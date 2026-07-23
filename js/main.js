@@ -57,6 +57,7 @@ function render() {
   const sub = $("subline");
   const timeline = $("timeline");
   const touNote = $("touNote");
+  const detailLine = $("detailLine");
   const hasFees = m.sessionFee > 0;
 
   // Resolve the ONE active pricing model into a single {session, effective}.
@@ -97,6 +98,7 @@ function render() {
       : "Pick your car to start.";
     timeline.hidden = true;
     touNote.hidden = true;
+    detailLine.hidden = true;
   } else if (!hasRate) {
     // No charger price yet — the break-even IS the headline answer.
     card.dataset.verdict = "worth";
@@ -104,11 +106,28 @@ function render() {
     sub.textContent = "Break-even price. Enter the charger's price for a yes/no.";
     timeline.hidden = true;
     touNote.hidden = true;
+    detailLine.hidden = true;
   } else {
     const v = verdict(effective, be);
     card.dataset.verdict = v === "unknown" ? "close" : v;
     headline.textContent = v === "worth" ? "\u26A1 Charge it" : v === "gas" ? "\u26FD Use gas" : "\u2248 Toss-up";
-    sub.textContent = showEffective
+
+    // Layman framing: the gas price that would cost the same per mile, plus how
+    // much cheaper/pricier charging is per mile. Everyone intuits gas prices.
+    const gasPerMile = m.gasPrice / m.mpg;
+    const elecPerMile = effective / m.miPerKwh;
+    const equivGas = (effective * m.mpg) / m.miPerKwh; // canonical $/gallon
+    const equivDisp = U.gasPriceForDisplay(equivGas, prefs.units);
+    const gasUnit = prefs.units === "metric" ? "/L" : "/gal";
+    const pct = gasPerMile > 0 ? Math.round((Math.abs(gasPerMile - elecPerMile) / gasPerMile) * 100) : 0;
+    sub.textContent = v === "worth"
+      ? `Like ${money(equivDisp, cur)}${gasUnit} gas \u2014 ${pct}% cheaper`
+      : v === "gas"
+        ? `Like ${money(equivDisp, cur)}${gasUnit} gas \u2014 ${pct}% pricier`
+        : `About the same as gas (~${money(equivDisp, cur)}${gasUnit})`;
+
+    detailLine.hidden = false;
+    detailLine.textContent = showEffective
       ? `Effective ${money(effective, cur)}/kWh${hasFees ? " incl. fees" : ""} \u00b7 break-even ${money(be, cur)}`
       : `You pay ${money(m.yourRate, cur)} \u00b7 break-even ${money(be, cur)}/kWh`;
 

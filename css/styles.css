@@ -282,6 +282,14 @@ body {
   position: relative;
   z-index: 1;
 }
+.result__detail {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  position: relative;
+  z-index: 1;
+}
 .result__time {
   margin: 10px 0 0;
   font-size: 13px;
