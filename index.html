@@ -44,10 +44,6 @@
             <input id="miPerKwh" type="text" inputmode="decimal" autocomplete="off" value="2.78" />
           </div>
         </div>
-        <div class="field">
-          <label for="batteryKwh">Battery size (kWh)</label>
-          <input id="batteryKwh" type="text" inputmode="decimal" autocomplete="off" value="15.1" />
-        </div>
         <p class="hint">Pick your model to auto-fill, or choose <strong>My own car</strong> to enter your own. Only <strong>MPG</strong> and <strong>mi/kWh</strong> change the result.</p>
       </div>
     </details>
@@ -84,20 +80,6 @@
     <details class="card disclosure" id="advanced">
       <summary>Advanced: session fees &amp; how long to charge</summary>
       <div class="disclosure__body">
-        <div class="field-row">
-          <div class="field">
-            <label for="sessionFee">Session fee</label>
-            <div class="input-money">
-              <span class="input-money__sym" id="curSym3">$</span>
-              <input id="sessionFee" type="text" inputmode="decimal" autocomplete="off" value="0" />
-            </div>
-          </div>
-          <div class="field">
-            <label for="powerKw">Charge power (kW)</label>
-            <input id="powerKw" type="text" inputmode="decimal" autocomplete="off" value="6.6" />
-          </div>
-        </div>
-
         <div class="field">
           <label>Charger pricing</label>
           <div class="segmented" id="rateMode" role="radiogroup">
@@ -115,6 +97,25 @@
           <div id="durRows" class="tou-rows"></div>
           <button type="button" id="durAdd" class="link tou-add">+ Add tier</button>
           <p class="hint">Set the price from the start (0 min), then add tiers that kick in after a number of minutes of charging.</p>
+        </div>
+
+        <div class="field">
+          <label for="sessionFee">Session fee (one-time)</label>
+          <div class="input-money">
+            <span class="input-money__sym" id="curSym3">$</span>
+            <input id="sessionFee" type="text" inputmode="decimal" autocomplete="off" value="0" />
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="powerKw">Charge power (kW)</label>
+            <input id="powerKw" type="text" inputmode="decimal" autocomplete="off" value="6.6" />
+          </div>
+          <div class="field">
+            <label for="batteryKwh">Battery size (kWh)</label>
+            <input id="batteryKwh" type="text" inputmode="decimal" autocomplete="off" value="15.1" />
+          </div>
         </div>
 
         <div class="field">
