@@ -184,6 +184,7 @@ body {
   background: var(--card-2);
   border-radius: var(--radius-sm);
 }
+.info-note a { color: var(--accent); font-weight: 700; }
 
 /* Searchable car combobox */
 .combo { position: relative; }
