@@ -223,9 +223,20 @@ function updateChargeSlider(show, fullChargeMin, curMin, curSoc) {
 }
 
 function renderAdvanced(m, be, cur, session, effective, timeFee) {
-  $("advKwh").textContent = Number.isFinite(session.kwhIntoBattery)
-    ? `${session.kwhIntoBattery.toFixed(1)} kWh`
-    : "-";
+  // Lead with range added (the tangible benefit), keep kWh for pricing context.
+  const kwhIn = session.kwhIntoBattery;
+  if (Number.isFinite(kwhIn) && kwhIn > 0) {
+    const kwhStr = `${kwhIn.toFixed(1)} kWh`;
+    if (Number.isFinite(m.miPerKwh) && m.miPerKwh > 0) {
+      const dist = m.miPerKwh * kwhIn; // canonical miles
+      const distDisp = prefs.units === "metric" ? U.kmFromMiles(dist) : dist;
+      $("advKwh").textContent = `${Math.round(distDisp)} ${U.labels(prefs.units).distance} \u00b7 ${kwhStr}`;
+    } else {
+      $("advKwh").textContent = kwhStr;
+    }
+  } else {
+    $("advKwh").textContent = "-";
+  }
   $("advTime").textContent = formatDuration(session.minutes);
   const tfRow = $("advTimeFeeRow");
   if (timeFee > 0) {
