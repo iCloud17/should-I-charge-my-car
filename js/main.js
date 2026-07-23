@@ -450,6 +450,13 @@ function attachEvents() {
     }
   });
 
+  $("carInfoBtn").addEventListener("click", () => {
+    const note = $("carInfoNote");
+    const willShow = note.hidden;
+    note.hidden = !willShow;
+    $("carInfoBtn").setAttribute("aria-expanded", String(willShow));
+  });
+
   $("carSearch").addEventListener("focus", (e) => {
     e.target.select();
     renderCarResults(e.target.value === "My own car" ? "" : e.target.value);

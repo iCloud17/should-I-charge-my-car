@@ -27,11 +27,15 @@
       </summary>
       <div class="disclosure__body">
         <div class="field">
-          <label for="carSearch">Your car</label>
+          <div class="field-label-row">
+            <label for="carSearch">Your car</label>
+            <button type="button" id="carInfoBtn" class="info-btn" aria-label="Why isn't my exact year listed?" aria-expanded="false">i</button>
+          </div>
           <div class="combo">
             <input id="carSearch" type="text" autocomplete="off" spellcheck="false" placeholder="Search make or model…" role="combobox" aria-expanded="false" aria-controls="carResults" aria-autocomplete="list" />
             <ul id="carResults" class="combo__results" role="listbox" hidden></ul>
           </div>
+          <p class="hint info-note" id="carInfoNote" hidden>Don&rsquo;t see your exact year? Pick the closest one. A plug-in hybrid&rsquo;s MPG and efficiency rarely change within a generation, so the result comes out essentially the same.</p>
         </div>
 
         <details class="tweak" id="tweak">

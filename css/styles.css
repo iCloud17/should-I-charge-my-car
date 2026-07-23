@@ -152,6 +152,39 @@ body {
   color: var(--text);
 }
 
+/* Info (i) affordance next to a field label */
+.field-label-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.field-label-row label { margin: 0; }
+.info-btn {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border-radius: 50%;
+  border: none;
+  background: var(--muted);
+  color: var(--card);
+  font-size: 11px;
+  font-weight: 800;
+  font-style: italic;
+  font-family: Georgia, "Times New Roman", serif;
+  line-height: 18px;
+  text-align: center;
+  cursor: pointer;
+  padding: 0;
+}
+.info-btn:active { transform: scale(0.9); }
+.info-note {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: var(--card-2);
+  border-radius: var(--radius-sm);
+}
+
 /* Searchable car combobox */
 .combo { position: relative; }
 .combo__results {
