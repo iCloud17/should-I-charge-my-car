@@ -5,7 +5,7 @@ export const $ = (id) => document.getElementById(id);
 export function parseNum(value) {
   if (value == null) return NaN;
   const n = parseFloat(String(value).replace(/[^0-9.\-]/g, ""));
-  return Number.isFinite(n) ? n : NaN;
+  return Number.isFinite(n) && n >= 0 ? n : NaN; // positive-only (0 and above)
 }
 
 export function money(value, currency = "$", digits = 2) {

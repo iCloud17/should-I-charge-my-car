@@ -66,11 +66,11 @@
             <div class="field-row">
               <div class="field">
                 <label for="mpg" id="mpgLabel">Gas MPG</label>
-                <input id="mpg" type="text" inputmode="decimal" autocomplete="off" value="" />
+                <input id="mpg" type="number" min="0" step="any" inputmode="decimal" autocomplete="off" value="" />
               </div>
               <div class="field">
                 <label for="miPerKwh" id="effLabel">Electric mi/kWh</label>
-                <input id="miPerKwh" type="text" inputmode="decimal" autocomplete="off" value="" />
+                <input id="miPerKwh" type="number" min="0" step="any" inputmode="decimal" autocomplete="off" value="" />
               </div>
             </div>
             <p class="hint">Auto-filled from your car. Only change these if you track your own real-world numbers.</p>
@@ -95,7 +95,7 @@
         <label for="gasPrice" id="gasPriceLabel">Gas price ($/gallon)</label>
         <div class="input-money">
           <span class="input-money__sym" id="curSym1">$</span>
-          <input id="gasPrice" type="text" inputmode="decimal" autocomplete="off" value="" placeholder="e.g. 3.89" />
+          <input id="gasPrice" type="number" min="0" step="any" inputmode="decimal" autocomplete="off" value="" placeholder="e.g. 3.89" />
         </div>
       </div>
     </section>
@@ -109,7 +109,7 @@
         <label for="yourRate" id="yourRateLabel">Energy rate ($/kWh)</label>
         <div class="input-money">
           <span class="input-money__sym" id="curSym2">$</span>
-          <input id="yourRate" type="text" inputmode="decimal" autocomplete="off" value="" placeholder="e.g. 0.30" />
+          <input id="yourRate" type="number" min="0" step="any" inputmode="decimal" autocomplete="off" value="" placeholder="e.g. 0.30" />
         </div>
         <p class="hint" id="rateModeNote" hidden></p>
         <details class="tweak tweak--muted" id="energyModeTweak">
@@ -138,7 +138,7 @@
         <label for="sessionFee">Service fee</label>
         <div class="input-money has-suffix">
           <span class="input-money__sym" id="curSym3">$</span>
-          <input id="sessionFee" type="text" inputmode="decimal" autocomplete="off" value="0" />
+          <input id="sessionFee" type="number" min="0" step="any" inputmode="decimal" autocomplete="off" value="0" />
           <span class="input-money__suffix">/session</span>
         </div>
       </div>
@@ -167,11 +167,11 @@
         <div class="field-row">
           <div class="field">
             <label for="powerKw">Charge power (kW)</label>
-            <input id="powerKw" type="text" inputmode="decimal" autocomplete="off" value="6.6" />
+            <input id="powerKw" type="number" min="0" step="any" inputmode="decimal" autocomplete="off" value="6.6" />
           </div>
           <div class="field">
             <label for="batteryKwh">Battery size (kWh)</label>
-            <input id="batteryKwh" type="text" inputmode="decimal" autocomplete="off" value="" />
+            <input id="batteryKwh" type="number" min="0" step="any" inputmode="decimal" autocomplete="off" value="" />
           </div>
         </div>
         <p class="hint">PHEVs charge on AC only, so speed is capped by the car&rsquo;s onboard charger. Power and battery affect the time estimate only.</p>

@@ -335,7 +335,8 @@ label {
   color: var(--muted);
 }
 
-input[type="text"] {
+input[type="text"],
+input[type="number"] {
   width: 100%;
   border: 1px solid var(--line);
   background: var(--field);
@@ -347,10 +348,15 @@ input[type="text"] {
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-input[type="text"]:focus {
+input[type="text"]:focus,
+input[type="number"]:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
 }
+/* Numeric fields: strip spinner arrows; positivity is enforced via min=0. */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 
 .input-money { position: relative; }
 .input-money__sym {

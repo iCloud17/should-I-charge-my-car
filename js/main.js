@@ -342,7 +342,7 @@ function addTouRow(time = "00:00", rate = "") {
     `<input type="time" class="tou-time" value="${time}" />` +
     `<div class="input-money tou-rate-wrap">` +
     `<span class="input-money__sym">${prefs.currency}</span>` +
-    `<input type="text" inputmode="decimal" class="tou-rate" placeholder="0.30" value="${rate}" />` +
+    `<input type="number" min="0" step="any" inputmode="decimal" class="tou-rate" placeholder="0.30" value="${rate}" />` +
     `</div>` +
     `<button type="button" class="tou-del" aria-label="Remove period">\u00d7</button>`;
   $("touRows").appendChild(row);
@@ -364,10 +364,10 @@ function addDurRow(min = 0, rate = "") {
   const row = document.createElement("div");
   row.className = "tou-row dur-row";
   row.innerHTML =
-    `<div class="dur-after">after <input type="text" inputmode="numeric" class="dur-min" value="${min}" /> min</div>` +
+    `<div class="dur-after">after <input type="number" min="0" step="any" inputmode="numeric" class="dur-min" value="${min}" /> min</div>` +
     `<div class="input-money tou-rate-wrap">` +
     `<span class="input-money__sym">${prefs.currency}</span>` +
-    `<input type="text" inputmode="decimal" class="dur-rate" placeholder="0.30" value="${rate}" />` +
+    `<input type="number" min="0" step="any" inputmode="decimal" class="dur-rate" placeholder="0.30" value="${rate}" />` +
     `</div>` +
     `<button type="button" class="tou-del" aria-label="Remove tier">\u00d7</button>`;
   $("durRows").appendChild(row);
@@ -393,14 +393,14 @@ function addTimeFeeRow(start = 0, perHour = "", unit = "hr") {
   const row = document.createElement("div");
   row.className = "tou-row tf-row";
   row.innerHTML =
-    `<div class="dur-after">after <input type="text" inputmode="decimal" class="dur-min tf-start" value="${start}" />` +
+    `<div class="dur-after">after <input type="number" min="0" step="any" inputmode="decimal" class="dur-min tf-start" value="${start}" />` +
     `<select class="tf-start-unit" aria-label="Tier start unit">` +
     `<option value="hr"${unit === "hr" ? " selected" : ""}>hr</option>` +
     `<option value="min"${unit === "min" ? " selected" : ""}>min</option>` +
     `</select></div>` +
     `<div class="input-money tou-rate-wrap">` +
     `<span class="input-money__sym">${prefs.currency}</span>` +
-    `<input type="text" inputmode="decimal" class="tf-rate" placeholder="3" value="${perHour}" />` +
+    `<input type="number" min="0" step="any" inputmode="decimal" class="tf-rate" placeholder="3" value="${perHour}" />` +
     `</div>` +
     `<span class="tf-unit">/hr</span>` +
     `<button type="button" class="tou-del" aria-label="Remove tier">\u00d7</button>`;
