@@ -1,5 +1,5 @@
 // service-worker.js - cache-first offline support for the static app shell.
-const CACHE = "sicc-v8";
+const CACHE = "sicc-v9";
 const ASSETS = [
   "./",
   "./index.html",

@@ -111,26 +111,9 @@
 
     <!-- Advanced: should I charge here + how long -->
     <details class="card disclosure" id="advanced">
-      <summary>Advanced: session fees &amp; how long to charge</summary>
+      <summary>Charger fees &amp; charge time</summary>
       <div class="disclosure__body">
-        <div class="field">
-          <label>Charger pricing</label>
-          <div class="segmented" id="rateMode" role="radiogroup">
-            <label><input type="radio" name="rateMode" value="flat" checked /><span>Flat</span></label>
-            <label><input type="radio" name="rateMode" value="tod" /><span>By time</span></label>
-            <label><input type="radio" name="rateMode" value="dur" /><span>By duration</span></label>
-          </div>
-        </div>
-        <div id="touEditor" hidden>
-          <div id="touRows" class="tou-rows"></div>
-          <button type="button" id="touAdd" class="link tou-add">+ Add time period</button>
-          <p class="hint">Enter each price and the time it starts (it runs until the next one). We use your device&rsquo;s current time to pick the rate now and flag a cheaper window.</p>
-        </div>
-        <div id="durEditor" hidden>
-          <div id="durRows" class="tou-rows"></div>
-          <button type="button" id="durAdd" class="link tou-add">+ Add tier</button>
-          <p class="hint">Set the price from the start (0 min), then add tiers that kick in after a number of minutes of charging.</p>
-        </div>
+        <p class="hint hint--lead">Match the charger&rsquo;s pricing screen: add any session fee and by-the-hour time fee here. (Energy free? Put 0 in Charger price above.)</p>
 
         <div class="field">
           <label for="sessionFee">Session fee (one-time)</label>
@@ -148,6 +131,25 @@
             <p class="hint">A charge for the time you&rsquo;re plugged in, on top of energy. Set the rate from the start, then add a tier for when it changes. Example: $3/hr, then $6/hr after 4 hr. Leave blank if your charger doesn&rsquo;t do this.</p>
           </div>
         </details>
+
+        <div class="field">
+          <label>Energy rate</label>
+          <div class="segmented" id="rateMode" role="radiogroup">
+            <label><input type="radio" name="rateMode" value="flat" checked /><span>Flat</span></label>
+            <label><input type="radio" name="rateMode" value="tod" /><span>Time of day</span></label>
+            <label><input type="radio" name="rateMode" value="dur" /><span>By duration</span></label>
+          </div>
+        </div>
+        <div id="touEditor" hidden>
+          <div id="touRows" class="tou-rows"></div>
+          <button type="button" id="touAdd" class="link tou-add">+ Add time period</button>
+          <p class="hint">Enter each price and the time it starts (it runs until the next one). We use your device&rsquo;s current time to pick the rate now and flag a cheaper window.</p>
+        </div>
+        <div id="durEditor" hidden>
+          <div id="durRows" class="tou-rows"></div>
+          <button type="button" id="durAdd" class="link tou-add">+ Add tier</button>
+          <p class="hint">Set the price from the start (0 min), then add tiers that kick in after a number of minutes of charging.</p>
+        </div>
 
         <div class="field">
           <p class="sublabel">Charger speed</p>
