@@ -254,7 +254,28 @@ body {
 .tweak > summary::after { content: " +"; color: var(--muted); }
 .tweak[open] > summary::after { content: " −"; }
 .tweak__body { padding-top: 8px; }
-.tweak--muted > summary { color: var(--muted); font-weight: 600; }
+/* Energy-mode disclosure as a lightweight accent accordion: a leading chevron
+   that rotates open. Colored so it stands out from the surrounding hints,
+   without a box, so it never reads as an input to fill. */
+.tweak--muted > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 14px;
+  padding: 6px 0;
+}
+.tweak--muted > summary::after,
+.tweak--muted[open] > summary::after { content: none; }
+.tweak--muted > summary::before {
+  content: "\25B8";
+  color: var(--accent);
+  font-size: 12px;
+  display: inline-block;
+  transition: transform 0.15s;
+}
+.tweak--muted[open] > summary::before { transform: rotate(90deg); }
 
 .result__label {
   margin: 0;
