@@ -13,3 +13,8 @@ npm-debug.log*
 
 # Logs
 *.log
+
+# Local browser-testing artifacts (screenshots, Playwright output)
+.playwright-mcp/
+home.png
+metric-advanced.png

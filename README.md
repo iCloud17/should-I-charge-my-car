@@ -31,3 +31,8 @@ Just open `index.html`, or serve the folder:
 python3 -m http.server 8000
 # then visit http://localhost:8000
 ```
+
+## License
+
+[MIT](LICENSE) — free to use, modify, and distribute. Vehicle efficiency figures
+are approximate and user-editable; verify against your own real-world numbers.
