@@ -18,3 +18,6 @@ npm-debug.log*
 .playwright-mcp/
 home.png
 metric-advanced.png
+
+# Seed script cache (large bulk CSV from fueleconomy.gov)
+scripts/.vehicles.cache.csv
