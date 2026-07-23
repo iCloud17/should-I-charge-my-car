@@ -13,6 +13,13 @@ export function money(value, currency = "$", digits = 2) {
   return `${currency}${value.toFixed(digits)}`;
 }
 
+// Escape a string for safe interpolation into innerHTML templates.
+export function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (c) => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+  ));
+}
+
 export function formatDuration(minutes) {
   if (!Number.isFinite(minutes) || minutes <= 0) return "-";
   const total = Math.round(minutes);

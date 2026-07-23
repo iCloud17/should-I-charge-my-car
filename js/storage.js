@@ -34,10 +34,18 @@ export function loadPrefs() {
     const raw = localStorage.getItem(KEY);
     if (!raw) return { ...DEFAULT_PREFS };
     const parsed = JSON.parse(raw);
-    return { ...DEFAULT_PREFS, ...parsed };
+    const prefs = { ...DEFAULT_PREFS, ...parsed };
+    prefs.currency = safeCurrency(prefs.currency);
+    return prefs;
   } catch {
     return { ...DEFAULT_PREFS };
   }
+}
+
+// Currency gets interpolated into markup, so keep it a short, HTML-safe symbol.
+function safeCurrency(cur) {
+  const c = String(cur == null ? "$" : cur).replace(/[<>&"'`]/g, "").trim().slice(0, 3);
+  return c || "$";
 }
 
 export function savePrefs(prefs) {

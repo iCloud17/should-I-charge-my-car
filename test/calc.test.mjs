@@ -44,6 +44,12 @@ test("verdict buckets around break-even with an 8% band", () => {
   assert.equal(verdict(NaN, 0.25), "unknown");
 });
 
+test("verdict with free gas (break-even 0): charging never wins", () => {
+  assert.equal(verdict(0.20, 0), "gas");  // paying anything loses to free gas
+  assert.equal(verdict(0, 0), "close");   // both free: a wash
+  assert.equal(verdict(0.20, -1), "unknown");
+});
+
 test("timeFeeCost integrates tiered by-the-hour fees", () => {
   const tiers = [{ start: 0, perHour: 2.04 }, { start: 240, perHour: 5 }];
   assert.equal(timeFeeCost(tiers, 0), 0);

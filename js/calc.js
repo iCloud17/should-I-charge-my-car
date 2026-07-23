@@ -36,7 +36,8 @@ export function powerAtSoc(soc, powerKw, kneePct = 92.5, taperEndFactor = 0.25) 
 
 /** Simple verdict bucket comparing a price against break-even, with a margin band. */
 export function verdict(pricePerKwh, breakeven, marginPct = 0.08) {
-  if (!(breakeven > 0) || Number.isNaN(pricePerKwh)) return "unknown";
+  if (Number.isNaN(pricePerKwh) || !Number.isFinite(breakeven) || breakeven < 0) return "unknown";
+  if (breakeven === 0) return pricePerKwh > 0 ? "gas" : "close"; // free gas: charging can't win
   const band = breakeven * marginPct;
   if (pricePerKwh <= breakeven - band) return "worth";
   if (pricePerKwh >= breakeven + band) return "gas";
