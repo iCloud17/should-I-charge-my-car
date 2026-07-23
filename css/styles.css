@@ -627,6 +627,7 @@ output { font-weight: 800; color: var(--text); }
   border-radius: var(--radius-sm);
   background: var(--card-2);
 }
+.advanced-result__title { margin: 0 0 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
 .advanced-result__row {
   display: flex;
   justify-content: space-between;

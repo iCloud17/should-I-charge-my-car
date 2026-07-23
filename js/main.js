@@ -252,13 +252,13 @@ function renderAdvanced(m, be, cur, session, effective, timeFee) {
   if (Number.isFinite(effective) && Number.isFinite(be)) {
     const vv = verdict(effective, be);
     if (vv === "worth") {
-      av.textContent = `✅ Worth charging: all-in ${money(effective, cur)}/kWh beats break-even.`;
+      av.textContent = `✅ Worth it: ${money(effective, cur)}/kWh, under your ${money(be, cur)}/kWh break-even.`;
       av.style.color = "var(--worth)";
     } else if (vv === "gas") {
-      av.textContent = `❌ Not worth it: fees push you to ${money(effective, cur)}/kWh. Use gas.`;
+      av.textContent = `❌ Not worth it: ${money(effective, cur)}/kWh, over your ${money(be, cur)}/kWh break-even. Use gas.`;
       av.style.color = "var(--gas)";
     } else {
-      av.textContent = `≈ Right at break-even (${money(effective, cur)}/kWh). Your call.`;
+      av.textContent = `≈ About break-even: ${money(effective, cur)}/kWh vs ${money(be, cur)}/kWh. Your call.`;
       av.style.color = "var(--close)";
     }
   } else {

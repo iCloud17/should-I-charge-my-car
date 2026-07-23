@@ -153,8 +153,9 @@
 
     <!-- How long to charge: secondary time estimate + cost breakdown -->
     <details class="card disclosure" id="advanced">
-      <summary>How long to charge?</summary>
+      <summary>Charge time &amp; cost</summary>
       <div class="disclosure__body">
+        <p class="hint hint--lead">Set your charger speed and how full you want the battery, then see how long it takes, the range you add, and the all-in price per kWh.</p>
 
         <div class="field">
           <p class="sublabel">Charger speed</p>
@@ -192,6 +193,7 @@
         </div>
 
         <div class="advanced-result" id="advancedResult">
+          <p class="advanced-result__title">For this charge</p>
           <div class="advanced-result__row">
             <span>Range added</span><strong id="advKwh">-</strong>
           </div>
@@ -202,7 +204,7 @@
             <span>Time fee</span><strong id="advTimeFee">-</strong>
           </div>
           <div class="advanced-result__row">
-            <span>Effective price</span><strong id="advEffective">-</strong>
+            <span>All-in price ($/kWh)</span><strong id="advEffective">-</strong>
           </div>
           <p class="advanced-result__verdict" id="advVerdict">-</p>
         </div>
