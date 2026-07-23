@@ -6,7 +6,10 @@ export async function loadCars() {
   try {
     const res = await fetch("data/phevs.json", { cache: "no-cache" });
     const json = await res.json();
-    cars = Array.isArray(json.cars) ? json.cars : [];
+    const list = Array.isArray(json.cars) ? json.cars : [];
+    // Sort by name (make, then model), then newest year first.
+    list.sort((a, b) => a.make.localeCompare(b.make) || a.model.localeCompare(b.model) || b.year - a.year);
+    cars = list;
   } catch {
     cars = [];
   }
@@ -23,4 +26,11 @@ export function getCar(id) {
 
 export function carLabel(car) {
   return `${car.year} ${car.make} ${car.model}`;
+}
+
+// Longest "year make model" label length, used to cap the search field.
+export function maxLabelLength() {
+  let max = 0;
+  for (const c of cars) { const n = carLabel(c).length; if (n > max) max = n; }
+  return max;
 }

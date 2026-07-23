@@ -3,7 +3,7 @@
 import { breakevenKwhPrice, chargeCurve, verdict, rateAtTime, rateAtElapsed, cheapestPeriod } from "./calc.js";
 import * as U from "./units.js";
 import { loadPrefs, savePrefs, clearPrefs, DEFAULT_PREFS } from "./storage.js";
-import { loadCars, getCar, getCars, carLabel } from "./cars.js";
+import { loadCars, getCar, getCars, carLabel, maxLabelLength } from "./cars.js";
 import { $, parseNum, money, formatDuration, escapeHtml } from "./ui.js";
 import { applyTheme, nextThemeMode, themeLabel } from "./theme.js";
 
@@ -157,7 +157,7 @@ function render() {
     // "How long" at a glance, using your saved battery / power / charge target.
     if (v !== "gas" && Number.isFinite(session.minutes) && session.minutes > 0) {
       timeline.hidden = false;
-      timeline.textContent = `Est. ${formatDuration(session.minutes)} to ${Math.round(session.soc)}% at ${round(m.powerKw, 1)} kW`;
+      timeline.textContent = `Est. ${formatDuration(session.minutes)} to ${Math.round(session.soc)}% at ${round(m.powerKw, 2)} kW`;
     } else {
       timeline.hidden = true;
     }
@@ -282,11 +282,11 @@ function writeDisplayValues() {
   const s = prefs.units;
   $("gasPrice").value = fixed2(U.gasPriceForDisplay(prefs.gasPrice, s));
   $("yourRate").value = fixed2(prefs.yourRate);
-  $("mpg").value = round(U.economyForDisplay(prefs.mpg, s), 1);
+  $("mpg").value = round(U.economyForDisplay(prefs.mpg, s), 2);
   $("miPerKwh").value = round(U.efficiencyForDisplay(prefs.miPerKwh, s), 2);
-  $("batteryKwh").value = round(prefs.batteryKwh, 1);
+  $("batteryKwh").value = round(prefs.batteryKwh, 2);
   $("sessionFee").value = round(prefs.sessionFee, 2);
-  $("powerKw").value = round(prefs.powerKw, 1);
+  $("powerKw").value = round(prefs.powerKw, 2);
   $("startPct").value = prefs.startPct;
   $("targetPct").value = prefs.targetPct;
   // Keep the invariant even if a stored/edge value has start > target.
@@ -518,14 +518,13 @@ function normalizeText(s) {
 
 function filterCars(query) {
   const q = normalizeText(query);
-  const all = getCars();
-  if (!q) return all.slice(0, 8);
+  const all = getCars(); // already sorted by make, model, newest year
+  if (!q) return all;
   const tokens = q.split(/\s+/);
-  const matches = all.filter((c) => {
+  return all.filter((c) => {
     const label = normalizeText(`${c.year} ${c.make} ${c.model}`);
     return tokens.every((t) => label.includes(t));
   });
-  return matches.slice(0, 12);
 }
 
 function renderCarResults(query) {
@@ -582,6 +581,21 @@ function attachEvents() {
     const el = e.target;
     if (el && el.tagName === "INPUT" && el.type === "number" && !touchedFields.has(el)) {
       requestAnimationFrame(() => { try { el.select(); } catch (_) { /* ignore */ } });
+    }
+  });
+
+  // Numbers never need more than 2 decimals: round on commit (blur/Enter).
+  document.addEventListener("change", (e) => {
+    const el = e.target;
+    if (el && el.tagName === "INPUT" && el.type === "number" && el.value.trim() !== "") {
+      const n = parseFloat(el.value);
+      if (Number.isFinite(n)) {
+        const rounded = Math.round(n * 100) / 100;
+        if (String(rounded) !== el.value) {
+          el.value = String(rounded);
+          el.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+      }
     }
   });
 
@@ -729,6 +743,8 @@ function boot() {
   applyTheme(prefs.themeMode);
   updateThemeToggle();
   applyUnitLabels();
+  const maxLen = maxLabelLength();
+  if (maxLen) $("carSearch").maxLength = maxLen;
   if (prefs.carId === CUSTOM_ID) {
     $("carName").textContent = prefs.customName || "My car";
     $("carSearch").value = "My own car";
