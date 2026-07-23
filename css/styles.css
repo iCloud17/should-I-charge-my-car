@@ -37,6 +37,9 @@
 
 * { box-sizing: border-box; }
 
+/* Ensure the hidden attribute always wins over component display rules. */
+[hidden] { display: none !important; }
+
 html, body {
   margin: 0;
   padding: 0;
@@ -139,24 +142,25 @@ body {
 .result[data-verdict="close"] { --accent: var(--close); }
 .result[data-verdict="gas"]   { --accent: var(--gas); }
 
-.car-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  background: var(--field);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 7px 12px;
-  font-size: 14px;
-  font-weight: 600;
+/* Car tile: summary chip + inline picker */
+.car-summary { display: inline-flex; align-items: center; gap: 10px; }
+.car-summary__icon { font-size: 20px; }
+.car-summary__name {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
   color: var(--text);
-  cursor: pointer;
-  margin-bottom: 14px;
-  position: relative;
-  z-index: 1;
 }
-.car-chip:active { transform: scale(0.98); }
-.car-chip__edit { color: var(--muted); font-weight: 500; }
+.car-select {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: var(--field);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 13px 12px;
+  font-size: 16px;
+  font-weight: 600;
+}
 
 .result__label {
   margin: 0;

@@ -19,17 +19,46 @@
 
     <!-- Result card: the hero -->
     <section class="card result" id="resultCard" data-verdict="worth">
-      <button id="carButton" class="car-chip" type="button">
-        <span class="car-chip__icon" aria-hidden="true">🚗</span>
-        <span id="carName" class="car-chip__name">RAV4 Prime</span>
-        <span class="car-chip__edit">change ›</span>
-      </button>
-
       <p class="result__headline" id="headline">$0.28/kWh</p>
       <p class="result__sub" id="subline">Break-even price. Enter the charger&rsquo;s price for a yes/no.</p>
       <p class="result__time" id="timeline" hidden></p>
       <p class="result__time result__tou" id="touNote" hidden></p>
     </section>
+
+    <!-- Car tile: pick or customize your car -->
+    <details class="card disclosure car-tile" id="carTile" open>
+      <summary>
+        <span class="car-summary">
+          <span class="car-summary__icon" aria-hidden="true">🚗</span>
+          <span class="car-summary__name" id="carName">RAV4 Prime 4WD</span>
+        </span>
+      </summary>
+      <div class="disclosure__body">
+        <div class="field">
+          <label for="carSelect">Car</label>
+          <select id="carSelect" class="car-select"></select>
+        </div>
+        <div class="field" id="nicknameField" hidden>
+          <label for="carNickname">Car name <span class="label-opt">(optional)</span></label>
+          <input id="carNickname" type="text" autocomplete="off" maxlength="40" placeholder="e.g., My RAV4" />
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="mpg" id="mpgLabel">Gas MPG</label>
+            <input id="mpg" type="text" inputmode="decimal" autocomplete="off" value="38" />
+          </div>
+          <div class="field">
+            <label for="miPerKwh" id="effLabel">Electric mi/kWh</label>
+            <input id="miPerKwh" type="text" inputmode="decimal" autocomplete="off" value="2.78" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="batteryKwh">Battery size (kWh)</label>
+          <input id="batteryKwh" type="text" inputmode="decimal" autocomplete="off" value="15.1" />
+        </div>
+        <p class="hint">Pick your model to auto-fill, or choose <strong>My own car</strong> to enter your own. Only <strong>MPG</strong> and <strong>mi/kWh</strong> change the result.</p>
+      </div>
+    </details>
 
     <!-- Core inputs -->
     <section class="card inputs">
@@ -50,30 +79,6 @@
       </div>
       <p class="hint" id="rateModeNote" hidden></p>
     </section>
-
-    <!-- Customize car values -->
-    <details class="card disclosure" id="customize">
-      <summary>Your car &amp; numbers</summary>
-      <div class="disclosure__body">
-        <div class="field">
-          <label for="carNickname">Car name <span class="label-opt">(optional)</span></label>
-          <input id="carNickname" type="text" autocomplete="off" maxlength="40" placeholder="e.g., My RAV4" />
-        </div>
-        <div class="field">
-          <label for="mpg" id="mpgLabel">Gas MPG</label>
-          <input id="mpg" type="text" inputmode="decimal" autocomplete="off" value="38" />
-        </div>
-        <div class="field">
-          <label for="miPerKwh" id="effLabel">Electric mi/kWh</label>
-          <input id="miPerKwh" type="text" inputmode="decimal" autocomplete="off" value="2.9" />
-        </div>
-        <div class="field">
-          <label for="batteryKwh">Battery size (kWh)</label>
-          <input id="batteryKwh" type="text" inputmode="decimal" autocomplete="off" value="18.1" />
-        </div>
-        <p class="hint">Only <strong>MPG</strong> and <strong>mi/kWh</strong> change the result — the name is just a label. Real-world numbers beat EPA estimates.</p>
-      </div>
-    </details>
 
     <!-- Advanced: should I charge here + how long -->
     <details class="card disclosure" id="advanced">
@@ -141,19 +146,6 @@
       <span class="app__foot-note">Saved on this device. No account needed.</span>
     </footer>
   </main>
-
-  <!-- Car picker dialog -->
-  <dialog id="carDialog" class="dialog">
-    <form method="dialog" class="dialog__inner">
-      <h2 class="dialog__title">Choose your car</h2>
-      <p class="dialog__hint">Pick a model to pre-fill its numbers, or choose &ldquo;My own car&rdquo; and enter your own below.</p>
-      <select id="carSelect" class="dialog__select" size="10"></select>
-      <div class="dialog__actions">
-        <button value="cancel" class="btn btn--ghost">Cancel</button>
-        <button id="carPick" value="pick" class="btn btn--primary">Select</button>
-      </div>
-    </form>
-  </dialog>
 
   <script type="module" src="js/main.js"></script>
 </body>

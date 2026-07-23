@@ -321,20 +321,25 @@ function setCar(car, { keepCustom = false } = {}) {
     prefs.batteryKwh = car.batteryKwh;
   }
   savePrefs(prefs);
-  $("carName").textContent = `${car.model}`;
+  $("carName").textContent = `${car.make} ${car.model}`;
+  $("nicknameField").hidden = true;
+  $("carSelect").value = car.id;
   writeDisplayValues();
   render();
 }
 
 // Switch to a user-defined car: keep the current numbers, drive the label from
-// the nickname, and open the editor so it's obvious where to enter values.
+// the nickname, and reveal the name field so it's obvious where to enter it.
 function setCustomCar() {
   prefs.carId = CUSTOM_ID;
   savePrefs(prefs);
   $("carName").textContent = prefs.customName || "My car";
-  $("customize").open = true;
+  $("nicknameField").hidden = false;
+  $("carSelect").value = CUSTOM_ID;
+  $("carTile").open = true;
   writeDisplayValues();
   render();
+  $("carNickname").focus();
 }
 
 function buildCarSelect() {
@@ -401,20 +406,13 @@ function attachEvents() {
     }
   });
 
-  const dialog = $("carDialog");
-  $("carButton").addEventListener("click", () => {
-    buildCarSelect();
-    dialog.showModal();
-  });
-  dialog.addEventListener("close", () => {
-    if (dialog.returnValue === "pick") {
-      const val = $("carSelect").value;
-      if (val === CUSTOM_ID) {
-        setCustomCar();
-      } else {
-        const car = getCar(val);
-        if (car) setCar(car);
-      }
+  $("carSelect").addEventListener("change", (e) => {
+    const val = e.target.value;
+    if (val === CUSTOM_ID) {
+      setCustomCar();
+    } else {
+      const car = getCar(val);
+      if (car) setCar(car);
     }
   });
 
@@ -437,11 +435,17 @@ function attachEvents() {
 // --- Boot ---
 function boot() {
   applyUnitLabels();
+  buildCarSelect();
   if (prefs.carId === CUSTOM_ID) {
     $("carName").textContent = prefs.customName || "My car";
+    $("nicknameField").hidden = false;
   } else {
     const car = getCar(prefs.carId) || getCars()[0];
-    if (car) $("carName").textContent = car.model;
+    if (car) {
+      $("carName").textContent = `${car.make} ${car.model}`;
+      $("carSelect").value = car.id;
+    }
+    $("nicknameField").hidden = true;
   }
   writeDisplayValues();
   applyRateMode();
