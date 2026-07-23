@@ -565,12 +565,36 @@ function attachEvents() {
   const liveIds = ["gasPrice", "yourRate", "mpg", "miPerKwh", "batteryKwh", "sessionFee", "powerKw"];
   for (const id of liveIds) $(id).addEventListener("input", render);
 
+  // Focusing a number field selects its contents ONLY while it still holds its
+  // untouched default (e.g. the "0" in a new station-time-rate row), so one
+  // keystroke replaces the default. Once you've typed your own value, focusing
+  // leaves it alone so you can edit/append instead of wiping it.
+  const touchedFields = new WeakSet();
+  document.addEventListener("input", (e) => {
+    const el = e.target;
+    if (el && el.tagName === "INPUT" && el.type === "number") touchedFields.add(el);
+  });
+  document.addEventListener("focusin", (e) => {
+    const el = e.target;
+    if (el && el.tagName === "INPUT" && el.type === "number" && !touchedFields.has(el)) {
+      requestAnimationFrame(() => { try { el.select(); } catch (_) { /* ignore */ } });
+    }
+  });
+
+  // "Battery now" can't exceed "Charge to" (and vice versa): they can meet but
+  // never cross.
   $("startPct").addEventListener("input", (e) => {
-    $("startPctOut").textContent = `${e.target.value}%`;
+    const target = parseNum($("targetPct").value);
+    let v = parseNum(e.target.value);
+    if (Number.isFinite(target) && v > target) { v = target; e.target.value = String(v); }
+    $("startPctOut").textContent = `${v}%`;
     render();
   });
   $("targetPct").addEventListener("input", (e) => {
-    $("targetPctOut").textContent = `${e.target.value}%`;
+    const start = parseNum($("startPct").value);
+    let v = parseNum(e.target.value);
+    if (Number.isFinite(start) && v < start) { v = start; e.target.value = String(v); }
+    $("targetPctOut").textContent = `${v}%`;
     render();
   });
   $("chargeForMin").addEventListener("input", (e) => {
