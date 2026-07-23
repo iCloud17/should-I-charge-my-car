@@ -461,8 +461,11 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   color: var(--accent);
   box-shadow: var(--shadow-sm);
 }
-.field.is-disabled { opacity: 0.5; }
-.field.is-disabled input { cursor: not-allowed; }
+/* Dim only the flat-rate input when a schedule mode is active, not the mode
+   selector / editors that now live in the same field. */
+.field.is-disabled > label,
+.field.is-disabled > .input-money { opacity: 0.5; }
+.field.is-disabled > .input-money input { cursor: not-allowed; }
 
 /* Duration-tier rows */
 .dur-after {
