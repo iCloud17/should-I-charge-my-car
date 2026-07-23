@@ -1,12 +1,13 @@
 // main.js — wire inputs → calc → render. Persist to localStorage.
 
-import { breakevenKwhPrice, chargeSession, effectiveKwhPrice, verdict } from "./calc.js";
+import { breakevenKwhPrice, chargeSession, effectiveKwhPrice, verdict, rateAtTime, cheapestPeriod, sessionCost } from "./calc.js";
 import * as U from "./units.js";
 import { loadPrefs, savePrefs, clearPrefs, DEFAULT_PREFS } from "./storage.js";
 import { loadCars, getCar, getCars, carLabel } from "./cars.js";
 import { $, parseNum, money, formatDuration } from "./ui.js";
 
 let prefs = loadPrefs();
+let touEnabled = false; // time-of-day pricing (volatile — never persisted)
 
 // --- Read canonical model values from the DOM (converting from display units) ---
 function readInputs() {
@@ -55,36 +56,47 @@ function render() {
   const headline = $("headline");
   const sub = $("subline");
   const timeline = $("timeline");
-  const hasRate = Number.isFinite(m.yourRate) && m.yourRate >= 0;
+  const touNote = $("touNote");
 
-  // Charge session + all-in effective price (energy + session fee amortized over
-  // the kWh actually added). The hero uses this, so Advanced fees flow up to it.
-  const session = chargeSession({ batteryKwh: m.batteryKwh, startPct: m.startPct, targetPct: m.targetPct, powerKw: m.powerKw });
-  let effective = NaN;
-  if (hasRate) {
-    effective = effectiveKwhPrice({ sessionFee: m.sessionFee, ratePerKwh: m.yourRate, kwhFromCharger: session.kwhFromCharger });
-    if (!Number.isFinite(effective)) effective = m.yourRate; // no energy to add
-  }
+  const schedule = touEnabled ? readSchedule() : [];
+  const useTou = touEnabled && schedule.length > 0;
   const hasFees = m.sessionFee > 0;
+
+  // Charge session + all-in effective price. In time-of-day mode we integrate the
+  // cost over the clock starting NOW, so a rate change mid-charge is billed right.
+  let session, effective, hasRate;
+  if (useTou) {
+    const rateOf = (min) => rateAtTime(schedule, min);
+    session = sessionCost({ batteryKwh: m.batteryKwh, startPct: m.startPct, targetPct: m.targetPct, powerKw: m.powerKw, startClockMin: nowMinutes(), rateOf, sessionFee: m.sessionFee });
+    effective = session.effectivePerKwh;
+    hasRate = Number.isFinite(effective);
+  } else {
+    session = chargeSession({ batteryKwh: m.batteryKwh, startPct: m.startPct, targetPct: m.targetPct, powerKw: m.powerKw });
+    hasRate = Number.isFinite(m.yourRate) && m.yourRate >= 0;
+    effective = hasRate ? effectiveKwhPrice({ sessionFee: m.sessionFee, ratePerKwh: m.yourRate, kwhFromCharger: session.kwhFromCharger }) : NaN;
+    if (hasRate && !Number.isFinite(effective)) effective = m.yourRate;
+  }
 
   if (!Number.isFinite(be)) {
     card.dataset.verdict = "close";
     headline.textContent = "\u2014";
     sub.textContent = "Enter your car's MPG and mi/kWh to get started.";
     timeline.hidden = true;
+    touNote.hidden = true;
   } else if (!hasRate) {
     // No charger price yet — the break-even IS the headline answer.
     card.dataset.verdict = "worth";
     headline.textContent = `${money(be, cur)}/kWh`;
     sub.textContent = "Break-even price. Enter the charger's price for a yes/no.";
     timeline.hidden = true;
+    touNote.hidden = true;
   } else {
     const v = verdict(effective, be);
     card.dataset.verdict = v === "unknown" ? "close" : v;
     headline.textContent = v === "worth" ? "\u26A1 Charge it" : v === "gas" ? "\u26FD Use gas" : "\u2248 Toss-up";
-    sub.textContent = hasFees
-      ? `Effective ${money(effective, cur)}/kWh incl. fees · break-even ${money(be, cur)}`
-      : `You pay ${money(m.yourRate, cur)} · break-even ${money(be, cur)}/kWh`;
+    sub.textContent = (useTou || hasFees)
+      ? `Effective ${money(effective, cur)}/kWh${hasFees ? " incl. fees" : ""} \u00b7 break-even ${money(be, cur)}`
+      : `You pay ${money(m.yourRate, cur)} \u00b7 break-even ${money(be, cur)}/kWh`;
 
     // "How long" at a glance, using your saved battery / power / charge target.
     if (v !== "gas" && Number.isFinite(session.minutes) && session.minutes > 0) {
@@ -92,6 +104,21 @@ function render() {
       timeline.textContent = `~${formatDuration(session.minutes)} to ${m.targetPct}% at ${round(m.powerKw, 1)} kW`;
     } else {
       timeline.hidden = true;
+    }
+
+    // Time-of-day suggestion based on the current clock time.
+    if (useTou) {
+      const now = nowMinutes();
+      const nowRate = rateAtTime(schedule, now);
+      const cheap = cheapestPeriod(schedule);
+      touNote.hidden = false;
+      if (cheap && nowRate > cheap.rate + 1e-9) {
+        touNote.textContent = `\u23F0 Cheaper from ${fmtClock(cheap.start)}: ${money(cheap.rate, cur)}/kWh (now ${money(nowRate, cur)})`;
+      } else {
+        touNote.textContent = `\u2705 You're in the cheapest window now (${money(nowRate, cur)}/kWh)`;
+      }
+    } else {
+      touNote.hidden = true;
     }
   }
 
@@ -160,6 +187,48 @@ function round(n, d) {
 // Currency-style fixed 2-decimal display (e.g., 0.3 -> "0.30"); blank if unset.
 function fixed2(n) {
   return Number.isFinite(n) ? n.toFixed(2) : "";
+}
+
+// --- Time-of-day helpers ---
+function nowMinutes() {
+  const d = new Date();
+  return d.getHours() * 60 + d.getMinutes();
+}
+
+function fmtClock(min) {
+  min = ((Math.round(min) % 1440) + 1440) % 1440;
+  let h = Math.floor(min / 60);
+  const m = min % 60;
+  const ap = h < 12 ? "AM" : "PM";
+  h = h % 12;
+  if (h === 0) h = 12;
+  return `${h}:${String(m).padStart(2, "0")} ${ap}`;
+}
+
+// Build the TOU schedule from the editor rows: [{ start(min), rate }].
+function readSchedule() {
+  const sched = [];
+  for (const r of document.querySelectorAll("#touRows .tou-row")) {
+    const t = r.querySelector(".tou-time").value;
+    const rate = parseNum(r.querySelector(".tou-rate").value);
+    if (!t || !Number.isFinite(rate)) continue;
+    const [h, mm] = t.split(":").map(Number);
+    sched.push({ start: h * 60 + mm, rate });
+  }
+  return sched;
+}
+
+function addTouRow(time = "00:00", rate = "") {
+  const row = document.createElement("div");
+  row.className = "tou-row";
+  row.innerHTML =
+    `<input type="time" class="tou-time" value="${time}" />` +
+    `<div class="input-money tou-rate-wrap">` +
+    `<span class="input-money__sym">${prefs.currency}</span>` +
+    `<input type="text" inputmode="decimal" class="tou-rate" placeholder="0.30" value="${rate}" />` +
+    `</div>` +
+    `<button type="button" class="tou-del" aria-label="Remove period">\u00d7</button>`;
+  $("touRows").appendChild(row);
 }
 
 function toggleUnits() {
@@ -232,6 +301,28 @@ function attachEvents() {
   });
 
   $("unitToggle").addEventListener("click", toggleUnits);
+
+  // Time-of-day pricing editor (not persisted).
+  $("touToggle").addEventListener("change", (e) => {
+    touEnabled = e.target.checked;
+    $("touEditor").hidden = !touEnabled;
+    if (touEnabled && $("touRows").children.length === 0) {
+      addTouRow("00:00", "");
+      addTouRow("16:00", "");
+    }
+    render();
+  });
+  $("touAdd").addEventListener("click", () => {
+    addTouRow();
+    render();
+  });
+  $("touRows").addEventListener("input", render);
+  $("touRows").addEventListener("click", (e) => {
+    if (e.target.classList.contains("tou-del")) {
+      e.target.closest(".tou-row").remove();
+      render();
+    }
+  });
 
   const dialog = $("carDialog");
   $("carButton").addEventListener("click", () => {

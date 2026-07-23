@@ -269,6 +269,46 @@ input[type="text"]:focus {
 }
 .label-opt { font-weight: 500; color: var(--muted); }
 
+/* --- Time-of-day (TOU) editor --- */
+.check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+}
+.check input { width: 20px; height: 20px; accent-color: var(--accent); flex: none; }
+.tou-rows { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 8px; }
+.tou-row { display: flex; align-items: center; gap: 8px; }
+.tou-time {
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  background: var(--field);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 11px 10px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.tou-rate-wrap { flex: 1; }
+.tou-del {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--card-2);
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.tou-del:active { transform: scale(0.96); }
+.tou-add { display: inline-block; margin-top: 2px; }
+.result__tou { color: var(--text); }
+
 /* --- Compare box --- */
 .compare {
   margin-top: 14px;

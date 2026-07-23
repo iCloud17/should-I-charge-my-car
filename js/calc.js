@@ -101,3 +101,90 @@ export function verdict(pricePerKwh, breakeven, marginPct = 0.08) {
   if (pricePerKwh >= breakeven + band) return "gas";
   return "close";
 }
+
+// --- Time-of-use (TOU) pricing --------------------------------------------
+
+/**
+ * The rate in effect at a given minute-of-day for a wrap-around TOU schedule.
+ * `schedule` is a non-empty array of { start, rate } where start is minutes from
+ * midnight (0..1439). A period runs until the next period's start; the last
+ * period wraps past midnight back to the first.
+ */
+export function rateAtTime(schedule, minute) {
+  const s = (schedule || [])
+    .filter((p) => Number.isFinite(p.start) && Number.isFinite(p.rate))
+    .sort((a, b) => a.start - b.start);
+  if (!s.length) return NaN;
+  let current = s[s.length - 1]; // before the first start → previous day's last period
+  for (const p of s) {
+    if (p.start <= minute) current = p;
+    else break;
+  }
+  return current.rate;
+}
+
+/** The cheapest period in a schedule, with its wrap-aware window [start, end). */
+export function cheapestPeriod(schedule) {
+  const s = (schedule || [])
+    .filter((p) => Number.isFinite(p.start) && Number.isFinite(p.rate))
+    .sort((a, b) => a.start - b.start);
+  if (!s.length) return null;
+  let bestIdx = 0;
+  for (let i = 1; i < s.length; i++) if (s[i].rate < s[bestIdx].rate) bestIdx = i;
+  const end = s[(bestIdx + 1) % s.length].start;
+  return { start: s[bestIdx].start, end, rate: s[bestIdx].rate };
+}
+
+/**
+ * Integrate a charging session's cost over clock time so a rate change mid-charge
+ * (e.g. peak pricing kicking in at 4pm) is billed correctly. `rateOf(minute)`
+ * returns the $/kWh at a given minute-of-day. Returns energy cost, all-in total
+ * (incl. sessionFee), and the effective $/kWh to compare against break-even.
+ */
+export function sessionCost({
+  batteryKwh,
+  startPct,
+  targetPct,
+  powerKw,
+  startClockMin = 0,
+  rateOf,
+  sessionFee = 0,
+  chargeEfficiency = 0.88,
+  kneePct = 85,
+  taperEndFactor = 0.25,
+}) {
+  const start = Math.max(0, Math.min(100, startPct));
+  const target = Math.max(0, Math.min(100, targetPct));
+  const empty = {
+    kwhIntoBattery: 0, kwhFromCharger: 0, minutes: 0,
+    energyCost: 0, totalCost: sessionFee, effectivePerKwh: NaN,
+  };
+  if (!(target > start) || !(batteryKwh > 0) || !(powerKw > 0)) return empty;
+
+  const stepPct = 0.5;
+  const battPerStep = batteryKwh * (stepPct / 100);
+  const chargerPerStep = chargeEfficiency > 0 ? battPerStep / chargeEfficiency : battPerStep;
+
+  let kwhIntoBattery = 0, hours = 0, energyCost = 0;
+  for (let soc = start; soc < target; soc += stepPct) {
+    const frac = Math.min(stepPct, target - soc) / stepPct;
+    const p = powerAtSoc(soc, powerKw, kneePct, taperEndFactor);
+    const clockMin = (((startClockMin + hours * 60) % 1440) + 1440) % 1440;
+    const rate = rateOf(clockMin);
+    const kwhStep = chargerPerStep * frac;
+    energyCost += (Number.isFinite(rate) ? rate : 0) * kwhStep;
+    kwhIntoBattery += battPerStep * frac;
+    hours += (chargerPerStep * frac) / p;
+  }
+
+  const kwhFromCharger = chargeEfficiency > 0 ? kwhIntoBattery / chargeEfficiency : kwhIntoBattery;
+  const totalCost = sessionFee + energyCost;
+  return {
+    kwhIntoBattery,
+    kwhFromCharger,
+    minutes: hours * 60,
+    energyCost,
+    totalCost,
+    effectivePerKwh: kwhFromCharger > 0 ? totalCost / kwhFromCharger : NaN,
+  };
+}

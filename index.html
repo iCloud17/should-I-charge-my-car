@@ -28,6 +28,7 @@
       <p class="result__headline" id="headline">$0.28/kWh</p>
       <p class="result__sub" id="subline">Break-even price. Enter the charger&rsquo;s price for a yes/no.</p>
       <p class="result__time" id="timeline" hidden></p>
+      <p class="result__time result__tou" id="touNote" hidden></p>
     </section>
 
     <!-- Core inputs -->
@@ -89,6 +90,18 @@
             <label for="powerKw">Charge power (kW)</label>
             <input id="powerKw" type="text" inputmode="decimal" autocomplete="off" value="6.6" />
           </div>
+        </div>
+
+        <div class="field tou-field">
+          <label class="check" for="touToggle">
+            <input type="checkbox" id="touToggle" />
+            <span>Price changes by time of day</span>
+          </label>
+        </div>
+        <div id="touEditor" hidden>
+          <div id="touRows" class="tou-rows"></div>
+          <button type="button" id="touAdd" class="link tou-add">+ Add time period</button>
+          <p class="hint">Enter each price and the time it starts (it runs until the next one). We use your device&rsquo;s current time to pick the rate now and flag a cheaper window.</p>
         </div>
 
         <div class="field">
