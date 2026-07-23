@@ -90,16 +90,25 @@ body {
 
 .app__head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 12px;
   padding: 6px 4px 0;
 }
+.app__head-text { min-width: 0; }
 
 .app__title {
   font-size: 20px;
   font-weight: 800;
   letter-spacing: -0.02em;
   margin: 0;
+}
+.app__tagline {
+  margin: 3px 0 0;
+  font-size: 13px;
+  line-height: 1.35;
+  font-weight: 500;
+  color: var(--muted);
 }
 
 .pill {

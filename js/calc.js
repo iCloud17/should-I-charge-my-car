@@ -1,4 +1,4 @@
-// calc.js — pure math. No DOM, no globals. All inputs are pre-normalized to
+// calc.js - pure math. No DOM, no globals. All inputs are pre-normalized to
 // canonical units by units.js: distance = miles, energy = kWh, volume = gallons,
 // gas price = currency per gallon, electricity price = currency per kWh.
 
@@ -36,7 +36,7 @@ export function elecCostPerMile({ pricePerKwh, miPerKwh }) {
  * We model the CV phase as a linear taper from full power at the knee down to
  * `taperEndFactor` * full power at 100%. This is an approximation, but it
  * captures the key effect: topping off to 100% costs lots of time for little
- * energy — which matters when there are per-minute or idle fees.
+ * energy - which matters when there are per-minute or idle fees.
  */
 export function powerAtSoc(soc, powerKw, kneePct = 85, taperEndFactor = 0.25) {
   if (soc <= kneePct) return powerKw;

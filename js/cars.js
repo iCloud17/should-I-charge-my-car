@@ -1,4 +1,4 @@
-// cars.js — load the bundled PHEV dataset and expose lookup helpers.
+// cars.js - load the bundled PHEV dataset and expose lookup helpers.
 
 let cars = [];
 

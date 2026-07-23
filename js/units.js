@@ -1,4 +1,4 @@
-// units.js — convert AT THE EDGES, compute in canonical units.
+// units.js - convert AT THE EDGES, compute in canonical units.
 // Canonical: distance = miles, energy = kWh, volume = gallons,
 // fuel economy = MPG, EV efficiency = mi/kWh, gas price = $/gallon.
 

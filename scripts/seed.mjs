@@ -1,4 +1,4 @@
-// seed.mjs — regenerate data/phevs.json from the fueleconomy.gov bulk dataset.
+// seed.mjs - regenerate data/phevs.json from the fueleconomy.gov bulk dataset.
 //
 // fueleconomy.gov (US DOE/EPA) is the authority behind window-sticker numbers and
 // publishes a free bulk CSV of every rated vehicle. We filter to plug-in hybrids

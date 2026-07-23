@@ -1,4 +1,4 @@
-// ui.js — small DOM/formatting helpers. No business logic here.
+// ui.js - small DOM/formatting helpers. No business logic here.
 
 export const $ = (id) => document.getElementById(id);
 

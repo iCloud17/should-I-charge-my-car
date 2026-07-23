@@ -1,4 +1,4 @@
-// main.js — wire inputs → calc → render. Persist to localStorage.
+// main.js - wire inputs → calc → render. Persist to localStorage.
 
 import { breakevenKwhPrice, chargeSession, effectiveKwhPrice, verdict, rateAtTime, rateAtElapsed, cheapestPeriod, sessionCost } from "./calc.js";
 import * as U from "./units.js";
@@ -7,7 +7,7 @@ import { loadCars, getCar, getCars, carLabel } from "./cars.js";
 import { $, parseNum, money, formatDuration } from "./ui.js";
 
 let prefs = loadPrefs();
-let rateMode = "flat"; // "flat" | "tod" | "dur" (volatile — never persisted)
+let rateMode = "flat"; // "flat" | "tod" | "dur" (volatile - never persisted)
 
 // --- Read canonical model values from the DOM (converting from display units) ---
 function readInputs() {
@@ -100,7 +100,7 @@ function render() {
     touNote.hidden = true;
     detailLine.hidden = true;
   } else if (!hasRate) {
-    // No charger price yet — the break-even IS the headline answer.
+    // No charger price yet - the break-even IS the headline answer.
     card.dataset.verdict = "worth";
     headline.textContent = `${money(be, cur)}/kWh`;
     sub.textContent = "Break-even price. Enter the charger's price for a yes/no.";
@@ -441,7 +441,7 @@ function attachEvents() {
 
   $("unitToggle").addEventListener("click", toggleUnits);
 
-  // Pricing mode (flat / time-of-day / duration) — exclusive, not persisted.
+  // Pricing mode (flat / time-of-day / duration) - exclusive, not persisted.
   for (const radio of document.querySelectorAll('input[name="rateMode"]')) {
     radio.addEventListener("change", (e) => {
       rateMode = e.target.value;
@@ -544,7 +544,7 @@ function boot() {
       $("carSearch").value = carLabel(car);
       $("tweak").open = false;
     } else {
-      // Clean slate — nudge the user to pick a car.
+      // Clean slate - nudge the user to pick a car.
       $("carName").textContent = "Select your car";
       $("carSearch").value = "";
       $("carTile").open = true;
