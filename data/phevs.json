@@ -1,0 +1,25 @@
+{
+  "_note": "Approximate EPA-based figures for popular PHEVs. mpg = gasoline combined MPG, miPerKwh = electric efficiency (miles per kWh), batteryKwh = usable-ish pack size, evRangeMi = EPA electric range. All values are editable by the user in the app.",
+  "cars": [
+    { "id": "rav4-prime-2023", "make": "Toyota", "model": "RAV4 Prime", "year": 2023, "mpg": 38, "miPerKwh": 2.9, "batteryKwh": 18.1, "evRangeMi": 42 },
+    { "id": "prius-prime-2023", "make": "Toyota", "model": "Prius Prime", "year": 2023, "mpg": 54, "miPerKwh": 4.0, "batteryKwh": 8.8, "evRangeMi": 25 },
+    { "id": "prius-prime-2025", "make": "Toyota", "model": "Prius Prime", "year": 2025, "mpg": 52, "miPerKwh": 3.8, "batteryKwh": 13.6, "evRangeMi": 44 },
+    { "id": "escape-phev-2023", "make": "Ford", "model": "Escape PHEV", "year": 2023, "mpg": 40, "miPerKwh": 3.0, "batteryKwh": 14.4, "evRangeMi": 37 },
+    { "id": "wrangler-4xe-2023", "make": "Jeep", "model": "Wrangler 4xe", "year": 2023, "mpg": 20, "miPerKwh": 2.1, "batteryKwh": 17.3, "evRangeMi": 21 },
+    { "id": "grand-cherokee-4xe-2023", "make": "Jeep", "model": "Grand Cherokee 4xe", "year": 2023, "mpg": 23, "miPerKwh": 2.1, "batteryKwh": 17.3, "evRangeMi": 25 },
+    { "id": "pacifica-hybrid-2023", "make": "Chrysler", "model": "Pacifica Hybrid", "year": 2023, "mpg": 30, "miPerKwh": 2.3, "batteryKwh": 16.0, "evRangeMi": 32 },
+    { "id": "tucson-phev-2023", "make": "Hyundai", "model": "Tucson PHEV", "year": 2023, "mpg": 35, "miPerKwh": 2.6, "batteryKwh": 13.8, "evRangeMi": 33 },
+    { "id": "santa-fe-phev-2023", "make": "Hyundai", "model": "Santa Fe PHEV", "year": 2023, "mpg": 33, "miPerKwh": 2.4, "batteryKwh": 13.8, "evRangeMi": 30 },
+    { "id": "sorento-phev-2023", "make": "Kia", "model": "Sorento PHEV", "year": 2023, "mpg": 34, "miPerKwh": 2.4, "batteryKwh": 13.8, "evRangeMi": 32 },
+    { "id": "niro-phev-2022", "make": "Kia", "model": "Niro PHEV", "year": 2022, "mpg": 48, "miPerKwh": 3.6, "batteryKwh": 11.1, "evRangeMi": 33 },
+    { "id": "x5-45e-2023", "make": "BMW", "model": "X5 xDrive45e", "year": 2023, "mpg": 20, "miPerKwh": 2.2, "batteryKwh": 24.0, "evRangeMi": 30 },
+    { "id": "330e-2023", "make": "BMW", "model": "330e", "year": 2023, "mpg": 28, "miPerKwh": 3.0, "batteryKwh": 12.0, "evRangeMi": 23 },
+    { "id": "xc60-recharge-2023", "make": "Volvo", "model": "XC60 Recharge", "year": 2023, "mpg": 28, "miPerKwh": 2.5, "batteryKwh": 18.8, "evRangeMi": 35 },
+    { "id": "xc90-recharge-2023", "make": "Volvo", "model": "XC90 Recharge", "year": 2023, "mpg": 27, "miPerKwh": 2.3, "batteryKwh": 18.8, "evRangeMi": 32 },
+    { "id": "outlander-phev-2023", "make": "Mitsubishi", "model": "Outlander PHEV", "year": 2023, "mpg": 26, "miPerKwh": 2.3, "batteryKwh": 20.0, "evRangeMi": 38 },
+    { "id": "clarity-phev-2021", "make": "Honda", "model": "Clarity PHEV", "year": 2021, "mpg": 42, "miPerKwh": 3.1, "batteryKwh": 17.0, "evRangeMi": 47 },
+    { "id": "nx-450h-plus-2023", "make": "Lexus", "model": "NX 450h+", "year": 2023, "mpg": 36, "miPerKwh": 2.7, "batteryKwh": 18.1, "evRangeMi": 37 },
+    { "id": "q5-55-tfsie-2023", "make": "Audi", "model": "Q5 55 TFSI e", "year": 2023, "mpg": 23, "miPerKwh": 2.4, "batteryKwh": 17.9, "evRangeMi": 23 },
+    { "id": "fusion-energi-2020", "make": "Ford", "model": "Fusion Energi", "year": 2020, "mpg": 42, "miPerKwh": 3.2, "batteryKwh": 9.0, "evRangeMi": 26 }
+  ]
+}

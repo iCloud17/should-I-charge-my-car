@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#16a34a" />
+  <meta name="description" content="Find the max price per kWh you can pay to charge your plug-in hybrid before gas becomes cheaper." />
+  <title>Should I Charge My Car?</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="app__head">
+      <h1 class="app__title">Should I Charge?</h1>
+      <button id="unitToggle" class="pill" type="button" aria-label="Toggle units">Imperial</button>
+    </header>
+
+    <!-- Result card: the hero -->
+    <section class="card result" id="resultCard" data-verdict="worth">
+      <button id="carButton" class="car-chip" type="button">
+        <span class="car-chip__icon" aria-hidden="true">🚗</span>
+        <span id="carName" class="car-chip__name">RAV4 Prime</span>
+        <span class="car-chip__edit">change ›</span>
+      </button>
+
+      <p class="result__label">Break-even charging price</p>
+      <p class="result__value"><span id="breakevenValue">$0.35</span><span class="result__unit">/kWh</span></p>
+      <p class="result__verdict" id="verdictText">Charging is worth it below this price.</p>
+    </section>
+
+    <!-- Core inputs -->
+    <section class="card inputs">
+      <div class="field">
+        <label for="gasPrice" id="gasPriceLabel">Gas price (per gallon)</label>
+        <div class="input-money">
+          <span class="input-money__sym" id="curSym1">$</span>
+          <input id="gasPrice" type="text" inputmode="decimal" autocomplete="off" value="3.89" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="yourRate">Charger price (per kWh)</label>
+        <div class="input-money">
+          <span class="input-money__sym" id="curSym2">$</span>
+          <input id="yourRate" type="text" inputmode="decimal" autocomplete="off" value="0.30" placeholder="optional" />
+        </div>
+      </div>
+
+      <div class="compare" id="compareBox" hidden>
+        <span class="compare__dot" aria-hidden="true"></span>
+        <span id="compareText">—</span>
+      </div>
+    </section>
+
+    <!-- Customize car values -->
+    <details class="card disclosure" id="customize">
+      <summary>Customize car numbers</summary>
+      <div class="disclosure__body">
+        <div class="field">
+          <label for="mpg" id="mpgLabel">Gas MPG</label>
+          <input id="mpg" type="text" inputmode="decimal" autocomplete="off" value="38" />
+        </div>
+        <div class="field">
+          <label for="miPerKwh" id="effLabel">Electric mi/kWh</label>
+          <input id="miPerKwh" type="text" inputmode="decimal" autocomplete="off" value="2.9" />
+        </div>
+        <div class="field">
+          <label for="batteryKwh">Battery size (kWh)</label>
+          <input id="batteryKwh" type="text" inputmode="decimal" autocomplete="off" value="18.1" />
+        </div>
+        <p class="hint">Real-world numbers beat EPA estimates — adjust to what you actually get.</p>
+      </div>
+    </details>
+
+    <!-- Advanced: should I charge here + how long -->
+    <details class="card disclosure" id="advanced">
+      <summary>Advanced: session fees &amp; how long to charge</summary>
+      <div class="disclosure__body">
+        <div class="field-row">
+          <div class="field">
+            <label for="sessionFee">Session fee</label>
+            <div class="input-money">
+              <span class="input-money__sym" id="curSym3">$</span>
+              <input id="sessionFee" type="text" inputmode="decimal" autocomplete="off" value="0" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="powerKw">Charge power (kW)</label>
+            <input id="powerKw" type="text" inputmode="decimal" autocomplete="off" value="6.6" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="startPct">Battery now: <output id="startPctOut">20%</output></label>
+          <input id="startPct" type="range" min="0" max="100" step="5" value="20" />
+        </div>
+        <div class="field">
+          <label for="targetPct">Charge to: <output id="targetPctOut">100%</output></label>
+          <input id="targetPct" type="range" min="0" max="100" step="5" value="100" />
+        </div>
+
+        <div class="advanced-result" id="advancedResult">
+          <div class="advanced-result__row">
+            <span>Energy added</span><strong id="advKwh">—</strong>
+          </div>
+          <div class="advanced-result__row">
+            <span>Time to charge</span><strong id="advTime">—</strong>
+          </div>
+          <div class="advanced-result__row">
+            <span>Effective price</span><strong id="advEffective">—</strong>
+          </div>
+          <p class="advanced-result__verdict" id="advVerdict">—</p>
+        </div>
+      </div>
+    </details>
+
+    <footer class="app__foot">
+      <button id="resetBtn" class="link" type="button">Reset</button>
+      <span class="app__foot-note">Saved on this device. No account needed.</span>
+    </footer>
+  </main>
+
+  <!-- Car picker dialog -->
+  <dialog id="carDialog" class="dialog">
+    <form method="dialog" class="dialog__inner">
+      <h2 class="dialog__title">Choose your car</h2>
+      <select id="carSelect" class="dialog__select" size="10"></select>
+      <div class="dialog__actions">
+        <button value="cancel" class="btn btn--ghost">Cancel</button>
+        <button id="carPick" value="pick" class="btn btn--primary">Select</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
