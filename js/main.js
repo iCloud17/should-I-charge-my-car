@@ -345,16 +345,26 @@ function setCustomCar() {
 }
 
 // --- Searchable car picker (typeahead over the bundled dataset) ---
+// Normalize so punctuation/casing don't block matches, and "+" reads as "plus"
+// (so "450h+" finds "450h Plus", "TFSI e" finds "TFSIe", etc.).
+function normalizeText(s) {
+  return String(s)
+    .toLowerCase()
+    .replace(/\+/g, " plus ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
 function filterCars(query) {
-  const q = query.trim().toLowerCase();
+  const q = normalizeText(query);
   const all = getCars();
   if (!q) return all.slice(0, 8);
   const tokens = q.split(/\s+/);
   const matches = all.filter((c) => {
-    const label = `${c.year} ${c.make} ${c.model}`.toLowerCase();
+    const label = normalizeText(`${c.year} ${c.make} ${c.model}`);
     return tokens.every((t) => label.includes(t));
   });
-  return matches.slice(0, 10);
+  return matches.slice(0, 12);
 }
 
 function renderCarResults(query) {
