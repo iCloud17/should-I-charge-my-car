@@ -144,6 +144,7 @@ body {
   box-shadow: var(--shadow-sm);
   padding: 18px;
 }
+.card__title { margin: 0 0 4px; font-size: 15px; font-weight: 800; letter-spacing: -0.01em; }
 
 /* --- Result hero --- */
 .result {
@@ -253,6 +254,7 @@ body {
 .tweak > summary::after { content: " +"; color: var(--muted); }
 .tweak[open] > summary::after { content: " −"; }
 .tweak__body { padding-top: 8px; }
+.tweak--muted > summary { color: var(--muted); font-weight: 600; }
 
 .result__label {
   margin: 0;

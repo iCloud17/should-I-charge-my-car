@@ -89,13 +89,28 @@
       <p class="result__time result__tou" id="timeNote" hidden></p>
     </section>
 
-    <!-- Core inputs -->
+    <!-- Gas price: the comparison baseline -->
     <section class="card inputs">
       <div class="field">
         <label for="gasPrice" id="gasPriceLabel">Gas price ($/gallon)</label>
         <div class="input-money">
           <span class="input-money__sym" id="curSym1">$</span>
           <input id="gasPrice" type="text" inputmode="decimal" autocomplete="off" value="" placeholder="e.g. 3.89" />
+        </div>
+      </div>
+    </section>
+
+    <!-- Charger pricing: mirrors the charger's own price screen, top to bottom -->
+    <section class="card">
+      <p class="card__title">Charger pricing</p>
+      <p class="hint hint--lead">Copy this off the charger&rsquo;s price screen. A simple flat charger? Just fill in Energy rate.</p>
+
+      <div class="field">
+        <label for="sessionFee">Service fee</label>
+        <div class="input-money has-suffix">
+          <span class="input-money__sym" id="curSym3">$</span>
+          <input id="sessionFee" type="text" inputmode="decimal" autocomplete="off" value="0" />
+          <span class="input-money__suffix">/session</span>
         </div>
       </div>
 
@@ -105,34 +120,9 @@
           <span class="input-money__sym" id="curSym2">$</span>
           <input id="yourRate" type="text" inputmode="decimal" autocomplete="off" value="" placeholder="e.g. 0.30" />
         </div>
-      </div>
-      <p class="hint" id="rateModeNote" hidden></p>
-    </section>
-
-    <!-- Advanced: should I charge here + how long -->
-    <details class="card disclosure" id="advanced">
-      <summary>Charger fees &amp; charge time</summary>
-      <div class="disclosure__body">
-        <p class="hint hint--lead">Copy these straight off the charger&rsquo;s price screen. (Energy free? Enter 0 in Energy rate above.)</p>
-
-        <div class="field">
-          <label for="sessionFee">Service fee</label>
-          <div class="input-money has-suffix">
-            <span class="input-money__sym" id="curSym3">$</span>
-            <input id="sessionFee" type="text" inputmode="decimal" autocomplete="off" value="0" />
-            <span class="input-money__suffix">/session</span>
-          </div>
-        </div>
-
-        <div class="field">
-          <label>Station time rate while connected</label>
-          <div id="timeFeeRows" class="tou-rows"></div>
-          <button type="button" id="timeFeeAdd" class="link tou-add">+ Add rate</button>
-          <p class="hint">Charged for the time you&rsquo;re plugged in, on top of energy. Example: $0/hr for the first 4 hr, then $5/hr. If the rate only starts &ldquo;after charging stops,&rdquo; leave it out, it won&rsquo;t apply if you unplug when it&rsquo;s done.</p>
-        </div>
-
-        <details class="tweak" id="energyModeTweak">
-          <summary>Energy price isn&rsquo;t a flat rate?</summary>
+        <p class="hint" id="rateModeNote" hidden></p>
+        <details class="tweak tweak--muted" id="energyModeTweak">
+          <summary>Energy price isn&rsquo;t flat?</summary>
           <div class="tweak__body">
             <div class="segmented" id="rateMode" role="radiogroup">
               <label><input type="radio" name="rateMode" value="flat" checked /><span>Flat</span></label>
@@ -151,6 +141,20 @@
             </div>
           </div>
         </details>
+      </div>
+
+      <div class="field">
+        <label>Station time rate while connected</label>
+        <div id="timeFeeRows" class="tou-rows"></div>
+        <button type="button" id="timeFeeAdd" class="link tou-add">+ Add rate</button>
+        <p class="hint">Charged for the time you&rsquo;re plugged in, on top of energy. Example: $0/hr for the first 4 hr, then $5/hr. If the rate only starts &ldquo;after charging stops,&rdquo; leave it out, it won&rsquo;t apply if you unplug when it&rsquo;s done.</p>
+      </div>
+    </section>
+
+    <!-- How long to charge: secondary time estimate + cost breakdown -->
+    <details class="card disclosure" id="advanced">
+      <summary>How long to charge?</summary>
+      <div class="disclosure__body">
 
         <div class="field">
           <p class="sublabel">Charger speed</p>
