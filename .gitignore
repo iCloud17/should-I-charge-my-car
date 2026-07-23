@@ -20,3 +20,6 @@ npm-debug.log*
 
 # Seed script cache (large bulk CSV from fueleconomy.gov)
 scripts/.vehicles.cache.csv
+
+# Local design notes (not part of the shipped app)
+DESIGN.md
