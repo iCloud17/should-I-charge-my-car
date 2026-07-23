@@ -25,7 +25,7 @@ export const DEFAULT_PREFS = {
   sessionFee: 0,
   idleFeePerHour: 0,
   powerKw: 6.6,
-  startPct: 20,
+  startPct: 0,
   targetPct: 100,
 };
 
