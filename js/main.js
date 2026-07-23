@@ -450,12 +450,21 @@ function attachEvents() {
     }
   });
 
-  $("carInfoBtn").addEventListener("click", () => {
-    const note = $("carInfoNote");
-    const willShow = note.hidden;
-    note.hidden = !willShow;
-    $("carInfoBtn").setAttribute("aria-expanded", String(willShow));
-  });
+  // Info note: show on hover/focus (desktop), tap to pin open (touch).
+  {
+    const infoBtn = $("carInfoBtn");
+    const infoNote = $("carInfoNote");
+    let pinned = false;
+    const show = (v) => {
+      infoNote.hidden = !v;
+      infoBtn.setAttribute("aria-expanded", String(v));
+    };
+    infoBtn.addEventListener("mouseenter", () => show(true));
+    infoBtn.addEventListener("mouseleave", () => { if (!pinned) show(false); });
+    infoBtn.addEventListener("focus", () => show(true));
+    infoBtn.addEventListener("blur", () => { if (!pinned) show(false); });
+    infoBtn.addEventListener("click", () => { pinned = !pinned; show(pinned); });
+  }
 
   $("carSearch").addEventListener("focus", (e) => {
     e.target.select();
