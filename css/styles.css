@@ -467,6 +467,17 @@ input[type="text"]:focus {
   font-weight: 600;
   text-align: center;
 }
+.tf-start-unit {
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  background: var(--field);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 10px 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
 
 /* --- Compare box --- */
 .compare {

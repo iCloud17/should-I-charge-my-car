@@ -372,25 +372,33 @@ function addDurRow(min = 0, rate = "") {
 }
 
 // Build by-the-hour time-fee tiers from the editor rows: [{ start(min), perHour }].
+// Each row's start can be entered in hours (default) or minutes; we normalize to
+// minutes here so the math and the rest of the app stay in one unit.
 function readTimeFee() {
   const tiers = [];
   for (const r of document.querySelectorAll("#timeFeeRows .tf-row")) {
-    const min = parseNum(r.querySelector(".tf-min").value);
+    const num = parseNum(r.querySelector(".tf-start").value);
+    const unit = r.querySelector(".tf-start-unit").value; // "hr" | "min"
     const perHour = parseNum(r.querySelector(".tf-rate").value);
     if (!Number.isFinite(perHour) || perHour <= 0) continue;
-    tiers.push({ start: Number.isFinite(min) ? min : 0, perHour });
+    const startMin = Number.isFinite(num) ? (unit === "hr" ? num * 60 : num) : 0;
+    tiers.push({ start: startMin, perHour });
   }
   return tiers;
 }
 
-function addTimeFeeRow(min = 0, perHour = "") {
+function addTimeFeeRow(start = 0, perHour = "", unit = "hr") {
   const row = document.createElement("div");
   row.className = "tou-row tf-row";
   row.innerHTML =
-    `<div class="dur-after">after <input type="text" inputmode="numeric" class="dur-min tf-min" value="${min}" /> min</div>` +
+    `<div class="dur-after">after <input type="text" inputmode="decimal" class="dur-min tf-start" value="${start}" />` +
+    `<select class="tf-start-unit" aria-label="Tier start unit">` +
+    `<option value="hr"${unit === "hr" ? " selected" : ""}>hr</option>` +
+    `<option value="min"${unit === "min" ? " selected" : ""}>min</option>` +
+    `</select></div>` +
     `<div class="input-money tou-rate-wrap">` +
     `<span class="input-money__sym">${prefs.currency}</span>` +
-    `<input type="text" inputmode="decimal" class="tf-rate" placeholder="2.04" value="${perHour}" />` +
+    `<input type="text" inputmode="decimal" class="tf-rate" placeholder="3" value="${perHour}" />` +
     `</div>` +
     `<span class="tf-unit">/hr</span>` +
     `<button type="button" class="tou-del" aria-label="Remove tier">\u00d7</button>`;
@@ -618,6 +626,7 @@ function attachEvents() {
     render();
   });
   $("timeFeeRows").addEventListener("input", render);
+  $("timeFeeRows").addEventListener("change", render); // hr/min unit select
   $("timeFeeRows").addEventListener("click", (e) => {
     if (e.target.classList.contains("tou-del")) {
       e.target.closest(".tou-row").remove();
