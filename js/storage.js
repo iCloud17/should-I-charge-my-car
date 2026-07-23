@@ -23,7 +23,6 @@ export const DEFAULT_PREFS = {
   currency: "$",
   // Advanced - charger fees & session (volatile - NOT persisted).
   sessionFee: 0,
-  idleFeePerHour: 0,
   powerKw: 6.6,
   startPct: 0,
   targetPct: 100,

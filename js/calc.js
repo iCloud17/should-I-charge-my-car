@@ -15,18 +15,6 @@ export function breakevenKwhPrice({ gasPrice, mpg, miPerKwh }) {
   return gasPrice * (miPerKwh / mpg);
 }
 
-/** Cost to drive one mile on gasoline. */
-export function gasCostPerMile({ gasPrice, mpg }) {
-  if (!(mpg > 0)) return NaN;
-  return gasPrice / mpg;
-}
-
-/** Cost to drive one mile on electricity at a given $/kWh. */
-export function elecCostPerMile({ pricePerKwh, miPerKwh }) {
-  if (!(miPerKwh > 0)) return NaN;
-  return pricePerKwh / miPerKwh;
-}
-
 /**
  * Available charge power at a given state of charge (SoC), in kW.
  *
@@ -44,55 +32,6 @@ export function powerAtSoc(soc, powerKw, kneePct = 92.5, taperEndFactor = 0.25) 
   if (soc <= kneePct) return powerKw;
   const t = Math.min(1, (soc - kneePct) / (100 - kneePct)); // 0..1 through CV phase
   return powerKw * (1 - (1 - taperEndFactor) * t);
-}
-
-/**
- * Energy and time for a charging session from startPct to targetPct.
- * chargeEfficiency accounts for AC→battery losses (~0.88 typical).
- * Time is integrated over SoC using a non-linear CC-CV power curve, so the
- * final top-off takes realistically longer than the bulk of the charge.
- */
-export function chargeSession({
-  batteryKwh,
-  startPct,
-  targetPct,
-  powerKw,
-  chargeEfficiency = 0.88,
-  kneePct = 92.5,
-  taperEndFactor = 0.25,
-}) {
-  const start = Math.max(0, Math.min(100, startPct));
-  const target = Math.max(0, Math.min(100, targetPct));
-  if (!(target > start) || !(batteryKwh > 0) || !(powerKw > 0)) {
-    return { kwhIntoBattery: 0, kwhFromCharger: 0, hours: 0, minutes: 0 };
-  }
-
-  const stepPct = 0.5;
-  const battPerStep = batteryKwh * (stepPct / 100); // kWh stored per step
-  const chargerPerStep = chargeEfficiency > 0 ? battPerStep / chargeEfficiency : battPerStep;
-
-  let kwhIntoBattery = 0;
-  let hours = 0;
-  for (let soc = start; soc < target; soc += stepPct) {
-    const frac = Math.min(stepPct, target - soc) / stepPct; // handle final partial step
-    const p = powerAtSoc(soc, powerKw, kneePct, taperEndFactor);
-    kwhIntoBattery += battPerStep * frac;
-    hours += (chargerPerStep * frac) / p;
-  }
-
-  const kwhFromCharger = chargeEfficiency > 0 ? kwhIntoBattery / chargeEfficiency : kwhIntoBattery;
-  return { kwhIntoBattery, kwhFromCharger, hours, minutes: hours * 60 };
-}
-
-/**
- * Effective all-in price per kWh actually delivered to the battery, including a
- * flat per-session fee, the energy rate, and any idle fee. This is what you
- * compare against breakevenKwhPrice to decide "should I charge here?".
- */
-export function effectiveKwhPrice({ sessionFee = 0, ratePerKwh = 0, kwhFromCharger, idleFeePerHour = 0, idleHours = 0 }) {
-  if (!(kwhFromCharger > 0)) return NaN;
-  const total = sessionFee + ratePerKwh * kwhFromCharger + idleFeePerHour * idleHours;
-  return total / kwhFromCharger;
 }
 
 /** Simple verdict bucket comparing a price against break-even, with a margin band. */
@@ -155,61 +94,6 @@ export function rateAtElapsed(tiers, minutes) {
   return current.rate;
 }
 
-/**
- * Integrate a charging session's cost over clock time so a rate change mid-charge
- * (e.g. peak pricing kicking in at 4pm) is billed correctly. `rateOf(minute)`
- * returns the $/kWh at a given minute-of-day. Returns energy cost, all-in total
- * (incl. sessionFee), and the effective $/kWh to compare against break-even.
- */
-export function sessionCost({
-  batteryKwh,
-  startPct,
-  targetPct,
-  powerKw,
-  startClockMin = 0,
-  rateOf,
-  sessionFee = 0,
-  chargeEfficiency = 0.88,
-  kneePct = 92.5,
-  taperEndFactor = 0.25,
-}) {
-  const start = Math.max(0, Math.min(100, startPct));
-  const target = Math.max(0, Math.min(100, targetPct));
-  const empty = {
-    kwhIntoBattery: 0, kwhFromCharger: 0, minutes: 0,
-    energyCost: 0, totalCost: sessionFee, effectivePerKwh: NaN,
-  };
-  if (!(target > start) || !(batteryKwh > 0) || !(powerKw > 0)) return empty;
-
-  const stepPct = 0.5;
-  const battPerStep = batteryKwh * (stepPct / 100);
-  const chargerPerStep = chargeEfficiency > 0 ? battPerStep / chargeEfficiency : battPerStep;
-
-  let kwhIntoBattery = 0, hours = 0, energyCost = 0;
-  for (let soc = start; soc < target; soc += stepPct) {
-    const frac = Math.min(stepPct, target - soc) / stepPct;
-    const p = powerAtSoc(soc, powerKw, kneePct, taperEndFactor);
-    const elapsedMin = hours * 60;
-    const clockMin = (((startClockMin + elapsedMin) % 1440) + 1440) % 1440;
-    const rate = rateOf(clockMin, elapsedMin);
-    const kwhStep = chargerPerStep * frac;
-    energyCost += (Number.isFinite(rate) ? rate : 0) * kwhStep;
-    kwhIntoBattery += battPerStep * frac;
-    hours += (chargerPerStep * frac) / p;
-  }
-
-  const kwhFromCharger = chargeEfficiency > 0 ? kwhIntoBattery / chargeEfficiency : kwhIntoBattery;
-  const totalCost = sessionFee + energyCost;
-  return {
-    kwhIntoBattery,
-    kwhFromCharger,
-    minutes: hours * 60,
-    energyCost,
-    totalCost,
-    effectivePerKwh: kwhFromCharger > 0 ? totalCost / kwhFromCharger : NaN,
-  };
-}
-
 // --- Time-connected fee (charged by the hour while plugged in) --------------
 /**
  * Total time-based fee for staying plugged in `minutes`, given tiers
@@ -232,32 +116,6 @@ export function timeFeeCost(tiers, minutes) {
     if (spanMin > 0) cost += (spanMin / 60) * s[i].perHour;
   }
   return cost;
-}
-
-/**
- * The largest number of connected minutes whose cumulative time fee stays within
- * `budget` (the dollars still available before charging costs the same as gas).
- * Returns 0 if there's no budget, and Infinity if a free tier means the fee never
- * catches up. Used to tell the user "worth it if you unplug within X".
- */
-export function minutesForTimeBudget(tiers, budget) {
-  if (!(budget > 0)) return 0;
-  const s = (tiers || [])
-    .filter((t) => Number.isFinite(t.start) && Number.isFinite(t.perHour))
-    .sort((a, b) => a.start - b.start);
-  if (!s.length) return Infinity;
-  let remaining = budget;
-  for (let i = 0; i < s.length; i++) {
-    const from = Math.max(s[i].start, 0);
-    const to = i + 1 < s.length ? s[i + 1].start : Infinity;
-    const perMin = s[i].perHour / 60;
-    if (perMin <= 0) return to === Infinity ? Infinity : to; // free tier
-    const affordableMin = remaining / perMin;
-    const spanMin = to - from;
-    if (affordableMin <= spanMin) return from + affordableMin;
-    remaining -= spanMin * perMin;
-  }
-  return Infinity;
 }
 
 // --- Unified charge curve ---------------------------------------------------

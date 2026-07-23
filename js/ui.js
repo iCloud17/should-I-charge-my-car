@@ -22,22 +22,3 @@ export function formatDuration(minutes) {
   if (m === 0) return `${h} hr`;
   return `${h} hr ${m} min`;
 }
-
-// Animate a number in an element from its current value to a new target.
-export function animateValue(el, to, { currency = "$", digits = 2, duration = 350 } = {}) {
-  const from = el._val ?? to;
-  el._val = to;
-  if (!Number.isFinite(to)) {
-    el.textContent = "-";
-    return;
-  }
-  const start = performance.now();
-  const step = (now) => {
-    const t = Math.min(1, (now - start) / duration);
-    const eased = 1 - Math.pow(1 - t, 3);
-    const v = from + (to - from) * eased;
-    el.textContent = `${currency}${v.toFixed(digits)}`;
-    if (t < 1) requestAnimationFrame(step);
-  };
-  requestAnimationFrame(step);
-}
