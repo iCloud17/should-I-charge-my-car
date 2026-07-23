@@ -9,6 +9,18 @@
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
   <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="css/styles.css" />
+  <script>
+    // Set the color theme before first paint to avoid a flash. This mirrors the
+    // auto/night rule in js/theme.js (auto = dark from 19:00 to 06:59 local);
+    // the theme module re-applies and owns all runtime changes after load.
+    try {
+      var p = JSON.parse(localStorage.getItem("sicc.prefs.v1") || "{}");
+      var mode = p.themeMode || "auto";
+      var h = new Date().getHours();
+      var dark = mode === "dark" || (mode === "auto" && (h >= 19 || h < 7));
+      document.documentElement.dataset.theme = dark ? "dark" : "light";
+    } catch (e) {}
+  </script>
 </head>
 <body>
   <main class="app">
@@ -17,7 +29,10 @@
         <h1 class="app__title">Should I Charge?</h1>
         <p class="app__tagline">See if charging your plug-in hybrid is cheaper than filling up on gas.</p>
       </div>
-      <button id="unitToggle" class="pill" type="button" aria-label="Toggle units">Imperial</button>
+      <div class="app__head-actions">
+        <button id="themeToggle" class="pill pill--icon" type="button" aria-label="Theme: auto. Tap to change.">🌗</button>
+        <button id="unitToggle" class="pill" type="button" aria-label="Toggle units">Imperial</button>
+      </div>
     </header>
 
     <!-- Car tile: pick or customize your car -->

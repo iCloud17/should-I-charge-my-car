@@ -7,7 +7,7 @@ const KEY = "sicc.prefs.v1";
 // them - the user re-enters those on the spot.
 const PERSIST_KEYS = [
   "carId", "customName", "mpg", "miPerKwh", "batteryKwh",
-  "gasPrice", "units", "currency", "powerKw", "startPct", "targetPct",
+  "gasPrice", "units", "currency", "powerKw", "startPct", "targetPct", "themeMode",
 ];
 
 export const DEFAULT_PREFS = {
@@ -21,6 +21,7 @@ export const DEFAULT_PREFS = {
   customName: "", // user's nickname for a custom car
   units: "imperial", // "imperial" | "metric"
   currency: "$",
+  themeMode: "auto", // "auto" (follows local time) | "light" | "dark"
   // Advanced - charger fees & session (volatile - NOT persisted).
   sessionFee: 0,
   powerKw: 6.6,

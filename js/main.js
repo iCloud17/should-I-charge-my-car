@@ -5,6 +5,7 @@ import * as U from "./units.js";
 import { loadPrefs, savePrefs, clearPrefs, DEFAULT_PREFS } from "./storage.js";
 import { loadCars, getCar, getCars, carLabel } from "./cars.js";
 import { $, parseNum, money, formatDuration } from "./ui.js";
+import { applyTheme, nextThemeMode, themeLabel } from "./theme.js";
 
 let prefs = loadPrefs();
 let rateMode = "flat"; // "flat" | "tod" | "dur" (volatile - never persisted)
@@ -428,6 +429,23 @@ function applyRateMode() {
   }
 }
 
+// --- Theme toggle (auto -> light -> dark) ---
+function updateThemeToggle() {
+  const { icon, text } = themeLabel(prefs.themeMode);
+  const btn = $("themeToggle");
+  btn.textContent = icon;
+  btn.setAttribute("aria-label", `Theme: ${text}. Tap to change.`);
+  btn.title = `Theme: ${text}`;
+}
+
+function cycleTheme() {
+  prefs.themeMode = nextThemeMode(prefs.themeMode);
+  savePrefs(prefs);
+  applyTheme(prefs.themeMode);
+  updateThemeToggle();
+}
+
+// --- Units toggle ---
 function toggleUnits() {
   // Values in `prefs` are canonical, so we just flip the flag and re-render fields.
   const m = readInputs();
@@ -552,7 +570,11 @@ function attachEvents() {
   });
 
   $("unitToggle").addEventListener("click", toggleUnits);
-
+  $("themeToggle").addEventListener("click", cycleTheme);
+  // Re-resolve auto theme when the user returns (day may have turned to night).
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && prefs.themeMode === "auto") applyTheme("auto");
+  });
   // Pricing mode (flat / time-of-day / duration) - exclusive, not persisted.
   for (const radio of document.querySelectorAll('input[name="rateMode"]')) {
     radio.addEventListener("change", (e) => {
@@ -665,6 +687,8 @@ function attachEvents() {
 
 // --- Boot ---
 function boot() {
+  applyTheme(prefs.themeMode);
+  updateThemeToggle();
   applyUnitLabels();
   if (prefs.carId === CUSTOM_ID) {
     $("carName").textContent = prefs.customName || "My car";
