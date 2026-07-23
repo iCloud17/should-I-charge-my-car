@@ -64,6 +64,10 @@ html, body {
 body {
   font-size: 16px;
   line-height: 1.4;
+  /* Floor the layout at a phone-sized width. Below this (e.g. dragging a
+     desktop window very narrow) a horizontal scrollbar appears instead of the
+     inputs and buttons squeezing until text spills out of them. */
+  min-width: 320px;
 }
 
 .app {
@@ -426,7 +430,10 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 }
 .check input { width: 20px; height: 20px; accent-color: var(--accent); flex: none; }
 .tou-rows { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 8px; }
-.tou-row { display: flex; align-items: center; gap: 8px; }
+/* Wrap the multi-control schedule rows on very narrow widths so the rate
+   field or delete button drops to a second line instead of spilling out of
+   the card. */
+.tou-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .tou-time {
   flex: 0 0 auto;
   border: 1px solid var(--line);
@@ -437,7 +444,7 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   font-size: 15px;
   font-weight: 600;
 }
-.tou-rate-wrap { flex: 1; }
+.tou-rate-wrap { flex: 1 1 120px; min-width: 0; }
 .tou-del {
   flex: 0 0 auto;
   width: 40px;
