@@ -134,7 +134,7 @@ function render() {
     // "How long" at a glance, using your saved battery / power / charge target.
     if (v !== "gas" && Number.isFinite(session.minutes) && session.minutes > 0) {
       timeline.hidden = false;
-      timeline.textContent = `~${formatDuration(session.minutes)} to ${m.targetPct}% at ${round(m.powerKw, 1)} kW`;
+      timeline.textContent = `Est. ${formatDuration(session.minutes)} to ${m.targetPct}% at ${round(m.powerKw, 1)} kW`;
     } else {
       timeline.hidden = true;
     }

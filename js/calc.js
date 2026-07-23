@@ -33,12 +33,14 @@ export function elecCostPerMile({ pricePerKwh, miPerKwh }) {
  * Batteries don't charge linearly: power is roughly flat up to a "knee" SoC
  * (constant-power / CC phase), then tapers as the BMS switches to constant
  * voltage (CV phase), so the last portion takes disproportionately longer.
- * We model the CV phase as a linear taper from full power at the knee down to
+ * Level 2 AC charging holds near full power until roughly 90-95% SoC, so the
+ * knee defaults to 92.5%. We model the CV phase as a linear taper from full
+ * power at the knee down to
  * `taperEndFactor` * full power at 100%. This is an approximation, but it
  * captures the key effect: topping off to 100% costs lots of time for little
  * energy - which matters when there are per-minute or idle fees.
  */
-export function powerAtSoc(soc, powerKw, kneePct = 85, taperEndFactor = 0.25) {
+export function powerAtSoc(soc, powerKw, kneePct = 92.5, taperEndFactor = 0.25) {
   if (soc <= kneePct) return powerKw;
   const t = Math.min(1, (soc - kneePct) / (100 - kneePct)); // 0..1 through CV phase
   return powerKw * (1 - (1 - taperEndFactor) * t);
@@ -56,7 +58,7 @@ export function chargeSession({
   targetPct,
   powerKw,
   chargeEfficiency = 0.88,
-  kneePct = 85,
+  kneePct = 92.5,
   taperEndFactor = 0.25,
 }) {
   const start = Math.max(0, Math.min(100, startPct));
@@ -168,7 +170,7 @@ export function sessionCost({
   rateOf,
   sessionFee = 0,
   chargeEfficiency = 0.88,
-  kneePct = 85,
+  kneePct = 92.5,
   taperEndFactor = 0.25,
 }) {
   const start = Math.max(0, Math.min(100, startPct));
