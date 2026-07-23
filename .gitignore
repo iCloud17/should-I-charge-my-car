@@ -1,0 +1,15 @@
+# macOS
+.DS_Store
+
+# Node (only used by optional seed scripts)
+node_modules/
+npm-debug.log*
+.env
+.env.local
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+
+# Logs
+*.log
