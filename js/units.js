@@ -46,7 +46,7 @@ export function labels(system) {
   return {
     fuelEconomy: metric ? "L/100km" : "MPG",
     evEfficiency: metric ? "kWh/100km" : "mi/kWh",
-    gasVolume: metric ? "per liter" : "per gallon",
+    gasVolume: metric ? "liter" : "gallon",
     distance: metric ? "km" : "mi",
   };
 }

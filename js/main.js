@@ -270,8 +270,10 @@ function renderAdvanced(m, be, cur, session, effective, timeFee) {
 // --- Units toggle ---
 function applyUnitLabels() {
   const L = U.labels(prefs.units);
+  const cur = prefs.currency;
   $("unitToggle").textContent = prefs.units === "metric" ? "Metric" : "Imperial";
-  $("gasPriceLabel").textContent = `Gas price (${L.gasVolume})`;
+  $("gasPriceLabel").textContent = `Gas price (${cur}/${L.gasVolume})`;
+  $("yourRateLabel").textContent = `Charger price (${cur}/kWh)`;
   $("mpgLabel").textContent = `Gas ${L.fuelEconomy}`;
   $("effLabel").textContent = `Electric ${L.evEfficiency}`;
 }
