@@ -721,7 +721,6 @@ function boot() {
     }
     $("nicknameField").hidden = true;
   }
-  if ($("timeFeeRows").children.length === 0) addTimeFeeRow(0, "");
   writeDisplayValues();
   applyRateMode();
   render();

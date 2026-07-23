@@ -103,16 +103,7 @@
     <!-- Charger pricing: mirrors the charger's own price screen, top to bottom -->
     <section class="card">
       <p class="card__title">Charger pricing</p>
-      <p class="hint hint--lead">Copy this off the charger&rsquo;s price screen. A simple flat charger? Just fill in Energy rate.</p>
-
-      <div class="field">
-        <label for="sessionFee">Service fee</label>
-        <div class="input-money has-suffix">
-          <span class="input-money__sym" id="curSym3">$</span>
-          <input id="sessionFee" type="text" inputmode="decimal" autocomplete="off" value="0" />
-          <span class="input-money__suffix">/session</span>
-        </div>
-      </div>
+      <p class="hint hint--lead">The main number is the Energy rate ($/kWh). Only add a Service fee or Station time rate if your charger lists them.</p>
 
       <div class="field">
         <label for="yourRate" id="yourRateLabel">Energy rate ($/kWh)</label>
@@ -141,6 +132,15 @@
             </div>
           </div>
         </details>
+      </div>
+
+      <div class="field">
+        <label for="sessionFee">Service fee</label>
+        <div class="input-money has-suffix">
+          <span class="input-money__sym" id="curSym3">$</span>
+          <input id="sessionFee" type="text" inputmode="decimal" autocomplete="off" value="0" />
+          <span class="input-money__suffix">/session</span>
+        </div>
       </div>
 
       <div class="field">
