@@ -57,6 +57,16 @@ function render() {
   const timeline = $("timeline");
   const hasRate = Number.isFinite(m.yourRate) && m.yourRate >= 0;
 
+  // Charge session + all-in effective price (energy + session fee amortized over
+  // the kWh actually added). The hero uses this, so Advanced fees flow up to it.
+  const session = chargeSession({ batteryKwh: m.batteryKwh, startPct: m.startPct, targetPct: m.targetPct, powerKw: m.powerKw });
+  let effective = NaN;
+  if (hasRate) {
+    effective = effectiveKwhPrice({ sessionFee: m.sessionFee, ratePerKwh: m.yourRate, kwhFromCharger: session.kwhFromCharger });
+    if (!Number.isFinite(effective)) effective = m.yourRate; // no energy to add
+  }
+  const hasFees = m.sessionFee > 0;
+
   if (!Number.isFinite(be)) {
     card.dataset.verdict = "close";
     headline.textContent = "\u2014";
@@ -69,56 +79,44 @@ function render() {
     sub.textContent = "Break-even price. Enter the charger's price for a yes/no.";
     timeline.hidden = true;
   } else {
-    const v = verdict(m.yourRate, be);
+    const v = verdict(effective, be);
     card.dataset.verdict = v === "unknown" ? "close" : v;
     headline.textContent = v === "worth" ? "\u26A1 Charge it" : v === "gas" ? "\u26FD Use gas" : "\u2248 Toss-up";
-    sub.textContent = `You pay ${money(m.yourRate, cur)} · break-even ${money(be, cur)}/kWh`;
+    sub.textContent = hasFees
+      ? `Effective ${money(effective, cur)}/kWh incl. fees · break-even ${money(be, cur)}`
+      : `You pay ${money(m.yourRate, cur)} · break-even ${money(be, cur)}/kWh`;
 
     // "How long" at a glance, using your saved battery / power / charge target.
-    const s = chargeSession({ batteryKwh: m.batteryKwh, startPct: m.startPct, targetPct: m.targetPct, powerKw: m.powerKw });
-    if (v !== "gas" && Number.isFinite(s.minutes) && s.minutes > 0) {
+    if (v !== "gas" && Number.isFinite(session.minutes) && session.minutes > 0) {
       timeline.hidden = false;
-      timeline.textContent = `~${formatDuration(s.minutes)} to ${m.targetPct}% at ${round(m.powerKw, 1)} kW`;
+      timeline.textContent = `~${formatDuration(session.minutes)} to ${m.targetPct}% at ${round(m.powerKw, 1)} kW`;
     } else {
       timeline.hidden = true;
     }
   }
 
-  renderAdvanced(m, be, cur);
+  renderAdvanced(m, be, cur, session, effective);
   persistFrom(m);
 }
 
-function renderAdvanced(m, be, cur) {
-  const session = chargeSession({
-    batteryKwh: m.batteryKwh,
-    startPct: m.startPct,
-    targetPct: m.targetPct,
-    powerKw: m.powerKw,
-  });
-
-  const eff = effectiveKwhPrice({
-    sessionFee: m.sessionFee,
-    ratePerKwh: m.yourRate || 0,
-    kwhFromCharger: session.kwhFromCharger,
-  });
-
+function renderAdvanced(m, be, cur, session, effective) {
   $("advKwh").textContent = Number.isFinite(session.kwhIntoBattery)
     ? `${session.kwhIntoBattery.toFixed(1)} kWh`
     : "—";
   $("advTime").textContent = formatDuration(session.minutes);
-  $("advEffective").textContent = money(eff, cur);
+  $("advEffective").textContent = money(effective, cur);
 
   const av = $("advVerdict");
-  if (Number.isFinite(eff) && Number.isFinite(be)) {
-    const vv = verdict(eff, be);
+  if (Number.isFinite(effective) && Number.isFinite(be)) {
+    const vv = verdict(effective, be);
     if (vv === "worth") {
-      av.textContent = `✅ Worth charging — all-in ${money(eff, cur)}/kWh beats break-even.`;
+      av.textContent = `✅ Worth charging — all-in ${money(effective, cur)}/kWh beats break-even.`;
       av.style.color = "var(--worth)";
     } else if (vv === "gas") {
-      av.textContent = `❌ Not worth it — fees push you to ${money(eff, cur)}/kWh. Use gas.`;
+      av.textContent = `❌ Not worth it — fees push you to ${money(effective, cur)}/kWh. Use gas.`;
       av.style.color = "var(--gas)";
     } else {
-      av.textContent = `≈ Right at break-even (${money(eff, cur)}/kWh) — your call.`;
+      av.textContent = `≈ Right at break-even (${money(effective, cur)}/kWh) — your call.`;
       av.style.color = "var(--close)";
     }
   } else {
