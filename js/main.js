@@ -1,13 +1,13 @@
 // main.js — wire inputs → calc → render. Persist to localStorage.
 
-import { breakevenKwhPrice, chargeSession, effectiveKwhPrice, verdict, rateAtTime, cheapestPeriod, sessionCost } from "./calc.js";
+import { breakevenKwhPrice, chargeSession, effectiveKwhPrice, verdict, rateAtTime, rateAtElapsed, cheapestPeriod, sessionCost } from "./calc.js";
 import * as U from "./units.js";
 import { loadPrefs, savePrefs, clearPrefs, DEFAULT_PREFS } from "./storage.js";
 import { loadCars, getCar, getCars, carLabel } from "./cars.js";
 import { $, parseNum, money, formatDuration } from "./ui.js";
 
 let prefs = loadPrefs();
-let touEnabled = false; // time-of-day pricing (volatile — never persisted)
+let rateMode = "flat"; // "flat" | "tod" | "dur" (volatile — never persisted)
 
 // --- Read canonical model values from the DOM (converting from display units) ---
 function readInputs() {
@@ -57,25 +57,36 @@ function render() {
   const sub = $("subline");
   const timeline = $("timeline");
   const touNote = $("touNote");
-
-  const schedule = touEnabled ? readSchedule() : [];
-  const useTou = touEnabled && schedule.length > 0;
   const hasFees = m.sessionFee > 0;
 
-  // Charge session + all-in effective price. In time-of-day mode we integrate the
-  // cost over the clock starting NOW, so a rate change mid-charge is billed right.
-  let session, effective, hasRate;
-  if (useTou) {
-    const rateOf = (min) => rateAtTime(schedule, min);
-    session = sessionCost({ batteryKwh: m.batteryKwh, startPct: m.startPct, targetPct: m.targetPct, powerKw: m.powerKw, startClockMin: nowMinutes(), rateOf, sessionFee: m.sessionFee });
+  // Resolve the ONE active pricing model into a single {session, effective}.
+  // tod integrates cost over the clock (starting now); dur integrates over
+  // elapsed charging time; flat is a single rate. Modes are mutually exclusive.
+  let session = null, effective = NaN, hasRate = false, schedule = null;
+  if (rateMode === "tod") {
+    schedule = readSchedule();
+    if (schedule.length) {
+      const rateOf = (clock) => rateAtTime(schedule, clock);
+      session = sessionCost({ batteryKwh: m.batteryKwh, startPct: m.startPct, targetPct: m.targetPct, powerKw: m.powerKw, startClockMin: nowMinutes(), rateOf, sessionFee: m.sessionFee });
+    }
+  } else if (rateMode === "dur") {
+    const tiers = readDurationTiers();
+    if (tiers.length) {
+      const rateOf = (_clock, elapsed) => rateAtElapsed(tiers, elapsed);
+      session = sessionCost({ batteryKwh: m.batteryKwh, startPct: m.startPct, targetPct: m.targetPct, powerKw: m.powerKw, startClockMin: 0, rateOf, sessionFee: m.sessionFee });
+    }
+  }
+  if (session) {
     effective = session.effectivePerKwh;
     hasRate = Number.isFinite(effective);
   } else {
+    // Flat rate (also the fallback when a schedule/tier list isn't filled in yet).
     session = chargeSession({ batteryKwh: m.batteryKwh, startPct: m.startPct, targetPct: m.targetPct, powerKw: m.powerKw });
     hasRate = Number.isFinite(m.yourRate) && m.yourRate >= 0;
     effective = hasRate ? effectiveKwhPrice({ sessionFee: m.sessionFee, ratePerKwh: m.yourRate, kwhFromCharger: session.kwhFromCharger }) : NaN;
     if (hasRate && !Number.isFinite(effective)) effective = m.yourRate;
   }
+  const showEffective = rateMode !== "flat" || hasFees;
 
   if (!Number.isFinite(be)) {
     card.dataset.verdict = "close";
@@ -94,7 +105,7 @@ function render() {
     const v = verdict(effective, be);
     card.dataset.verdict = v === "unknown" ? "close" : v;
     headline.textContent = v === "worth" ? "\u26A1 Charge it" : v === "gas" ? "\u26FD Use gas" : "\u2248 Toss-up";
-    sub.textContent = (useTou || hasFees)
+    sub.textContent = showEffective
       ? `Effective ${money(effective, cur)}/kWh${hasFees ? " incl. fees" : ""} \u00b7 break-even ${money(be, cur)}`
       : `You pay ${money(m.yourRate, cur)} \u00b7 break-even ${money(be, cur)}/kWh`;
 
@@ -107,7 +118,7 @@ function render() {
     }
 
     // Time-of-day suggestion based on the current clock time.
-    if (useTou) {
+    if (rateMode === "tod" && schedule && schedule.length) {
       const now = nowMinutes();
       const nowRate = rateAtTime(schedule, now);
       const cheap = cheapestPeriod(schedule);
@@ -231,6 +242,63 @@ function addTouRow(time = "00:00", rate = "") {
   $("touRows").appendChild(row);
 }
 
+// Build duration tiers from the editor rows: [{ start(elapsed min), rate }].
+function readDurationTiers() {
+  const tiers = [];
+  for (const r of document.querySelectorAll("#durRows .dur-row")) {
+    const min = parseNum(r.querySelector(".dur-min").value);
+    const rate = parseNum(r.querySelector(".dur-rate").value);
+    if (!Number.isFinite(rate)) continue;
+    tiers.push({ start: Number.isFinite(min) ? min : 0, rate });
+  }
+  return tiers;
+}
+
+function addDurRow(min = 0, rate = "") {
+  const row = document.createElement("div");
+  row.className = "tou-row dur-row";
+  row.innerHTML =
+    `<div class="dur-after">after <input type="text" inputmode="numeric" class="dur-min" value="${min}" /> min</div>` +
+    `<div class="input-money tou-rate-wrap">` +
+    `<span class="input-money__sym">${prefs.currency}</span>` +
+    `<input type="text" inputmode="decimal" class="dur-rate" placeholder="0.30" value="${rate}" />` +
+    `</div>` +
+    `<button type="button" class="tou-del" aria-label="Remove tier">\u00d7</button>`;
+  $("durRows").appendChild(row);
+}
+
+// Reflect the selected pricing mode: show the right editor, and disable the flat
+// charger-price field when a schedule/tier mode is driving the result instead.
+function applyRateMode() {
+  $("touEditor").hidden = rateMode !== "tod";
+  $("durEditor").hidden = rateMode !== "dur";
+
+  const rateInput = $("yourRate");
+  const note = $("rateModeNote");
+  const field = rateInput.closest(".field");
+  if (rateMode === "flat") {
+    rateInput.disabled = false;
+    field.classList.remove("is-disabled");
+    note.hidden = true;
+  } else {
+    rateInput.disabled = true;
+    field.classList.add("is-disabled");
+    note.hidden = false;
+    note.textContent = rateMode === "tod"
+      ? "Using time-of-day pricing (set in Advanced)."
+      : "Using duration-based pricing (set in Advanced).";
+  }
+
+  if (rateMode === "tod" && $("touRows").children.length === 0) {
+    addTouRow("00:00", "");
+    addTouRow("16:00", "");
+  }
+  if (rateMode === "dur" && $("durRows").children.length === 0) {
+    addDurRow(0, "");
+    addDurRow(60, "");
+  }
+}
+
 function toggleUnits() {
   // Values in `prefs` are canonical, so we just flip the flag and re-render fields.
   const m = readInputs();
@@ -302,22 +370,31 @@ function attachEvents() {
 
   $("unitToggle").addEventListener("click", toggleUnits);
 
-  // Time-of-day pricing editor (not persisted).
-  $("touToggle").addEventListener("change", (e) => {
-    touEnabled = e.target.checked;
-    $("touEditor").hidden = !touEnabled;
-    if (touEnabled && $("touRows").children.length === 0) {
-      addTouRow("00:00", "");
-      addTouRow("16:00", "");
-    }
-    render();
-  });
+  // Pricing mode (flat / time-of-day / duration) — exclusive, not persisted.
+  for (const radio of document.querySelectorAll('input[name="rateMode"]')) {
+    radio.addEventListener("change", (e) => {
+      rateMode = e.target.value;
+      applyRateMode();
+      render();
+    });
+  }
   $("touAdd").addEventListener("click", () => {
     addTouRow();
     render();
   });
   $("touRows").addEventListener("input", render);
   $("touRows").addEventListener("click", (e) => {
+    if (e.target.classList.contains("tou-del")) {
+      e.target.closest(".tou-row").remove();
+      render();
+    }
+  });
+  $("durAdd").addEventListener("click", () => {
+    addDurRow();
+    render();
+  });
+  $("durRows").addEventListener("input", render);
+  $("durRows").addEventListener("click", (e) => {
     if (e.target.classList.contains("tou-del")) {
       e.target.closest(".tou-row").remove();
       render();
@@ -367,6 +444,7 @@ function boot() {
     if (car) $("carName").textContent = car.model;
   }
   writeDisplayValues();
+  applyRateMode();
   render();
 }
 

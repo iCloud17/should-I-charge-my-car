@@ -136,6 +136,24 @@ export function cheapestPeriod(schedule) {
 }
 
 /**
+ * The rate for a duration-based tier schedule at a given ELAPSED session time
+ * (minutes since plug-in). Tiers are { start, rate } where start is elapsed
+ * minutes; a tier applies from its start until the next tier's start. No wrap.
+ */
+export function rateAtElapsed(tiers, minutes) {
+  const s = (tiers || [])
+    .filter((p) => Number.isFinite(p.start) && Number.isFinite(p.rate))
+    .sort((a, b) => a.start - b.start);
+  if (!s.length) return NaN;
+  let current = s[0];
+  for (const p of s) {
+    if (p.start <= minutes) current = p;
+    else break;
+  }
+  return current.rate;
+}
+
+/**
  * Integrate a charging session's cost over clock time so a rate change mid-charge
  * (e.g. peak pricing kicking in at 4pm) is billed correctly. `rateOf(minute)`
  * returns the $/kWh at a given minute-of-day. Returns energy cost, all-in total
@@ -169,8 +187,9 @@ export function sessionCost({
   for (let soc = start; soc < target; soc += stepPct) {
     const frac = Math.min(stepPct, target - soc) / stepPct;
     const p = powerAtSoc(soc, powerKw, kneePct, taperEndFactor);
-    const clockMin = (((startClockMin + hours * 60) % 1440) + 1440) % 1440;
-    const rate = rateOf(clockMin);
+    const elapsedMin = hours * 60;
+    const clockMin = (((startClockMin + elapsedMin) % 1440) + 1440) % 1440;
+    const rate = rateOf(clockMin, elapsedMin);
     const kwhStep = chargerPerStep * frac;
     energyCost += (Number.isFinite(rate) ? rate : 0) * kwhStep;
     kwhIntoBattery += battPerStep * frac;

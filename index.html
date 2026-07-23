@@ -48,6 +48,7 @@
           <input id="yourRate" type="text" inputmode="decimal" autocomplete="off" value="0.30" placeholder="optional" />
         </div>
       </div>
+      <p class="hint" id="rateModeNote" hidden></p>
     </section>
 
     <!-- Customize car values -->
@@ -92,16 +93,23 @@
           </div>
         </div>
 
-        <div class="field tou-field">
-          <label class="check" for="touToggle">
-            <input type="checkbox" id="touToggle" />
-            <span>Price changes by time of day</span>
-          </label>
+        <div class="field">
+          <label>Charger pricing</label>
+          <div class="segmented" id="rateMode" role="radiogroup">
+            <label><input type="radio" name="rateMode" value="flat" checked /><span>Flat</span></label>
+            <label><input type="radio" name="rateMode" value="tod" /><span>By time</span></label>
+            <label><input type="radio" name="rateMode" value="dur" /><span>By duration</span></label>
+          </div>
         </div>
         <div id="touEditor" hidden>
           <div id="touRows" class="tou-rows"></div>
           <button type="button" id="touAdd" class="link tou-add">+ Add time period</button>
           <p class="hint">Enter each price and the time it starts (it runs until the next one). We use your device&rsquo;s current time to pick the rate now and flag a cheaper window.</p>
+        </div>
+        <div id="durEditor" hidden>
+          <div id="durRows" class="tou-rows"></div>
+          <button type="button" id="durAdd" class="link tou-add">+ Add tier</button>
+          <p class="hint">Set the price from the start (0 min), then add tiers that kick in after a number of minutes of charging.</p>
         </div>
 
         <div class="field">
