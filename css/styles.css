@@ -478,6 +478,28 @@ input[type="text"]:focus {
 .compare[data-verdict="gas"] { background: color-mix(in srgb, var(--gas) 14%, var(--card-2)); color: var(--gas); }
 .compare[data-verdict="gas"] .compare__dot { background: var(--gas); }
 
+/* --- Charger-speed presets --- */
+.sublabel { margin: 0 0 6px; font-size: 14px; font-weight: 600; color: var(--muted); }
+.presets { display: flex; gap: 8px; }
+.preset {
+  flex: 1;
+  border: 1px solid var(--line);
+  background: var(--field);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 11px 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.preset:active { transform: scale(0.98); }
+.preset.is-active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--field));
+}
+
 /* --- Disclosure --- */
 .disclosure { padding: 0; }
 .disclosure > summary {

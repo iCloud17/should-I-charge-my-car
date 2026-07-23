@@ -156,7 +156,17 @@ function render() {
   }
 
   renderAdvanced(m, be, cur, session, effective);
+  updatePresetActive();
   persistFrom(m);
+}
+
+// Highlight the charger-speed preset that matches the current power, if any.
+function updatePresetActive() {
+  const kw = parseNum($("powerKw").value);
+  for (const btn of document.querySelectorAll("#powerPresets .preset")) {
+    const match = Number.isFinite(kw) && Math.abs(parseNum(btn.dataset.kw) - kw) < 0.05;
+    btn.classList.toggle("is-active", match);
+  }
 }
 
 function renderAdvanced(m, be, cur, session, effective) {
@@ -470,6 +480,13 @@ function attachEvents() {
       e.target.closest(".tou-row").remove();
       render();
     }
+  });
+
+  $("powerPresets").addEventListener("click", (e) => {
+    const btn = e.target.closest(".preset");
+    if (!btn) return;
+    $("powerKw").value = btn.dataset.kw;
+    render();
   });
 
   // Info note: show on hover/focus (desktop), tap to pin open (touch).

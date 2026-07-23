@@ -124,6 +124,14 @@
           </div>
         </div>
 
+        <div class="field">
+          <p class="sublabel">Charger speed</p>
+          <div class="presets" id="powerPresets">
+            <button type="button" class="preset" data-kw="1.4">Level 1 &middot; 1.4 kW</button>
+            <button type="button" class="preset" data-kw="6.6">Level 2 &middot; 6.6 kW</button>
+          </div>
+        </div>
+
         <div class="field-row">
           <div class="field">
             <label for="powerKw">Charge power (kW)</label>
@@ -134,7 +142,7 @@
             <input id="batteryKwh" type="text" inputmode="decimal" autocomplete="off" value="" />
           </div>
         </div>
-        <p class="hint">Charge power &amp; battery auto-fill from your car and only affect the time estimate, so leave them if you&rsquo;re not sure.</p>
+        <p class="hint">PHEVs charge on AC only, so speed is capped by the car&rsquo;s onboard charger. Power and battery affect the time estimate only.</p>
 
         <div class="field">
           <label for="startPct">Battery now: <output id="startPctOut">0%</output></label>
