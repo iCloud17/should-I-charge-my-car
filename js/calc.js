@@ -211,7 +211,6 @@ export function sessionCost({
 }
 
 // --- Time-connected fee (charged by the hour while plugged in) --------------
-
 /**
  * Total time-based fee for staying plugged in `minutes`, given tiers
  * [{ start, perHour }] where start is the elapsed connected minute the tier
@@ -259,4 +258,105 @@ export function minutesForTimeBudget(tiers, budget) {
     remaining -= spanMin * perMin;
   }
   return Infinity;
+}
+
+// --- Unified charge curve ---------------------------------------------------
+
+/**
+ * One integration pass over a charging session that answers everything the UI
+ * needs about stopping early:
+ *  - the partial result if you unplug at `capMinutes` (energy, time, all-in
+ *    effective $/kWh, and the SoC you'd reach),
+ *  - the full charge time to `targetPct` (the far end of the "charge for" slider),
+ *  - the worth-it limit: the longest you can charge while the all-in effective
+ *    price still beats `breakeven`.
+ *
+ * `rateOf(clockMin, elapsedMin)` returns the energy $/kWh at a point in the
+ * session (constant for flat pricing). Fees included: a one-time `sessionFee`
+ * and a by-the-hour `timeTiers` fee. Everything is billed against energy pulled
+ * from the charger, so this matches breakevenKwhPrice.
+ */
+export function chargeCurve({
+  batteryKwh,
+  startPct,
+  targetPct,
+  powerKw,
+  rateOf = () => 0,
+  sessionFee = 0,
+  timeTiers = [],
+  breakeven = NaN,
+  capMinutes = Infinity,
+  startClockMin = 0,
+  chargeEfficiency = 0.88,
+  kneePct = 92.5,
+  taperEndFactor = 0.25,
+}) {
+  const start = Math.max(0, Math.min(100, startPct));
+  const target = Math.max(0, Math.min(100, targetPct));
+  const empty = {
+    kwhIntoBattery: 0, kwhFromCharger: 0, minutes: 0, soc: start,
+    energyCost: 0, timeFee: 0, totalCost: sessionFee, effectivePerKwh: NaN,
+    fullMinutes: 0, fullSoc: start, worthLimitMin: 0, worthLimitSoc: start, everWorth: false,
+  };
+  if (!(target > start) || !(batteryKwh > 0) || !(powerKw > 0)) return empty;
+
+  const stepPct = 0.5;
+  const battPerStep = batteryKwh * (stepPct / 100);
+  const chargerPerStep = chargeEfficiency > 0 ? battPerStep / chargeEfficiency : battPerStep;
+  const capHours = capMinutes / 60;
+  const socOf = (kwhInto) => start + (kwhInto / batteryKwh) * 100;
+
+  let kwhIntoBattery = 0, kwhFromCharger = 0, hours = 0, energyCost = 0;
+  let snap = null; // partial result at the cap
+  let everWorth = false, worthLimitMin = 0, worthLimitSoc = start;
+
+  for (let soc = start; soc < target; soc += stepPct) {
+    const frac = Math.min(stepPct, target - soc) / stepPct;
+    const p = powerAtSoc(soc, powerKw, kneePct, taperEndFactor);
+    const stepHours = (chargerPerStep * frac) / p;
+    const elapsedMin = hours * 60;
+    const clockMin = (((startClockMin + elapsedMin) % 1440) + 1440) % 1440;
+    const rate = rateOf(clockMin, elapsedMin);
+
+    // If the cap lands inside this step, snapshot the partial charge there.
+    if (!snap && hours + stepHours >= capHours) {
+      const rem = Math.max(0, capHours - hours);
+      const f2 = stepHours > 0 ? rem / stepHours : 0;
+      const kwhFromCap = kwhFromCharger + chargerPerStep * frac * f2;
+      const kwhIntoCap = kwhIntoBattery + battPerStep * frac * f2;
+      const energyCap = energyCost + (Number.isFinite(rate) ? rate : 0) * chargerPerStep * frac * f2;
+      const timeFeeCap = timeFeeCost(timeTiers, capHours * 60);
+      const totalCap = sessionFee + energyCap + timeFeeCap;
+      snap = {
+        kwhIntoBattery: kwhIntoCap, kwhFromCharger: kwhFromCap, minutes: capHours * 60,
+        soc: socOf(kwhIntoCap), energyCost: energyCap, timeFee: timeFeeCap, totalCost: totalCap,
+        effectivePerKwh: kwhFromCap > 0 ? totalCap / kwhFromCap : NaN,
+      };
+    }
+
+    // Advance the full integration by the whole step.
+    const kwhStep = chargerPerStep * frac;
+    kwhFromCharger += kwhStep;
+    energyCost += (Number.isFinite(rate) ? rate : 0) * kwhStep;
+    kwhIntoBattery += battPerStep * frac;
+    hours += stepHours;
+
+    // Track the last elapsed point that still beats gas.
+    if (breakeven > 0 && kwhFromCharger > 0) {
+      const connectedMin = hours * 60;
+      const eff = (sessionFee + energyCost + timeFeeCost(timeTiers, connectedMin)) / kwhFromCharger;
+      if (eff <= breakeven) { everWorth = true; worthLimitMin = connectedMin; worthLimitSoc = socOf(kwhIntoBattery); }
+    }
+  }
+
+  const fullMinutes = hours * 60;
+  const fullTimeFee = timeFeeCost(timeTiers, fullMinutes);
+  const fullTotal = sessionFee + energyCost + fullTimeFee;
+  const full = {
+    kwhIntoBattery, kwhFromCharger, minutes: fullMinutes, soc: target,
+    energyCost, timeFee: fullTimeFee, totalCost: fullTotal,
+    effectivePerKwh: kwhFromCharger > 0 ? fullTotal / kwhFromCharger : NaN,
+  };
+  const display = snap || full; // cap beyond the full charge → show the full charge
+  return { ...display, fullMinutes, fullSoc: target, worthLimitMin, worthLimitSoc, everWorth };
 }

@@ -163,6 +163,12 @@
           <input id="targetPct" type="range" min="0" max="100" step="5" value="100" />
         </div>
 
+        <div class="field" id="chargeForField" hidden>
+          <label for="chargeForMin">Charge for: <output id="chargeForOut">-</output></label>
+          <input id="chargeForMin" type="range" min="0" max="180" step="5" value="180" />
+          <p class="hint" id="chargeForNote"></p>
+        </div>
+
         <div class="advanced-result" id="advancedResult">
           <div class="advanced-result__row">
             <span>Energy added</span><strong id="advKwh">-</strong>

@@ -1,6 +1,6 @@
 // main.js - wire inputs → calc → render. Persist to localStorage.
 
-import { breakevenKwhPrice, chargeSession, verdict, rateAtTime, rateAtElapsed, cheapestPeriod, sessionCost, timeFeeCost, minutesForTimeBudget } from "./calc.js";
+import { breakevenKwhPrice, chargeCurve, verdict, rateAtTime, rateAtElapsed, cheapestPeriod } from "./calc.js";
 import * as U from "./units.js";
 import { loadPrefs, savePrefs, clearPrefs, DEFAULT_PREFS } from "./storage.js";
 import { loadCars, getCar, getCars, carLabel } from "./cars.js";
@@ -8,6 +8,8 @@ import { $, parseNum, money, formatDuration } from "./ui.js";
 
 let prefs = loadPrefs();
 let rateMode = "flat"; // "flat" | "tod" | "dur" (volatile - never persisted)
+let chargeCapMin = null; // "charge for" slider value in minutes (volatile)
+let capTouched = false;  // has the user dragged the "charge for" slider?
 
 // --- Read canonical model values from the DOM (converting from display units) ---
 function readInputs() {
@@ -60,53 +62,52 @@ function render() {
   const timeNote = $("timeNote");
   const detailLine = $("detailLine");
 
-  // Resolve the ONE active energy-pricing model into a charge session + its base
-  // cost (session fee + energy). tod integrates cost over the clock (starting
-  // now); dur integrates over elapsed charging time; flat is a single rate.
-  // The by-the-hour time fee is layered on top of whichever mode is active.
-  let session = null, baseTotal = NaN, hasRate = false, schedule = null;
+  // Resolve the ONE active energy-pricing model into a rate function of the
+  // session. tod prices by the clock (starting now); dur by elapsed charging
+  // time; flat is a single rate. The by-the-hour time fee is layered on top.
+  const timeTiers = readTimeFee();
+  const hasTimeTiers = timeTiers.length > 0;
+  let rateOf = null, schedule = null, hasRate = false, startClockMin = 0;
   if (rateMode === "tod") {
     schedule = readSchedule();
-    if (schedule.length) {
-      const rateOf = (clock) => rateAtTime(schedule, clock);
-      session = sessionCost({ batteryKwh: m.batteryKwh, startPct: m.startPct, targetPct: m.targetPct, powerKw: m.powerKw, startClockMin: nowMinutes(), rateOf, sessionFee: m.sessionFee });
-      baseTotal = session.totalCost;
-      hasRate = Number.isFinite(session.effectivePerKwh);
-    }
+    if (schedule.length) { rateOf = (clock) => rateAtTime(schedule, clock); hasRate = true; startClockMin = nowMinutes(); }
   } else if (rateMode === "dur") {
     const tiers = readDurationTiers();
-    if (tiers.length) {
-      const rateOf = (_clock, elapsed) => rateAtElapsed(tiers, elapsed);
-      session = sessionCost({ batteryKwh: m.batteryKwh, startPct: m.startPct, targetPct: m.targetPct, powerKw: m.powerKw, startClockMin: 0, rateOf, sessionFee: m.sessionFee });
-      baseTotal = session.totalCost;
-      hasRate = Number.isFinite(session.effectivePerKwh);
-    }
+    if (tiers.length) { rateOf = (_clock, elapsed) => rateAtElapsed(tiers, elapsed); hasRate = true; }
   }
-  if (!session) {
+  if (!rateOf) {
     // Flat rate (also the fallback when a schedule/tier list isn't filled in yet).
-    session = chargeSession({ batteryKwh: m.batteryKwh, startPct: m.startPct, targetPct: m.targetPct, powerKw: m.powerKw });
     hasRate = Number.isFinite(m.yourRate) && m.yourRate >= 0;
-    baseTotal = hasRate ? m.sessionFee + m.yourRate * session.kwhFromCharger : NaN;
+    rateOf = () => (hasRate ? m.yourRate : 0);
   }
 
-  // Layer the by-the-hour "time connected" fee on top of the energy cost.
+  const curveArgs = { batteryKwh: m.batteryKwh, startPct: m.startPct, targetPct: m.targetPct, powerKw: m.powerKw, rateOf, sessionFee: m.sessionFee, timeTiers, breakeven: be, startClockMin };
+
+  // Full charge first: its duration is the far end of the "charge for" slider.
+  const full = chargeCurve({ ...curveArgs, capMinutes: Infinity });
+  const fullChargeMin = full.fullMinutes;
+
+  // The slider only applies (partial charge) when there's a time fee to trade off.
+  let cap = Infinity;
+  if (hasTimeTiers && capTouched && Number.isFinite(chargeCapMin) && chargeCapMin < fullChargeMin - 0.5) cap = chargeCapMin;
+  const session = cap === Infinity ? full : chargeCurve({ ...curveArgs, capMinutes: cap });
+
+  updateChargeSlider(hasTimeTiers && fullChargeMin > 0, fullChargeMin, session.minutes, session.soc);
+
   const kwh = session.kwhFromCharger;
-  const timeTiers = readTimeFee();
-  const timeFee = timeFeeCost(timeTiers, session.minutes);
+  const timeFee = session.timeFee;
   const hasTimeFee = timeFee > 0;
   const hasFees = m.sessionFee > 0 || hasTimeFee;
 
   let effective = NaN;
   if (hasRate) {
-    effective = kwh > 0 ? (baseTotal + timeFee) / kwh : m.yourRate;
+    effective = kwh > 0 ? session.effectivePerKwh : m.yourRate;
   }
   const showEffective = rateMode !== "flat" || hasFees;
 
-  // For time-fee stations: the longest you can stay plugged in and still beat gas.
-  let worthWithin = null;
-  if (hasTimeFee && hasRate && Number.isFinite(be) && kwh > 0) {
-    worthWithin = minutesForTimeBudget(timeTiers, be * kwh - baseTotal);
-  }
+  // The longest you can charge here while still beating gas (accurate crossover).
+  const worthLimitMin = hasTimeFee && full.everWorth ? full.worthLimitMin : null;
+  const fullNotWorth = hasTimeFee && !full.everWorth;
 
   if (!Number.isFinite(be)) {
     card.dataset.verdict = "close";
@@ -155,7 +156,7 @@ function render() {
     // "How long" at a glance, using your saved battery / power / charge target.
     if (v !== "gas" && Number.isFinite(session.minutes) && session.minutes > 0) {
       timeline.hidden = false;
-      timeline.textContent = `Est. ${formatDuration(session.minutes)} to ${m.targetPct}% at ${round(m.powerKw, 1)} kW`;
+      timeline.textContent = `Est. ${formatDuration(session.minutes)} to ${Math.round(session.soc)}% at ${round(m.powerKw, 1)} kW`;
     } else {
       timeline.hidden = true;
     }
@@ -175,20 +176,14 @@ function render() {
       touNote.hidden = true;
     }
 
-    // By-the-hour time fee: how long you can stay plugged in and still beat gas.
-    if (hasTimeFee && worthWithin != null && Number.isFinite(worthWithin)) {
-      const chargeMin = session.minutes;
+    // By-the-hour time fee: how far you can charge before gas wins. The
+    // "Charge for" slider in Advanced lets you dial in a shorter, cheaper charge.
+    if (hasTimeFee && fullNotWorth) {
       timeNote.hidden = false;
-      if (worthWithin <= 0) {
-        timeNote.textContent = `\u23F1\uFE0F The by-the-hour fee alone costs more than gas here.`;
-      } else if (worthWithin >= chargeMin) {
-        const buffer = worthWithin - chargeMin;
-        timeNote.textContent = buffer >= 1
-          ? `\u23F1\uFE0F Worth it if you unplug within ${formatDuration(worthWithin)} (about ${formatDuration(buffer)} of slack once it's full).`
-          : `\u23F1\uFE0F Worth it only right as it finishes, around ${formatDuration(worthWithin)} plugged in.`;
-      } else {
-        timeNote.textContent = `\u23F1\uFE0F The by-the-hour fee wins after ${formatDuration(worthWithin)}, but a full charge takes ${formatDuration(chargeMin)}. Charge less or use gas.`;
-      }
+      timeNote.textContent = `\u23F1\uFE0F Even a short charge here costs more than gas.`;
+    } else if (hasTimeFee && worthLimitMin != null && worthLimitMin < fullChargeMin - 0.5) {
+      timeNote.hidden = false;
+      timeNote.textContent = `\u23F1\uFE0F Worth it up to about ${formatDuration(worthLimitMin)} of charging (~${Math.round(full.worthLimitSoc)}%). Longer, and the time fee beats gas.`;
     } else {
       timeNote.hidden = true;
     }
@@ -206,6 +201,25 @@ function updatePresetActive() {
     const match = Number.isFinite(kw) && Math.abs(parseNum(btn.dataset.kw) - kw) < 0.05;
     btn.classList.toggle("is-active", match);
   }
+}
+
+// The "Charge for" slider spans 0 to the full-charge time. It only shows when a
+// time fee makes a shorter charge worth considering. Untouched, it sits at the
+// full charge so nothing changes; drag it back to price a partial top-up.
+function updateChargeSlider(show, fullChargeMin, curMin, curSoc) {
+  const field = $("chargeForField");
+  field.hidden = !show;
+  if (!show) return;
+  const slider = $("chargeForMin");
+  const maxMin = Math.max(15, Math.ceil(fullChargeMin));
+  slider.max = String(maxMin);
+  slider.value = String(capTouched
+    ? Math.max(0, Math.min(maxMin, Math.round(chargeCapMin)))
+    : maxMin);
+  $("chargeForOut").textContent = `${formatDuration(Number(slider.value))} (~${Math.round(curSoc)}%)`;
+  $("chargeForNote").textContent = Number(slider.value) >= maxMin - 0.5
+    ? "Full charge to your target."
+    : "Stopping early: less energy, but less time fee.";
 }
 
 function renderAdvanced(m, be, cur, session, effective, timeFee) {
@@ -520,6 +534,11 @@ function attachEvents() {
     $("targetPctOut").textContent = `${e.target.value}%`;
     render();
   });
+  $("chargeForMin").addEventListener("input", (e) => {
+    capTouched = true;
+    chargeCapMin = parseNum(e.target.value);
+    render();
+  });
 
   $("unitToggle").addEventListener("click", toggleUnits);
 
@@ -620,6 +639,8 @@ function attachEvents() {
     savePrefs(prefs);
     // Reset volatile UI too: pricing mode, schedule/tier rows, info note.
     rateMode = "flat";
+    chargeCapMin = null;
+    capTouched = false;
     const flatRadio = document.querySelector('input[name="rateMode"][value="flat"]');
     if (flatRadio) flatRadio.checked = true;
     $("touRows").innerHTML = "";
