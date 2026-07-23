@@ -125,7 +125,7 @@ function render() {
     // No charger price yet - the break-even IS the headline answer.
     card.dataset.verdict = "worth";
     headline.textContent = `${money(be, cur)}/kWh`;
-    sub.textContent = "Break-even price. Enter the charger's price for a yes/no.";
+    sub.textContent = "Break-even price. Enter the charger's energy rate for a yes/no.";
     timeline.hidden = true;
     touNote.hidden = true;
     timeNote.hidden = true;
@@ -262,7 +262,7 @@ function renderAdvanced(m, be, cur, session, effective, timeFee) {
       av.style.color = "var(--close)";
     }
   } else {
-    av.textContent = "Add a charger price to compare.";
+    av.textContent = "Add the energy rate to compare.";
     av.style.color = "var(--muted)";
   }
 }
@@ -273,7 +273,7 @@ function applyUnitLabels() {
   const cur = prefs.currency;
   $("unitToggle").textContent = prefs.units === "metric" ? "Metric" : "Imperial";
   $("gasPriceLabel").textContent = `Gas price (${cur}/${L.gasVolume})`;
-  $("yourRateLabel").textContent = `Charger price (${cur}/kWh)`;
+  $("yourRateLabel").textContent = `Energy rate (${cur}/kWh)`;
   $("mpgLabel").textContent = `Gas ${L.fuelEconomy}`;
   $("effLabel").textContent = `Electric ${L.evEfficiency}`;
 }

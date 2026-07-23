@@ -362,6 +362,17 @@ input[type="text"]:focus {
   pointer-events: none;
 }
 .input-money input { padding-left: 30px; }
+.input-money.has-suffix input { padding-right: 82px; }
+.input-money__suffix {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 14px;
+  pointer-events: none;
+}
 
 .field-row { display: flex; gap: 12px; }
 .field-row .field { flex: 1; margin-top: 0; }
