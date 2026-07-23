@@ -77,8 +77,9 @@ async function main() {
     rangeCityA: idx("rangeCityA"), rangeHwyA: idx("rangeHwyA"),
   };
 
-  // Keep the newest entry per make+model.
-  const byKey = new Map();
+  // Keep every distinct make+model+year so people can pick their exact year;
+  // dedupe only true duplicate rows that share the same id.
+  const byId = new Map();
   for (let k = 1; k < lines.length; k++) {
     if (!lines[k]) continue;
     const f = parseLine(lines[k]);
@@ -97,19 +98,20 @@ async function main() {
     const miPerKwh = round(100 / combE, 2);
     const batteryKwh = evRangeMi > 0 ? round((evRangeMi * combE) / 100, 1) : null;
 
-    const key = `${make}|${model}`.toLowerCase();
-    const prev = byKey.get(key);
-    if (!prev || year > prev.year) {
-      byKey.set(key, {
-        id: slug(`${make}-${model}-${year}`),
-        make, model, year, mpg, miPerKwh,
+    const id = slug(`${make}-${model}-${year}`);
+    if (!byId.has(id)) {
+      byId.set(id, {
+        id, make, model, year, mpg, miPerKwh,
         batteryKwh, evRangeMi: evRangeMi || null,
       });
     }
   }
 
-  const cars = [...byKey.values()].sort(
-    (a, b) => a.make.localeCompare(b.make) || a.model.localeCompare(b.model)
+  const cars = [...byId.values()].sort(
+    (a, b) =>
+      a.make.localeCompare(b.make) ||
+      a.model.localeCompare(b.model) ||
+      b.year - a.year
   );
 
   const output = {
@@ -117,7 +119,7 @@ async function main() {
     _sourceUrl: CSV_URL,
     _generatedAt: new Date().toISOString().slice(0, 10),
     _note:
-      "PHEVs (atvType='Plug-in Hybrid'), newest year per model, model year >= " +
+      "PHEVs (atvType='Plug-in Hybrid'), every model year >= " +
       MIN_YEAR + ". mpg=comb08 (gas), miPerKwh=100/combE, evRangeMi from EPA " +
       "electric range, batteryKwh=estimated usable energy. All values user-editable.",
     cars,

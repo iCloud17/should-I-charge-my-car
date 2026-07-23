@@ -2,13 +2,23 @@
   "_source": "US DOE/EPA fueleconomy.gov bulk data (vehicles.csv)",
   "_sourceUrl": "https://www.fueleconomy.gov/feg/epadata/vehicles.csv",
   "_generatedAt": "2026-07-23",
-  "_note": "PHEVs (atvType='Plug-in Hybrid'), newest year per model, model year >= 2021. mpg=comb08 (gas), miPerKwh=100/combE, evRangeMi from EPA electric range, batteryKwh=estimated usable energy. All values user-editable.",
+  "_note": "PHEVs (atvType='Plug-in Hybrid'), every model year >= 2012. mpg=comb08 (gas), miPerKwh=100/combE, evRangeMi from EPA electric range, batteryKwh=estimated usable energy. All values user-editable.",
   "cars": [
     {
       "id": "alfa-romeo-tonale-eawd-2025",
       "make": "Alfa Romeo",
       "model": "Tonale eAWD",
       "year": 2025,
+      "mpg": 29,
+      "miPerKwh": 2.27,
+      "batteryKwh": 14.5,
+      "evRangeMi": 33
+    },
+    {
+      "id": "alfa-romeo-tonale-eawd-2024",
+      "make": "Alfa Romeo",
+      "model": "Tonale eAWD",
+      "year": 2024,
       "mpg": 29,
       "miPerKwh": 2.27,
       "batteryKwh": 14.5,
@@ -23,6 +33,46 @@
       "miPerKwh": 1.79,
       "batteryKwh": 3.4,
       "evRangeMi": 6
+    },
+    {
+      "id": "audi-a3-e-tron-2018",
+      "make": "Audi",
+      "model": "A3 e-tron",
+      "year": 2018,
+      "mpg": 36,
+      "miPerKwh": 2.44,
+      "batteryKwh": 6.6,
+      "evRangeMi": 16
+    },
+    {
+      "id": "audi-a3-e-tron-2017",
+      "make": "Audi",
+      "model": "A3 e-tron",
+      "year": 2017,
+      "mpg": 34,
+      "miPerKwh": 2.44,
+      "batteryKwh": 6.6,
+      "evRangeMi": 16
+    },
+    {
+      "id": "audi-a3-e-tron-2016",
+      "make": "Audi",
+      "model": "A3 e-tron",
+      "year": 2016,
+      "mpg": 35,
+      "miPerKwh": 2.5,
+      "batteryKwh": 6.4,
+      "evRangeMi": 16
+    },
+    {
+      "id": "audi-a3-e-tron-ultra-2016",
+      "make": "Audi",
+      "model": "A3 e-tron ultra",
+      "year": 2016,
+      "mpg": 39,
+      "miPerKwh": 2.63,
+      "batteryKwh": 6.5,
+      "evRangeMi": 17
     },
     {
       "id": "audi-a7-quattro-2021",
@@ -55,6 +105,16 @@
       "evRangeMi": 18
     },
     {
+      "id": "audi-a8-l-2020",
+      "make": "Audi",
+      "model": "A8 L",
+      "year": 2020,
+      "mpg": 23,
+      "miPerKwh": 1.59,
+      "batteryKwh": 10.7,
+      "evRangeMi": 17
+    },
+    {
       "id": "audi-q5-2021",
       "make": "Audi",
       "model": "Q5",
@@ -63,6 +123,16 @@
       "miPerKwh": 2.27,
       "batteryKwh": 8.4,
       "evRangeMi": 19
+    },
+    {
+      "id": "audi-q5-2020",
+      "make": "Audi",
+      "model": "Q5",
+      "year": 2020,
+      "mpg": 27,
+      "miPerKwh": 1.92,
+      "batteryKwh": 10.4,
+      "evRangeMi": 20
     },
     {
       "id": "audi-q5-plug-in-hybrid-quattro-2025",
@@ -85,6 +155,16 @@
       "evRangeMi": 28
     },
     {
+      "id": "audi-q5-tfsi-e-quattro-2022",
+      "make": "Audi",
+      "model": "Q5 TFSI e quattro",
+      "year": 2022,
+      "mpg": 26,
+      "miPerKwh": 1.79,
+      "batteryKwh": 12.9,
+      "evRangeMi": 23
+    },
+    {
       "id": "bentley-bentayga-2021",
       "make": "Bentley",
       "model": "Bentayga",
@@ -92,6 +172,16 @@
       "mpg": 19,
       "miPerKwh": 1.37,
       "batteryKwh": 13.1,
+      "evRangeMi": 18
+    },
+    {
+      "id": "bentley-bentayga-2020",
+      "make": "Bentley",
+      "model": "Bentayga",
+      "year": 2020,
+      "mpg": 19,
+      "miPerKwh": 1.41,
+      "batteryKwh": 12.8,
       "evRangeMi": 18
     },
     {
@@ -105,6 +195,26 @@
       "evRangeMi": 21
     },
     {
+      "id": "bentley-bentayga-hybrid-2025",
+      "make": "Bentley",
+      "model": "Bentayga Hybrid",
+      "year": 2025,
+      "mpg": 21,
+      "miPerKwh": 1.49,
+      "batteryKwh": 17.4,
+      "evRangeMi": 26
+    },
+    {
+      "id": "bentley-bentayga-hybrid-2023",
+      "make": "Bentley",
+      "model": "Bentayga Hybrid",
+      "year": 2023,
+      "mpg": 20,
+      "miPerKwh": 1.41,
+      "batteryKwh": 16.3,
+      "evRangeMi": 23
+    },
+    {
       "id": "bentley-continental-gt-2026",
       "make": "Bentley",
       "model": "Continental GT",
@@ -113,6 +223,16 @@
       "miPerKwh": 1.56,
       "batteryKwh": 19.2,
       "evRangeMi": 30
+    },
+    {
+      "id": "bentley-continental-gt-2025",
+      "make": "Bentley",
+      "model": "Continental GT",
+      "year": 2025,
+      "mpg": 19,
+      "miPerKwh": 1.56,
+      "batteryKwh": 25,
+      "evRangeMi": 39
     },
     {
       "id": "bentley-continental-gt-speed-2025",
@@ -135,6 +255,16 @@
       "evRangeMi": 30
     },
     {
+      "id": "bentley-continental-gtc-2025",
+      "make": "Bentley",
+      "model": "Continental GTC",
+      "year": 2025,
+      "mpg": 19,
+      "miPerKwh": 1.56,
+      "batteryKwh": 25,
+      "evRangeMi": 39
+    },
+    {
       "id": "bentley-continental-gtc-speed-2025",
       "make": "Bentley",
       "model": "Continental GTC Speed",
@@ -155,10 +285,40 @@
       "evRangeMi": 30
     },
     {
+      "id": "bentley-flying-spur-2025",
+      "make": "Bentley",
+      "model": "Flying Spur",
+      "year": 2025,
+      "mpg": 19,
+      "miPerKwh": 1.56,
+      "batteryKwh": 25,
+      "evRangeMi": 39
+    },
+    {
       "id": "bentley-flying-spur-hybrid-2024",
       "make": "Bentley",
       "model": "Flying Spur Hybrid",
       "year": 2024,
+      "mpg": 19,
+      "miPerKwh": 1.35,
+      "batteryKwh": 15.5,
+      "evRangeMi": 21
+    },
+    {
+      "id": "bentley-flying-spur-hybrid-2023",
+      "make": "Bentley",
+      "model": "Flying Spur Hybrid",
+      "year": 2023,
+      "mpg": 19,
+      "miPerKwh": 1.35,
+      "batteryKwh": 15.5,
+      "evRangeMi": 21
+    },
+    {
+      "id": "bentley-flying-spur-hybrid-2022",
+      "make": "Bentley",
+      "model": "Flying Spur Hybrid",
+      "year": 2022,
       "mpg": 19,
       "miPerKwh": 1.35,
       "batteryKwh": 15.5,
@@ -185,6 +345,36 @@
       "evRangeMi": 23
     },
     {
+      "id": "bmw-330e-2018",
+      "make": "BMW",
+      "model": "330e",
+      "year": 2018,
+      "mpg": 30,
+      "miPerKwh": 2.13,
+      "batteryKwh": 6.6,
+      "evRangeMi": 14
+    },
+    {
+      "id": "bmw-330e-2017",
+      "make": "BMW",
+      "model": "330e",
+      "year": 2017,
+      "mpg": 30,
+      "miPerKwh": 2.13,
+      "batteryKwh": 6.6,
+      "evRangeMi": 14
+    },
+    {
+      "id": "bmw-330e-2016",
+      "make": "BMW",
+      "model": "330e",
+      "year": 2016,
+      "mpg": 31,
+      "miPerKwh": 2.13,
+      "batteryKwh": 6.6,
+      "evRangeMi": 14
+    },
+    {
       "id": "bmw-330e-sedan-2024",
       "make": "BMW",
       "model": "330e Sedan",
@@ -193,6 +383,26 @@
       "miPerKwh": 2.08,
       "batteryKwh": 10.1,
       "evRangeMi": 21
+    },
+    {
+      "id": "bmw-330e-sedan-2023",
+      "make": "BMW",
+      "model": "330e Sedan",
+      "year": 2023,
+      "mpg": 27,
+      "miPerKwh": 2.08,
+      "batteryKwh": 10.1,
+      "evRangeMi": 21
+    },
+    {
+      "id": "bmw-330e-sedan-2022",
+      "make": "BMW",
+      "model": "330e Sedan",
+      "year": 2022,
+      "mpg": 28,
+      "miPerKwh": 2.22,
+      "batteryKwh": 10.4,
+      "evRangeMi": 23
     },
     {
       "id": "bmw-330e-xdrive-2021",
@@ -215,6 +425,26 @@
       "evRangeMi": 21
     },
     {
+      "id": "bmw-330e-xdrive-sedan-2023",
+      "make": "BMW",
+      "model": "330e xDrive Sedan",
+      "year": 2023,
+      "mpg": 26,
+      "miPerKwh": 2.22,
+      "batteryKwh": 9.5,
+      "evRangeMi": 21
+    },
+    {
+      "id": "bmw-330e-xdrive-sedan-2022",
+      "make": "BMW",
+      "model": "330e xDrive Sedan",
+      "year": 2022,
+      "mpg": 25,
+      "miPerKwh": 1.96,
+      "batteryKwh": 10.2,
+      "evRangeMi": 20
+    },
+    {
       "id": "bmw-530e-2021",
       "make": "BMW",
       "model": "530e",
@@ -225,10 +455,50 @@
       "evRangeMi": 21
     },
     {
+      "id": "bmw-530e-2020",
+      "make": "BMW",
+      "model": "530e",
+      "year": 2020,
+      "mpg": 27,
+      "miPerKwh": 2.13,
+      "batteryKwh": 9.9,
+      "evRangeMi": 21
+    },
+    {
+      "id": "bmw-530e-2019",
+      "make": "BMW",
+      "model": "530e",
+      "year": 2019,
+      "mpg": 29,
+      "miPerKwh": 2.17,
+      "batteryKwh": 7.4,
+      "evRangeMi": 16
+    },
+    {
+      "id": "bmw-530e-2018",
+      "make": "BMW",
+      "model": "530e",
+      "year": 2018,
+      "mpg": 29,
+      "miPerKwh": 2.17,
+      "batteryKwh": 7.4,
+      "evRangeMi": 16
+    },
+    {
       "id": "bmw-530e-sedan-2023",
       "make": "BMW",
       "model": "530e Sedan",
       "year": 2023,
+      "mpg": 26,
+      "miPerKwh": 2.04,
+      "batteryKwh": 10.3,
+      "evRangeMi": 21
+    },
+    {
+      "id": "bmw-530e-sedan-2022",
+      "make": "BMW",
+      "model": "530e Sedan",
+      "year": 2022,
       "mpg": 26,
       "miPerKwh": 2.04,
       "batteryKwh": 10.3,
@@ -245,10 +515,50 @@
       "evRangeMi": 19
     },
     {
+      "id": "bmw-530e-xdrive-2020",
+      "make": "BMW",
+      "model": "530e xDrive",
+      "year": 2020,
+      "mpg": 25,
+      "miPerKwh": 1.92,
+      "batteryKwh": 9.9,
+      "evRangeMi": 19
+    },
+    {
+      "id": "bmw-530e-xdrive-2019",
+      "make": "BMW",
+      "model": "530e xDrive",
+      "year": 2019,
+      "mpg": 28,
+      "miPerKwh": 2.04,
+      "batteryKwh": 7.4,
+      "evRangeMi": 15
+    },
+    {
+      "id": "bmw-530e-xdrive-2018",
+      "make": "BMW",
+      "model": "530e xDrive",
+      "year": 2018,
+      "mpg": 28,
+      "miPerKwh": 2.04,
+      "batteryKwh": 7.4,
+      "evRangeMi": 15
+    },
+    {
       "id": "bmw-530e-xdrive-sedan-2023",
       "make": "BMW",
       "model": "530e xDrive Sedan",
       "year": 2023,
+      "mpg": 25,
+      "miPerKwh": 1.89,
+      "batteryKwh": 10.1,
+      "evRangeMi": 19
+    },
+    {
+      "id": "bmw-530e-xdrive-sedan-2022",
+      "make": "BMW",
+      "model": "530e xDrive Sedan",
+      "year": 2022,
       "mpg": 25,
       "miPerKwh": 1.89,
       "batteryKwh": 10.1,
@@ -265,6 +575,46 @@
       "evRangeMi": 34
     },
     {
+      "id": "bmw-550e-xdrive-sedan-2025",
+      "make": "BMW",
+      "model": "550e xDrive Sedan",
+      "year": 2025,
+      "mpg": 24,
+      "miPerKwh": 2,
+      "batteryKwh": 17,
+      "evRangeMi": 34
+    },
+    {
+      "id": "bmw-740e-xdrive-2019",
+      "make": "BMW",
+      "model": "740e xDrive",
+      "year": 2019,
+      "mpg": 27,
+      "miPerKwh": 1.92,
+      "batteryKwh": 7.3,
+      "evRangeMi": 14
+    },
+    {
+      "id": "bmw-740e-xdrive-2018",
+      "make": "BMW",
+      "model": "740e xDrive",
+      "year": 2018,
+      "mpg": 27,
+      "miPerKwh": 1.92,
+      "batteryKwh": 7.3,
+      "evRangeMi": 14
+    },
+    {
+      "id": "bmw-740e-xdrive-2017",
+      "make": "BMW",
+      "model": "740e xDrive",
+      "year": 2017,
+      "mpg": 27,
+      "miPerKwh": 1.92,
+      "batteryKwh": 7.3,
+      "evRangeMi": 14
+    },
+    {
       "id": "bmw-745e-xdrive-2022",
       "make": "BMW",
       "model": "745e xDrive",
@@ -273,6 +623,26 @@
       "miPerKwh": 1.67,
       "batteryKwh": 10.2,
       "evRangeMi": 17
+    },
+    {
+      "id": "bmw-745e-xdrive-2021",
+      "make": "BMW",
+      "model": "745e xDrive",
+      "year": 2021,
+      "mpg": 22,
+      "miPerKwh": 1.67,
+      "batteryKwh": 10.2,
+      "evRangeMi": 17
+    },
+    {
+      "id": "bmw-745e-xdrive-2020",
+      "make": "BMW",
+      "model": "745e xDrive",
+      "year": 2020,
+      "mpg": 22,
+      "miPerKwh": 1.64,
+      "batteryKwh": 9.8,
+      "evRangeMi": 16
     },
     {
       "id": "bmw-750e-xdrive-sedan-2026",
@@ -285,6 +655,66 @@
       "evRangeMi": 35
     },
     {
+      "id": "bmw-750e-xdrive-sedan-2025",
+      "make": "BMW",
+      "model": "750e xDrive Sedan",
+      "year": 2025,
+      "mpg": 25,
+      "miPerKwh": 2,
+      "batteryKwh": 17,
+      "evRangeMi": 34
+    },
+    {
+      "id": "bmw-i3-94ah-with-range-extender-2018",
+      "make": "BMW",
+      "model": "i3 (94Ah) with Range Extender",
+      "year": 2018,
+      "mpg": 35,
+      "miPerKwh": 3.23,
+      "batteryKwh": 30.1,
+      "evRangeMi": 97
+    },
+    {
+      "id": "bmw-i3-rex-2016",
+      "make": "BMW",
+      "model": "i3 REX",
+      "year": 2016,
+      "mpg": 39,
+      "miPerKwh": 3.45,
+      "batteryKwh": 20.9,
+      "evRangeMi": 72
+    },
+    {
+      "id": "bmw-i3-rex-2015",
+      "make": "BMW",
+      "model": "i3 REX",
+      "year": 2015,
+      "mpg": 39,
+      "miPerKwh": 3.45,
+      "batteryKwh": 20.9,
+      "evRangeMi": 72
+    },
+    {
+      "id": "bmw-i3-rex-2014",
+      "make": "BMW",
+      "model": "i3 REX",
+      "year": 2014,
+      "mpg": 39,
+      "miPerKwh": 3.45,
+      "batteryKwh": 20.9,
+      "evRangeMi": 72
+    },
+    {
+      "id": "bmw-i3-rex-94-amp-hour-battery-2017",
+      "make": "BMW",
+      "model": "i3 REX  (94 Amp-hour battery)",
+      "year": 2017,
+      "mpg": 35,
+      "miPerKwh": 3.33,
+      "batteryKwh": 29.1,
+      "evRangeMi": 97
+    },
+    {
       "id": "bmw-i3-with-range-extender-2021",
       "make": "BMW",
       "model": "i3 with Range Extender",
@@ -293,6 +723,36 @@
       "miPerKwh": 3.13,
       "batteryKwh": 40.3,
       "evRangeMi": 126
+    },
+    {
+      "id": "bmw-i3-with-range-extender-2020",
+      "make": "BMW",
+      "model": "i3 with Range Extender",
+      "year": 2020,
+      "mpg": 31,
+      "miPerKwh": 3.13,
+      "batteryKwh": 40.3,
+      "evRangeMi": 126
+    },
+    {
+      "id": "bmw-i3-with-range-extender-2019",
+      "make": "BMW",
+      "model": "i3 with Range Extender",
+      "year": 2019,
+      "mpg": 31,
+      "miPerKwh": 3.13,
+      "batteryKwh": 40.3,
+      "evRangeMi": 126
+    },
+    {
+      "id": "bmw-i3s-94ah-with-range-extender-2018",
+      "make": "BMW",
+      "model": "i3s (94Ah) with Range Extender",
+      "year": 2018,
+      "mpg": 35,
+      "miPerKwh": 3.23,
+      "batteryKwh": 30.1,
+      "evRangeMi": 97
     },
     {
       "id": "bmw-i3s-with-range-extender-2021",
@@ -305,6 +765,106 @@
       "evRangeMi": 126
     },
     {
+      "id": "bmw-i3s-with-range-extender-2020",
+      "make": "BMW",
+      "model": "i3s with Range Extender",
+      "year": 2020,
+      "mpg": 31,
+      "miPerKwh": 3.13,
+      "batteryKwh": 40.3,
+      "evRangeMi": 126
+    },
+    {
+      "id": "bmw-i3s-with-range-extender-2019",
+      "make": "BMW",
+      "model": "i3s with Range Extender",
+      "year": 2019,
+      "mpg": 31,
+      "miPerKwh": 3.13,
+      "batteryKwh": 40.3,
+      "evRangeMi": 126
+    },
+    {
+      "id": "bmw-i8-2017",
+      "make": "BMW",
+      "model": "i8",
+      "year": 2017,
+      "mpg": 28,
+      "miPerKwh": 2.33,
+      "batteryKwh": 6.5,
+      "evRangeMi": 15
+    },
+    {
+      "id": "bmw-i8-2016",
+      "make": "BMW",
+      "model": "i8",
+      "year": 2016,
+      "mpg": 28,
+      "miPerKwh": 2.33,
+      "batteryKwh": 6.5,
+      "evRangeMi": 15
+    },
+    {
+      "id": "bmw-i8-2015",
+      "make": "BMW",
+      "model": "i8",
+      "year": 2015,
+      "mpg": 28,
+      "miPerKwh": 2.33,
+      "batteryKwh": 6.5,
+      "evRangeMi": 15
+    },
+    {
+      "id": "bmw-i8-2014",
+      "make": "BMW",
+      "model": "i8",
+      "year": 2014,
+      "mpg": 28,
+      "miPerKwh": 2.33,
+      "batteryKwh": 6.5,
+      "evRangeMi": 15
+    },
+    {
+      "id": "bmw-i8-coupe-2020",
+      "make": "BMW",
+      "model": "I8 Coupe",
+      "year": 2020,
+      "mpg": 27,
+      "miPerKwh": 2.04,
+      "batteryKwh": 8.8,
+      "evRangeMi": 18
+    },
+    {
+      "id": "bmw-i8-coupe-2019",
+      "make": "BMW",
+      "model": "I8 Coupe",
+      "year": 2019,
+      "mpg": 27,
+      "miPerKwh": 2.04,
+      "batteryKwh": 8.8,
+      "evRangeMi": 18
+    },
+    {
+      "id": "bmw-i8-roadster-2020",
+      "make": "BMW",
+      "model": "I8 Roadster",
+      "year": 2020,
+      "mpg": 27,
+      "miPerKwh": 2.04,
+      "batteryKwh": 8.8,
+      "evRangeMi": 18
+    },
+    {
+      "id": "bmw-i8-roadster-2019",
+      "make": "BMW",
+      "model": "I8 Roadster",
+      "year": 2019,
+      "mpg": 27,
+      "miPerKwh": 2.04,
+      "batteryKwh": 8.8,
+      "evRangeMi": 18
+    },
+    {
       "id": "bmw-m5-sedan-2026",
       "make": "BMW",
       "model": "M5 Sedan",
@@ -315,10 +875,30 @@
       "evRangeMi": 29
     },
     {
+      "id": "bmw-m5-sedan-2025",
+      "make": "BMW",
+      "model": "M5 Sedan",
+      "year": 2025,
+      "mpg": 14,
+      "miPerKwh": 1.69,
+      "batteryKwh": 15.9,
+      "evRangeMi": 27
+    },
+    {
       "id": "bmw-m5-touring-2026",
       "make": "BMW",
       "model": "M5 Touring",
       "year": 2026,
+      "mpg": 13,
+      "miPerKwh": 1.61,
+      "batteryKwh": 15.5,
+      "evRangeMi": 25
+    },
+    {
+      "id": "bmw-m5-touring-2025",
+      "make": "BMW",
+      "model": "M5 Touring",
+      "year": 2025,
       "mpg": 13,
       "miPerKwh": 1.61,
       "batteryKwh": 15.5,
@@ -335,10 +915,70 @@
       "evRangeMi": 18
     },
     {
+      "id": "bmw-x3-xdrive30e-2020",
+      "make": "BMW",
+      "model": "X3 xDrive30e",
+      "year": 2020,
+      "mpg": 24,
+      "miPerKwh": 1.79,
+      "batteryKwh": 10.1,
+      "evRangeMi": 18
+    },
+    {
+      "id": "bmw-x5-xdrive40e-2018",
+      "make": "BMW",
+      "model": "X5 xDrive40e",
+      "year": 2018,
+      "mpg": 24,
+      "miPerKwh": 1.69,
+      "batteryKwh": 8.3,
+      "evRangeMi": 14
+    },
+    {
+      "id": "bmw-x5-xdrive40e-2017",
+      "make": "BMW",
+      "model": "X5 xDrive40e",
+      "year": 2017,
+      "mpg": 24,
+      "miPerKwh": 1.69,
+      "batteryKwh": 8.3,
+      "evRangeMi": 14
+    },
+    {
+      "id": "bmw-x5-xdrive40e-2016",
+      "make": "BMW",
+      "model": "X5 xDrive40e",
+      "year": 2016,
+      "mpg": 24,
+      "miPerKwh": 1.69,
+      "batteryKwh": 8.3,
+      "evRangeMi": 14
+    },
+    {
       "id": "bmw-x5-xdrive45e-2023",
       "make": "BMW",
       "model": "X5 xDrive45e",
       "year": 2023,
+      "mpg": 20,
+      "miPerKwh": 1.59,
+      "batteryKwh": 19.5,
+      "evRangeMi": 31
+    },
+    {
+      "id": "bmw-x5-xdrive45e-2022",
+      "make": "BMW",
+      "model": "X5 xDrive45e",
+      "year": 2022,
+      "mpg": 20,
+      "miPerKwh": 1.59,
+      "batteryKwh": 19.5,
+      "evRangeMi": 31
+    },
+    {
+      "id": "bmw-x5-xdrive45e-2021",
+      "make": "BMW",
+      "model": "X5 xDrive45e",
+      "year": 2021,
       "mpg": 20,
       "miPerKwh": 1.59,
       "batteryKwh": 19.5,
@@ -355,10 +995,40 @@
       "evRangeMi": 40
     },
     {
+      "id": "bmw-x5-xdrive50e-2025",
+      "make": "BMW",
+      "model": "X5 xDrive50e",
+      "year": 2025,
+      "mpg": 22,
+      "miPerKwh": 1.72,
+      "batteryKwh": 22.6,
+      "evRangeMi": 39
+    },
+    {
       "id": "bmw-xm-2025",
       "make": "BMW",
       "model": "XM",
       "year": 2025,
+      "mpg": 14,
+      "miPerKwh": 1.37,
+      "batteryKwh": 22.6,
+      "evRangeMi": 31
+    },
+    {
+      "id": "bmw-xm-2024",
+      "make": "BMW",
+      "model": "XM",
+      "year": 2024,
+      "mpg": 14,
+      "miPerKwh": 1.37,
+      "batteryKwh": 22.6,
+      "evRangeMi": 31
+    },
+    {
+      "id": "bmw-xm-2023",
+      "make": "BMW",
+      "model": "XM",
+      "year": 2023,
       "mpg": 14,
       "miPerKwh": 1.37,
       "batteryKwh": 22.6,
@@ -375,6 +1045,156 @@
       "evRangeMi": 30
     },
     {
+      "id": "bmw-xm-label-2025",
+      "make": "BMW",
+      "model": "XM Label",
+      "year": 2025,
+      "mpg": 14,
+      "miPerKwh": 1.37,
+      "batteryKwh": 22.6,
+      "evRangeMi": 31
+    },
+    {
+      "id": "cadillac-ct6-plug-in-2018",
+      "make": "Cadillac",
+      "model": "CT6 Plug-In",
+      "year": 2018,
+      "mpg": 25,
+      "miPerKwh": 1.85,
+      "batteryKwh": 16.7,
+      "evRangeMi": 31
+    },
+    {
+      "id": "cadillac-ct6-plug-in-2017",
+      "make": "Cadillac",
+      "model": "CT6 Plug-In",
+      "year": 2017,
+      "mpg": 26,
+      "miPerKwh": 1.85,
+      "batteryKwh": 16.7,
+      "evRangeMi": 31
+    },
+    {
+      "id": "cadillac-elr-2016",
+      "make": "Cadillac",
+      "model": "ELR",
+      "year": 2016,
+      "mpg": 32,
+      "miPerKwh": 2.56,
+      "batteryKwh": 15.6,
+      "evRangeMi": 40
+    },
+    {
+      "id": "cadillac-elr-2015",
+      "make": "Cadillac",
+      "model": "ELR",
+      "year": 2015,
+      "mpg": 33,
+      "miPerKwh": 2.44,
+      "batteryKwh": 15.2,
+      "evRangeMi": 37
+    },
+    {
+      "id": "cadillac-elr-2014",
+      "make": "Cadillac",
+      "model": "ELR",
+      "year": 2014,
+      "mpg": 33,
+      "miPerKwh": 2.44,
+      "batteryKwh": 15.2,
+      "evRangeMi": 37
+    },
+    {
+      "id": "cadillac-elr-sport-2016",
+      "make": "Cadillac",
+      "model": "ELR Sport",
+      "year": 2016,
+      "mpg": 30,
+      "miPerKwh": 2.33,
+      "batteryKwh": 15.5,
+      "evRangeMi": 36
+    },
+    {
+      "id": "chevrolet-volt-2019",
+      "make": "Chevrolet",
+      "model": "Volt",
+      "year": 2019,
+      "mpg": 42,
+      "miPerKwh": 3.23,
+      "batteryKwh": 16.4,
+      "evRangeMi": 53
+    },
+    {
+      "id": "chevrolet-volt-2018",
+      "make": "Chevrolet",
+      "model": "Volt",
+      "year": 2018,
+      "mpg": 42,
+      "miPerKwh": 3.23,
+      "batteryKwh": 16.4,
+      "evRangeMi": 53
+    },
+    {
+      "id": "chevrolet-volt-2017",
+      "make": "Chevrolet",
+      "model": "Volt",
+      "year": 2017,
+      "mpg": 42,
+      "miPerKwh": 3.23,
+      "batteryKwh": 16.4,
+      "evRangeMi": 53
+    },
+    {
+      "id": "chevrolet-volt-2016",
+      "make": "Chevrolet",
+      "model": "Volt",
+      "year": 2016,
+      "mpg": 42,
+      "miPerKwh": 3.23,
+      "batteryKwh": 16.4,
+      "evRangeMi": 53
+    },
+    {
+      "id": "chevrolet-volt-2015",
+      "make": "Chevrolet",
+      "model": "Volt",
+      "year": 2015,
+      "mpg": 37,
+      "miPerKwh": 2.86,
+      "batteryKwh": 13.3,
+      "evRangeMi": 38
+    },
+    {
+      "id": "chevrolet-volt-2014",
+      "make": "Chevrolet",
+      "model": "Volt",
+      "year": 2014,
+      "mpg": 37,
+      "miPerKwh": 2.86,
+      "batteryKwh": 13.3,
+      "evRangeMi": 38
+    },
+    {
+      "id": "chevrolet-volt-2013",
+      "make": "Chevrolet",
+      "model": "Volt",
+      "year": 2013,
+      "mpg": 37,
+      "miPerKwh": 2.86,
+      "batteryKwh": 13.3,
+      "evRangeMi": 38
+    },
+    {
+      "id": "chevrolet-volt-2012",
+      "make": "Chevrolet",
+      "model": "Volt",
+      "year": 2012,
+      "mpg": 37,
+      "miPerKwh": 2.78,
+      "batteryKwh": 13,
+      "evRangeMi": 36
+    },
+    {
       "id": "chrysler-pacifica-hybrid-2026",
       "make": "Chrysler",
       "model": "Pacifica Hybrid",
@@ -383,6 +1203,96 @@
       "miPerKwh": 2.44,
       "batteryKwh": 13.1,
       "evRangeMi": 32
+    },
+    {
+      "id": "chrysler-pacifica-hybrid-2025",
+      "make": "Chrysler",
+      "model": "Pacifica Hybrid",
+      "year": 2025,
+      "mpg": 30,
+      "miPerKwh": 2.44,
+      "batteryKwh": 13.1,
+      "evRangeMi": 32
+    },
+    {
+      "id": "chrysler-pacifica-hybrid-2024",
+      "make": "Chrysler",
+      "model": "Pacifica Hybrid",
+      "year": 2024,
+      "mpg": 30,
+      "miPerKwh": 2.44,
+      "batteryKwh": 13.1,
+      "evRangeMi": 32
+    },
+    {
+      "id": "chrysler-pacifica-hybrid-2023",
+      "make": "Chrysler",
+      "model": "Pacifica Hybrid",
+      "year": 2023,
+      "mpg": 30,
+      "miPerKwh": 2.44,
+      "batteryKwh": 13.1,
+      "evRangeMi": 32
+    },
+    {
+      "id": "chrysler-pacifica-hybrid-2022",
+      "make": "Chrysler",
+      "model": "Pacifica Hybrid",
+      "year": 2022,
+      "mpg": 30,
+      "miPerKwh": 2.44,
+      "batteryKwh": 13.1,
+      "evRangeMi": 32
+    },
+    {
+      "id": "chrysler-pacifica-hybrid-2021",
+      "make": "Chrysler",
+      "model": "Pacifica Hybrid",
+      "year": 2021,
+      "mpg": 30,
+      "miPerKwh": 2.44,
+      "batteryKwh": 13.1,
+      "evRangeMi": 32
+    },
+    {
+      "id": "chrysler-pacifica-hybrid-2020",
+      "make": "Chrysler",
+      "model": "Pacifica Hybrid",
+      "year": 2020,
+      "mpg": 30,
+      "miPerKwh": 2.44,
+      "batteryKwh": 13.1,
+      "evRangeMi": 32
+    },
+    {
+      "id": "chrysler-pacifica-hybrid-2019",
+      "make": "Chrysler",
+      "model": "Pacifica Hybrid",
+      "year": 2019,
+      "mpg": 30,
+      "miPerKwh": 2.44,
+      "batteryKwh": 13.1,
+      "evRangeMi": 32
+    },
+    {
+      "id": "chrysler-pacifica-hybrid-2018",
+      "make": "Chrysler",
+      "model": "Pacifica Hybrid",
+      "year": 2018,
+      "mpg": 32,
+      "miPerKwh": 2.5,
+      "batteryKwh": 13.2,
+      "evRangeMi": 33
+    },
+    {
+      "id": "chrysler-pacifica-hybrid-2017",
+      "make": "Chrysler",
+      "model": "Pacifica Hybrid",
+      "year": 2017,
+      "mpg": 32,
+      "miPerKwh": 2.5,
+      "batteryKwh": 13.2,
+      "evRangeMi": 33
     },
     {
       "id": "dodge-hornet-phev-awd-2025",
@@ -395,10 +1305,40 @@
       "evRangeMi": 33
     },
     {
+      "id": "dodge-hornet-phev-awd-2024",
+      "make": "Dodge",
+      "model": "Hornet PHEV AWD",
+      "year": 2024,
+      "mpg": 29,
+      "miPerKwh": 2.27,
+      "batteryKwh": 14.5,
+      "evRangeMi": 33
+    },
+    {
       "id": "ferrari-296-gtb-2026",
       "make": "Ferrari",
       "model": "296 GTB",
       "year": 2026,
+      "mpg": 18,
+      "miPerKwh": 1.39,
+      "batteryKwh": 5.8,
+      "evRangeMi": 8
+    },
+    {
+      "id": "ferrari-296-gtb-2025",
+      "make": "Ferrari",
+      "model": "296 GTB",
+      "year": 2025,
+      "mpg": 18,
+      "miPerKwh": 1.39,
+      "batteryKwh": 5.8,
+      "evRangeMi": 8
+    },
+    {
+      "id": "ferrari-296-gtb-2022",
+      "make": "Ferrari",
+      "model": "296 GTB",
+      "year": 2022,
       "mpg": 18,
       "miPerKwh": 1.39,
       "batteryKwh": 5.8,
@@ -419,6 +1359,16 @@
       "make": "Ferrari",
       "model": "296 GTS",
       "year": 2026,
+      "mpg": 18,
+      "miPerKwh": 1.41,
+      "batteryKwh": 5.7,
+      "evRangeMi": 8
+    },
+    {
+      "id": "ferrari-296-gts-2025",
+      "make": "Ferrari",
+      "model": "296 GTS",
+      "year": 2025,
       "mpg": 18,
       "miPerKwh": 1.41,
       "batteryKwh": 5.7,
@@ -455,10 +1405,60 @@
       "evRangeMi": 8
     },
     {
+      "id": "ferrari-sf90-spider-2024",
+      "make": "Ferrari",
+      "model": "SF90 Spider",
+      "year": 2024,
+      "mpg": 17,
+      "miPerKwh": 1.3,
+      "batteryKwh": 6.2,
+      "evRangeMi": 8
+    },
+    {
+      "id": "ferrari-sf90-spider-2023",
+      "make": "Ferrari",
+      "model": "SF90 Spider",
+      "year": 2023,
+      "mpg": 17,
+      "miPerKwh": 1.3,
+      "batteryKwh": 6.2,
+      "evRangeMi": 8
+    },
+    {
+      "id": "ferrari-sf90-spider-2022",
+      "make": "Ferrari",
+      "model": "SF90 Spider",
+      "year": 2022,
+      "mpg": 17,
+      "miPerKwh": 1.3,
+      "batteryKwh": 6.2,
+      "evRangeMi": 8
+    },
+    {
       "id": "ferrari-sf90-stradale-2024",
       "make": "Ferrari",
       "model": "SF90 Stradale",
       "year": 2024,
+      "mpg": 18,
+      "miPerKwh": 1.52,
+      "batteryKwh": 5.9,
+      "evRangeMi": 9
+    },
+    {
+      "id": "ferrari-sf90-stradale-2023",
+      "make": "Ferrari",
+      "model": "SF90 Stradale",
+      "year": 2023,
+      "mpg": 18,
+      "miPerKwh": 1.52,
+      "batteryKwh": 5.9,
+      "evRangeMi": 9
+    },
+    {
+      "id": "ferrari-sf90-stradale-2022",
+      "make": "Ferrari",
+      "model": "SF90 Stradale",
+      "year": 2022,
       "mpg": 18,
       "miPerKwh": 1.52,
       "batteryKwh": 5.9,
@@ -495,6 +1495,66 @@
       "evRangeMi": 9
     },
     {
+      "id": "fisker-karma-2012",
+      "make": "Fisker",
+      "model": "Karma",
+      "year": 2012,
+      "mpg": 20,
+      "miPerKwh": 1.61,
+      "batteryKwh": 20.5,
+      "evRangeMi": 33
+    },
+    {
+      "id": "ford-c-max-energi-plug-in-hybrid-2016",
+      "make": "Ford",
+      "model": "C-MAX Energi Plug-in Hybrid",
+      "year": 2016,
+      "mpg": 38,
+      "miPerKwh": 2.7,
+      "batteryKwh": 7.4,
+      "evRangeMi": 20
+    },
+    {
+      "id": "ford-c-max-energi-plug-in-hybrid-2015",
+      "make": "Ford",
+      "model": "C-MAX Energi Plug-in Hybrid",
+      "year": 2015,
+      "mpg": 38,
+      "miPerKwh": 2.7,
+      "batteryKwh": 7.4,
+      "evRangeMi": 20
+    },
+    {
+      "id": "ford-c-max-energi-plug-in-hybrid-2014",
+      "make": "Ford",
+      "model": "C-MAX Energi Plug-in Hybrid",
+      "year": 2014,
+      "mpg": 38,
+      "miPerKwh": 2.7,
+      "batteryKwh": 7.4,
+      "evRangeMi": 20
+    },
+    {
+      "id": "ford-c-max-energi-plug-in-hybrid-2013",
+      "make": "Ford",
+      "model": "C-MAX Energi Plug-in Hybrid",
+      "year": 2013,
+      "mpg": 38,
+      "miPerKwh": 2.7,
+      "batteryKwh": 7.4,
+      "evRangeMi": 20
+    },
+    {
+      "id": "ford-c-max-energi-plug-in-hybrid-2017",
+      "make": "Ford",
+      "model": "C-MAX Energi Plug-In Hybrid",
+      "year": 2017,
+      "mpg": 39,
+      "miPerKwh": 2.86,
+      "batteryKwh": 7,
+      "evRangeMi": 20
+    },
+    {
       "id": "ford-escape-fwd-phev-2026",
       "make": "Ford",
       "model": "Escape FWD PHEV",
@@ -505,10 +1565,200 @@
       "evRangeMi": 37
     },
     {
+      "id": "ford-escape-fwd-phev-2025",
+      "make": "Ford",
+      "model": "Escape FWD PHEV",
+      "year": 2025,
+      "mpg": 40,
+      "miPerKwh": 3.03,
+      "batteryKwh": 12.2,
+      "evRangeMi": 37
+    },
+    {
+      "id": "ford-escape-fwd-phev-2023",
+      "make": "Ford",
+      "model": "Escape FWD PHEV",
+      "year": 2023,
+      "mpg": 40,
+      "miPerKwh": 3.03,
+      "batteryKwh": 12.2,
+      "evRangeMi": 37
+    },
+    {
+      "id": "ford-escape-fwd-phev-2022",
+      "make": "Ford",
+      "model": "Escape FWD PHEV",
+      "year": 2022,
+      "mpg": 40,
+      "miPerKwh": 3.13,
+      "batteryKwh": 11.8,
+      "evRangeMi": 37
+    },
+    {
+      "id": "ford-escape-fwd-phev-2021",
+      "make": "Ford",
+      "model": "Escape FWD PHEV",
+      "year": 2021,
+      "mpg": 40,
+      "miPerKwh": 3.13,
+      "batteryKwh": 11.8,
+      "evRangeMi": 37
+    },
+    {
+      "id": "ford-escape-fwd-phev-2020",
+      "make": "Ford",
+      "model": "Escape FWD PHEV",
+      "year": 2020,
+      "mpg": 41,
+      "miPerKwh": 3.03,
+      "batteryKwh": 12.2,
+      "evRangeMi": 37
+    },
+    {
+      "id": "ford-fusion-energi-plug-in-hybrid-2020",
+      "make": "Ford",
+      "model": "Fusion Energi Plug-in Hybrid",
+      "year": 2020,
+      "mpg": 42,
+      "miPerKwh": 3.03,
+      "batteryKwh": 8.6,
+      "evRangeMi": 26
+    },
+    {
+      "id": "ford-fusion-energi-plug-in-hybrid-2019",
+      "make": "Ford",
+      "model": "Fusion Energi Plug-in Hybrid",
+      "year": 2019,
+      "mpg": 42,
+      "miPerKwh": 3.03,
+      "batteryKwh": 8.6,
+      "evRangeMi": 26
+    },
+    {
+      "id": "ford-fusion-energi-plug-in-hybrid-2018",
+      "make": "Ford",
+      "model": "Fusion Energi Plug-in Hybrid",
+      "year": 2018,
+      "mpg": 42,
+      "miPerKwh": 2.86,
+      "batteryKwh": 7.4,
+      "evRangeMi": 21
+    },
+    {
+      "id": "ford-fusion-energi-plug-in-hybrid-2017",
+      "make": "Ford",
+      "model": "Fusion Energi Plug-in Hybrid",
+      "year": 2017,
+      "mpg": 42,
+      "miPerKwh": 2.86,
+      "batteryKwh": 7.7,
+      "evRangeMi": 22
+    },
+    {
+      "id": "ford-fusion-energi-plug-in-hybrid-2016",
+      "make": "Ford",
+      "model": "Fusion Energi Plug-in Hybrid",
+      "year": 2016,
+      "mpg": 38,
+      "miPerKwh": 2.7,
+      "batteryKwh": 7.4,
+      "evRangeMi": 20
+    },
+    {
+      "id": "ford-fusion-energi-plug-in-hybrid-2015",
+      "make": "Ford",
+      "model": "Fusion Energi Plug-in Hybrid",
+      "year": 2015,
+      "mpg": 38,
+      "miPerKwh": 2.7,
+      "batteryKwh": 7.4,
+      "evRangeMi": 20
+    },
+    {
+      "id": "ford-fusion-energi-plug-in-hybrid-2014",
+      "make": "Ford",
+      "model": "Fusion Energi Plug-in Hybrid",
+      "year": 2014,
+      "mpg": 38,
+      "miPerKwh": 2.7,
+      "batteryKwh": 7.4,
+      "evRangeMi": 20
+    },
+    {
+      "id": "ford-fusion-energi-plug-in-hybrid-2013",
+      "make": "Ford",
+      "model": "Fusion Energi Plug-in Hybrid",
+      "year": 2013,
+      "mpg": 38,
+      "miPerKwh": 2.7,
+      "batteryKwh": 7.4,
+      "evRangeMi": 20
+    },
+    {
+      "id": "ford-fusion-special-service-phev-2020",
+      "make": "Ford",
+      "model": "Fusion Special Service PHEV",
+      "year": 2020,
+      "mpg": 42,
+      "miPerKwh": 3.03,
+      "batteryKwh": 8.6,
+      "evRangeMi": 26
+    },
+    {
+      "id": "ford-fusion-special-service-vehicle-phev-2019",
+      "make": "Ford",
+      "model": "Fusion Special Service Vehicle PHEV",
+      "year": 2019,
+      "mpg": 42,
+      "miPerKwh": 3.03,
+      "batteryKwh": 8.6,
+      "evRangeMi": 26
+    },
+    {
+      "id": "honda-accord-plug-in-hybrid-2014",
+      "make": "Honda",
+      "model": "Accord Plug-in Hybrid",
+      "year": 2014,
+      "mpg": 46,
+      "miPerKwh": 3.45,
+      "batteryKwh": 3.8,
+      "evRangeMi": 13
+    },
+    {
       "id": "honda-clarity-plug-in-hybrid-2021",
       "make": "Honda",
       "model": "Clarity Plug-in Hybrid",
       "year": 2021,
+      "mpg": 42,
+      "miPerKwh": 3.23,
+      "batteryKwh": 14.9,
+      "evRangeMi": 48
+    },
+    {
+      "id": "honda-clarity-plug-in-hybrid-2020",
+      "make": "Honda",
+      "model": "Clarity Plug-in Hybrid",
+      "year": 2020,
+      "mpg": 42,
+      "miPerKwh": 3.23,
+      "batteryKwh": 14.9,
+      "evRangeMi": 48
+    },
+    {
+      "id": "honda-clarity-plug-in-hybrid-2019",
+      "make": "Honda",
+      "model": "Clarity Plug-in Hybrid",
+      "year": 2019,
+      "mpg": 42,
+      "miPerKwh": 3.23,
+      "batteryKwh": 14.9,
+      "evRangeMi": 48
+    },
+    {
+      "id": "honda-clarity-plug-in-hybrid-2018",
+      "make": "Honda",
+      "model": "Clarity Plug-in Hybrid",
+      "year": 2018,
       "mpg": 42,
       "miPerKwh": 3.23,
       "batteryKwh": 14.9,
@@ -525,6 +1775,46 @@
       "evRangeMi": 29
     },
     {
+      "id": "hyundai-ioniq-plug-in-hybrid-2021",
+      "make": "Hyundai",
+      "model": "Ioniq Plug-in Hybrid",
+      "year": 2021,
+      "mpg": 52,
+      "miPerKwh": 3.57,
+      "batteryKwh": 8.1,
+      "evRangeMi": 29
+    },
+    {
+      "id": "hyundai-ioniq-plug-in-hybrid-2020",
+      "make": "Hyundai",
+      "model": "Ioniq Plug-in Hybrid",
+      "year": 2020,
+      "mpg": 52,
+      "miPerKwh": 3.57,
+      "batteryKwh": 8.1,
+      "evRangeMi": 29
+    },
+    {
+      "id": "hyundai-ioniq-plug-in-hybrid-2019",
+      "make": "Hyundai",
+      "model": "Ioniq Plug-in Hybrid",
+      "year": 2019,
+      "mpg": 52,
+      "miPerKwh": 3.57,
+      "batteryKwh": 8.1,
+      "evRangeMi": 29
+    },
+    {
+      "id": "hyundai-ioniq-plug-in-hybrid-2018",
+      "make": "Hyundai",
+      "model": "Ioniq Plug-in Hybrid",
+      "year": 2018,
+      "mpg": 52,
+      "miPerKwh": 3.57,
+      "batteryKwh": 8.1,
+      "evRangeMi": 29
+    },
+    {
       "id": "hyundai-santa-fe-plug-in-hybrid-2023",
       "make": "Hyundai",
       "model": "Santa Fe Plug-in Hybrid",
@@ -533,6 +1823,56 @@
       "miPerKwh": 2.27,
       "batteryKwh": 13.6,
       "evRangeMi": 31
+    },
+    {
+      "id": "hyundai-santa-fe-plug-in-hybrid-2022",
+      "make": "Hyundai",
+      "model": "Santa Fe Plug-in Hybrid",
+      "year": 2022,
+      "mpg": 33,
+      "miPerKwh": 2.27,
+      "batteryKwh": 13.6,
+      "evRangeMi": 31
+    },
+    {
+      "id": "hyundai-sonata-plug-in-hybrid-2019",
+      "make": "Hyundai",
+      "model": "Sonata Plug-in Hybrid",
+      "year": 2019,
+      "mpg": 39,
+      "miPerKwh": 2.94,
+      "batteryKwh": 9.5,
+      "evRangeMi": 28
+    },
+    {
+      "id": "hyundai-sonata-plug-in-hybrid-2018",
+      "make": "Hyundai",
+      "model": "Sonata Plug-in Hybrid",
+      "year": 2018,
+      "mpg": 39,
+      "miPerKwh": 2.94,
+      "batteryKwh": 9.5,
+      "evRangeMi": 28
+    },
+    {
+      "id": "hyundai-sonata-plug-in-hybrid-2017",
+      "make": "Hyundai",
+      "model": "Sonata Plug-in Hybrid",
+      "year": 2017,
+      "mpg": 39,
+      "miPerKwh": 2.94,
+      "batteryKwh": 9.2,
+      "evRangeMi": 27
+    },
+    {
+      "id": "hyundai-sonata-plug-in-hybrid-2016",
+      "make": "Hyundai",
+      "model": "Sonata Plug-in Hybrid",
+      "year": 2016,
+      "mpg": 40,
+      "miPerKwh": 2.94,
+      "batteryKwh": 9.2,
+      "evRangeMi": 27
     },
     {
       "id": "hyundai-tucson-plug-in-hybrid-2026",
@@ -545,6 +1885,46 @@
       "evRangeMi": 32
     },
     {
+      "id": "hyundai-tucson-plug-in-hybrid-2025",
+      "make": "Hyundai",
+      "model": "Tucson Plug-in Hybrid",
+      "year": 2025,
+      "mpg": 35,
+      "miPerKwh": 2.27,
+      "batteryKwh": 13.6,
+      "evRangeMi": 31
+    },
+    {
+      "id": "hyundai-tucson-plug-in-hybrid-2024",
+      "make": "Hyundai",
+      "model": "Tucson Plug-in Hybrid",
+      "year": 2024,
+      "mpg": 35,
+      "miPerKwh": 2.38,
+      "batteryKwh": 13.9,
+      "evRangeMi": 33
+    },
+    {
+      "id": "hyundai-tucson-plug-in-hybrid-2023",
+      "make": "Hyundai",
+      "model": "Tucson Plug-in Hybrid",
+      "year": 2023,
+      "mpg": 35,
+      "miPerKwh": 2.38,
+      "batteryKwh": 13.9,
+      "evRangeMi": 33
+    },
+    {
+      "id": "hyundai-tucson-plug-in-hybrid-2022",
+      "make": "Hyundai",
+      "model": "Tucson Plug-in Hybrid",
+      "year": 2022,
+      "mpg": 35,
+      "miPerKwh": 2.38,
+      "batteryKwh": 13.9,
+      "evRangeMi": 33
+    },
+    {
       "id": "jeep-grand-cherokee-4xe-2026",
       "make": "Jeep",
       "model": "Grand Cherokee 4xe",
@@ -555,10 +1935,100 @@
       "evRangeMi": 26
     },
     {
+      "id": "jeep-grand-cherokee-4xe-2025",
+      "make": "Jeep",
+      "model": "Grand Cherokee 4xe",
+      "year": 2025,
+      "mpg": 23,
+      "miPerKwh": 1.72,
+      "batteryKwh": 15.1,
+      "evRangeMi": 26
+    },
+    {
+      "id": "jeep-grand-cherokee-4xe-2024",
+      "make": "Jeep",
+      "model": "Grand Cherokee 4xe",
+      "year": 2024,
+      "mpg": 23,
+      "miPerKwh": 1.72,
+      "batteryKwh": 15.1,
+      "evRangeMi": 26
+    },
+    {
+      "id": "jeep-grand-cherokee-4xe-2023",
+      "make": "Jeep",
+      "model": "Grand Cherokee 4xe",
+      "year": 2023,
+      "mpg": 23,
+      "miPerKwh": 1.72,
+      "batteryKwh": 15.1,
+      "evRangeMi": 26
+    },
+    {
+      "id": "jeep-grand-cherokee-4xe-2022",
+      "make": "Jeep",
+      "model": "Grand Cherokee 4xe",
+      "year": 2022,
+      "mpg": 23,
+      "miPerKwh": 1.72,
+      "batteryKwh": 15.1,
+      "evRangeMi": 26
+    },
+    {
       "id": "jeep-wrangler-4dr-4xe-2026",
       "make": "Jeep",
       "model": "Wrangler 4dr 4xe",
       "year": 2026,
+      "mpg": 20,
+      "miPerKwh": 1.47,
+      "batteryKwh": 15,
+      "evRangeMi": 22
+    },
+    {
+      "id": "jeep-wrangler-4dr-4xe-2025",
+      "make": "Jeep",
+      "model": "Wrangler 4dr 4xe",
+      "year": 2025,
+      "mpg": 20,
+      "miPerKwh": 1.47,
+      "batteryKwh": 15,
+      "evRangeMi": 22
+    },
+    {
+      "id": "jeep-wrangler-4dr-4xe-2024",
+      "make": "Jeep",
+      "model": "Wrangler 4dr 4xe",
+      "year": 2024,
+      "mpg": 20,
+      "miPerKwh": 1.47,
+      "batteryKwh": 15,
+      "evRangeMi": 22
+    },
+    {
+      "id": "jeep-wrangler-4dr-4xe-2023",
+      "make": "Jeep",
+      "model": "Wrangler 4dr 4xe",
+      "year": 2023,
+      "mpg": 20,
+      "miPerKwh": 1.47,
+      "batteryKwh": 15,
+      "evRangeMi": 22
+    },
+    {
+      "id": "jeep-wrangler-4dr-4xe-2022",
+      "make": "Jeep",
+      "model": "Wrangler 4dr 4xe",
+      "year": 2022,
+      "mpg": 20,
+      "miPerKwh": 1.47,
+      "batteryKwh": 15,
+      "evRangeMi": 22
+    },
+    {
+      "id": "jeep-wrangler-4dr-4xe-2021",
+      "make": "Jeep",
+      "model": "Wrangler 4dr 4xe",
+      "year": 2021,
       "mpg": 20,
       "miPerKwh": 1.47,
       "batteryKwh": 15,
@@ -585,6 +2055,36 @@
       "evRangeMi": 54
     },
     {
+      "id": "karma-revero-2019",
+      "make": "Karma",
+      "model": "Revero",
+      "year": 2019,
+      "mpg": 20,
+      "miPerKwh": 1.79,
+      "batteryKwh": 20.7,
+      "evRangeMi": 37
+    },
+    {
+      "id": "karma-revero-2018",
+      "make": "Karma",
+      "model": "Revero",
+      "year": 2018,
+      "mpg": 20,
+      "miPerKwh": 1.79,
+      "batteryKwh": 20.7,
+      "evRangeMi": 37
+    },
+    {
+      "id": "karma-revero-gt-21-inch-wheels-2020",
+      "make": "Karma",
+      "model": "Revero GT (21-inch wheels)",
+      "year": 2020,
+      "mpg": 26,
+      "miPerKwh": 2.08,
+      "batteryKwh": 29.3,
+      "evRangeMi": 61
+    },
+    {
       "id": "kia-niro-plug-in-hybrid-2026",
       "make": "Kia",
       "model": "Niro Plug-in Hybrid",
@@ -593,6 +2093,116 @@
       "miPerKwh": 3.23,
       "batteryKwh": 10.5,
       "evRangeMi": 34
+    },
+    {
+      "id": "kia-niro-plug-in-hybrid-2025",
+      "make": "Kia",
+      "model": "Niro Plug-in Hybrid",
+      "year": 2025,
+      "mpg": 48,
+      "miPerKwh": 3.23,
+      "batteryKwh": 10.5,
+      "evRangeMi": 34
+    },
+    {
+      "id": "kia-niro-plug-in-hybrid-2023",
+      "make": "Kia",
+      "model": "Niro Plug-in Hybrid",
+      "year": 2023,
+      "mpg": 48,
+      "miPerKwh": 3.23,
+      "batteryKwh": 10.5,
+      "evRangeMi": 34
+    },
+    {
+      "id": "kia-niro-plug-in-hybrid-2022",
+      "make": "Kia",
+      "model": "Niro Plug-in Hybrid",
+      "year": 2022,
+      "mpg": 46,
+      "miPerKwh": 3.13,
+      "batteryKwh": 8.3,
+      "evRangeMi": 26
+    },
+    {
+      "id": "kia-niro-plug-in-hybrid-2021",
+      "make": "Kia",
+      "model": "Niro Plug-in Hybrid",
+      "year": 2021,
+      "mpg": 46,
+      "miPerKwh": 3.13,
+      "batteryKwh": 8.3,
+      "evRangeMi": 26
+    },
+    {
+      "id": "kia-niro-plug-in-hybrid-2020",
+      "make": "Kia",
+      "model": "Niro Plug-in Hybrid",
+      "year": 2020,
+      "mpg": 46,
+      "miPerKwh": 3.13,
+      "batteryKwh": 8.3,
+      "evRangeMi": 26
+    },
+    {
+      "id": "kia-niro-plug-in-hybrid-2019",
+      "make": "Kia",
+      "model": "Niro Plug-in Hybrid",
+      "year": 2019,
+      "mpg": 46,
+      "miPerKwh": 3.13,
+      "batteryKwh": 8.3,
+      "evRangeMi": 26
+    },
+    {
+      "id": "kia-niro-plug-in-hybrid-2018",
+      "make": "Kia",
+      "model": "Niro Plug-in Hybrid",
+      "year": 2018,
+      "mpg": 46,
+      "miPerKwh": 3.13,
+      "batteryKwh": 8.3,
+      "evRangeMi": 26
+    },
+    {
+      "id": "kia-optima-plug-in-hybrid-2020",
+      "make": "Kia",
+      "model": "Optima Plug-in Hybrid",
+      "year": 2020,
+      "mpg": 41,
+      "miPerKwh": 3.03,
+      "batteryKwh": 9.2,
+      "evRangeMi": 28
+    },
+    {
+      "id": "kia-optima-plug-in-hybrid-2019",
+      "make": "Kia",
+      "model": "Optima Plug-in Hybrid",
+      "year": 2019,
+      "mpg": 40,
+      "miPerKwh": 3.03,
+      "batteryKwh": 9.6,
+      "evRangeMi": 29
+    },
+    {
+      "id": "kia-optima-plug-in-hybrid-2018",
+      "make": "Kia",
+      "model": "Optima Plug-in Hybrid",
+      "year": 2018,
+      "mpg": 40,
+      "miPerKwh": 3.03,
+      "batteryKwh": 9.6,
+      "evRangeMi": 29
+    },
+    {
+      "id": "kia-optima-plug-in-hybrid-2017",
+      "make": "Kia",
+      "model": "Optima Plug-in Hybrid",
+      "year": 2017,
+      "mpg": 40,
+      "miPerKwh": 3.03,
+      "batteryKwh": 9.6,
+      "evRangeMi": 29
     },
     {
       "id": "kia-sorento-plug-in-hybrid-2026",
@@ -605,6 +2215,46 @@
       "evRangeMi": 30
     },
     {
+      "id": "kia-sorento-plug-in-hybrid-2025",
+      "make": "Kia",
+      "model": "Sorento Plug-in Hybrid",
+      "year": 2025,
+      "mpg": 33,
+      "miPerKwh": 2.22,
+      "batteryKwh": 13.5,
+      "evRangeMi": 30
+    },
+    {
+      "id": "kia-sorento-plug-in-hybrid-2024",
+      "make": "Kia",
+      "model": "Sorento Plug-in Hybrid",
+      "year": 2024,
+      "mpg": 34,
+      "miPerKwh": 2.33,
+      "batteryKwh": 13.8,
+      "evRangeMi": 32
+    },
+    {
+      "id": "kia-sorento-plug-in-hybrid-2023",
+      "make": "Kia",
+      "model": "Sorento Plug-in Hybrid",
+      "year": 2023,
+      "mpg": 34,
+      "miPerKwh": 2.33,
+      "batteryKwh": 13.8,
+      "evRangeMi": 32
+    },
+    {
+      "id": "kia-sorento-plug-in-hybrid-2022",
+      "make": "Kia",
+      "model": "Sorento Plug-in Hybrid",
+      "year": 2022,
+      "mpg": 34,
+      "miPerKwh": 2.33,
+      "batteryKwh": 13.8,
+      "evRangeMi": 32
+    },
+    {
       "id": "kia-sportage-plug-in-hybrid-2026",
       "make": "Kia",
       "model": "Sportage Plug-in Hybrid",
@@ -615,10 +2265,50 @@
       "evRangeMi": 33
     },
     {
+      "id": "kia-sportage-plug-in-hybrid-2025",
+      "make": "Kia",
+      "model": "Sportage Plug-in Hybrid",
+      "year": 2025,
+      "mpg": 35,
+      "miPerKwh": 2.5,
+      "batteryKwh": 13.6,
+      "evRangeMi": 34
+    },
+    {
+      "id": "kia-sportage-plug-in-hybrid-2024",
+      "make": "Kia",
+      "model": "Sportage Plug-in Hybrid",
+      "year": 2024,
+      "mpg": 35,
+      "miPerKwh": 2.5,
+      "batteryKwh": 13.6,
+      "evRangeMi": 34
+    },
+    {
+      "id": "kia-sportage-plug-in-hybrid-2023",
+      "make": "Kia",
+      "model": "Sportage Plug-in Hybrid",
+      "year": 2023,
+      "mpg": 35,
+      "miPerKwh": 2.5,
+      "batteryKwh": 13.6,
+      "evRangeMi": 34
+    },
+    {
       "id": "lamborghini-urus-se-2026",
       "make": "Lamborghini",
       "model": "Urus SE",
       "year": 2026,
+      "mpg": 20,
+      "miPerKwh": 1.43,
+      "batteryKwh": 24.5,
+      "evRangeMi": 35
+    },
+    {
+      "id": "lamborghini-urus-se-2025",
+      "make": "Lamborghini",
+      "model": "Urus SE",
+      "year": 2025,
       "mpg": 20,
       "miPerKwh": 1.43,
       "batteryKwh": 24.5,
@@ -665,6 +2355,26 @@
       "evRangeMi": 19
     },
     {
+      "id": "land-rover-range-rover-phev-2020",
+      "make": "Land Rover",
+      "model": "Range Rover PHEV",
+      "year": 2020,
+      "mpg": 19,
+      "miPerKwh": 1.25,
+      "batteryKwh": 15.2,
+      "evRangeMi": 19
+    },
+    {
+      "id": "land-rover-range-rover-phev-2019",
+      "make": "Land Rover",
+      "model": "Range Rover PHEV",
+      "year": 2019,
+      "mpg": 19,
+      "miPerKwh": 1.25,
+      "batteryKwh": 15.2,
+      "evRangeMi": 19
+    },
+    {
       "id": "land-rover-range-rover-sport-p460-phev-2025",
       "make": "Land Rover",
       "model": "Range Rover Sport P460 PHEV",
@@ -685,10 +2395,70 @@
       "evRangeMi": 19
     },
     {
+      "id": "land-rover-range-rover-sport-phev-2021",
+      "make": "Land Rover",
+      "model": "Range Rover Sport PHEV",
+      "year": 2021,
+      "mpg": 19,
+      "miPerKwh": 1.25,
+      "batteryKwh": 15.2,
+      "evRangeMi": 19
+    },
+    {
+      "id": "land-rover-range-rover-sport-phev-2020",
+      "make": "Land Rover",
+      "model": "Range Rover Sport PHEV",
+      "year": 2020,
+      "mpg": 19,
+      "miPerKwh": 1.25,
+      "batteryKwh": 15.2,
+      "evRangeMi": 19
+    },
+    {
+      "id": "land-rover-range-rover-sport-phev-2019",
+      "make": "Land Rover",
+      "model": "Range Rover Sport PHEV",
+      "year": 2019,
+      "mpg": 19,
+      "miPerKwh": 1.25,
+      "batteryKwh": 15.2,
+      "evRangeMi": 19
+    },
+    {
       "id": "lexus-nx-450h-plus-awd-2025",
       "make": "Lexus",
       "model": "NX 450h Plus AWD",
       "year": 2025,
+      "mpg": 36,
+      "miPerKwh": 2.5,
+      "batteryKwh": 14.8,
+      "evRangeMi": 37
+    },
+    {
+      "id": "lexus-nx-450h-plus-awd-2024",
+      "make": "Lexus",
+      "model": "NX 450h Plus AWD",
+      "year": 2024,
+      "mpg": 36,
+      "miPerKwh": 2.5,
+      "batteryKwh": 14.8,
+      "evRangeMi": 37
+    },
+    {
+      "id": "lexus-nx-450h-plus-awd-2023",
+      "make": "Lexus",
+      "model": "NX 450h Plus AWD",
+      "year": 2023,
+      "mpg": 36,
+      "miPerKwh": 2.5,
+      "batteryKwh": 14.8,
+      "evRangeMi": 37
+    },
+    {
+      "id": "lexus-nx-450h-plus-awd-2022",
+      "make": "Lexus",
+      "model": "NX 450h Plus AWD",
+      "year": 2022,
       "mpg": 36,
       "miPerKwh": 2.5,
       "batteryKwh": 14.8,
@@ -725,6 +2495,36 @@
       "evRangeMi": 21
     },
     {
+      "id": "lincoln-aviator-phev-awd-2022",
+      "make": "Lincoln",
+      "model": "Aviator PHEV AWD",
+      "year": 2022,
+      "mpg": 23,
+      "miPerKwh": 1.67,
+      "batteryKwh": 12.6,
+      "evRangeMi": 21
+    },
+    {
+      "id": "lincoln-aviator-phev-awd-2021",
+      "make": "Lincoln",
+      "model": "Aviator PHEV AWD",
+      "year": 2021,
+      "mpg": 23,
+      "miPerKwh": 1.67,
+      "batteryKwh": 12.6,
+      "evRangeMi": 21
+    },
+    {
+      "id": "lincoln-aviator-phev-awd-2020",
+      "make": "Lincoln",
+      "model": "Aviator PHEV AWD",
+      "year": 2020,
+      "mpg": 23,
+      "miPerKwh": 1.67,
+      "batteryKwh": 12.6,
+      "evRangeMi": 21
+    },
+    {
       "id": "lincoln-corsair-awd-phev-2026",
       "make": "Lincoln",
       "model": "Corsair AWD PHEV",
@@ -733,6 +2533,46 @@
       "miPerKwh": 2.27,
       "batteryKwh": 11.9,
       "evRangeMi": 27
+    },
+    {
+      "id": "lincoln-corsair-awd-phev-2025",
+      "make": "Lincoln",
+      "model": "Corsair AWD PHEV",
+      "year": 2025,
+      "mpg": 33,
+      "miPerKwh": 2.27,
+      "batteryKwh": 11.9,
+      "evRangeMi": 27
+    },
+    {
+      "id": "lincoln-corsair-awd-phev-2023",
+      "make": "Lincoln",
+      "model": "Corsair AWD PHEV",
+      "year": 2023,
+      "mpg": 33,
+      "miPerKwh": 2.27,
+      "batteryKwh": 11.9,
+      "evRangeMi": 27
+    },
+    {
+      "id": "lincoln-corsair-awd-phev-2022",
+      "make": "Lincoln",
+      "model": "Corsair AWD PHEV",
+      "year": 2022,
+      "mpg": 33,
+      "miPerKwh": 2.33,
+      "batteryKwh": 12,
+      "evRangeMi": 28
+    },
+    {
+      "id": "lincoln-corsair-awd-phev-2021",
+      "make": "Lincoln",
+      "model": "Corsair AWD PHEV",
+      "year": 2021,
+      "mpg": 33,
+      "miPerKwh": 2.33,
+      "batteryKwh": 12,
+      "evRangeMi": 28
     },
     {
       "id": "mazda-cx-70-4wd-phev-2025",
@@ -765,6 +2605,16 @@
       "evRangeMi": 27
     },
     {
+      "id": "mazda-cx-90-4wd-2024",
+      "make": "Mazda",
+      "model": "CX-90 4WD",
+      "year": 2024,
+      "mpg": 25,
+      "miPerKwh": 1.72,
+      "batteryKwh": 15.1,
+      "evRangeMi": 26
+    },
+    {
       "id": "mazda-cx-90-4wd-phev-2025",
       "make": "Mazda",
       "model": "CX-90 4WD PHEV",
@@ -785,6 +2635,26 @@
       "evRangeMi": 11
     },
     {
+      "id": "mclaren-automotive-p1-2015",
+      "make": "McLaren Automotive",
+      "model": "P1",
+      "year": 2015,
+      "mpg": 17,
+      "miPerKwh": 4,
+      "batteryKwh": 4.8,
+      "evRangeMi": 19
+    },
+    {
+      "id": "mclaren-automotive-p1-2014",
+      "make": "McLaren Automotive",
+      "model": "P1",
+      "year": 2014,
+      "mpg": 17,
+      "miPerKwh": 4,
+      "batteryKwh": 4.8,
+      "evRangeMi": 19
+    },
+    {
       "id": "mercedes-benz-amg-c63-s-e-performance-2025",
       "make": "Mercedes-Benz",
       "model": "AMG C63 S E Performance",
@@ -803,6 +2673,16 @@
       "miPerKwh": 1.79,
       "batteryKwh": 24.6,
       "evRangeMi": 44
+    },
+    {
+      "id": "mercedes-benz-amg-e53-hybrid-4matic-plus-2025",
+      "make": "Mercedes-Benz",
+      "model": "AMG E53 Hybrid 4matic Plus",
+      "year": 2025,
+      "mpg": 23,
+      "miPerKwh": 1.75,
+      "batteryKwh": 24.5,
+      "evRangeMi": 43
     },
     {
       "id": "mercedes-benz-amg-e53-hybrid-4matic-plus-station-wagon-2026",
@@ -875,6 +2755,66 @@
       "evRangeMi": 9
     },
     {
+      "id": "mercedes-benz-c350e-2018",
+      "make": "Mercedes-Benz",
+      "model": "C350e",
+      "year": 2018,
+      "mpg": 30,
+      "miPerKwh": 1.79,
+      "batteryKwh": 5,
+      "evRangeMi": 9
+    },
+    {
+      "id": "mercedes-benz-c350e-2017",
+      "make": "Mercedes-Benz",
+      "model": "C350e",
+      "year": 2017,
+      "mpg": 30,
+      "miPerKwh": 1.79,
+      "batteryKwh": 5,
+      "evRangeMi": 9
+    },
+    {
+      "id": "mercedes-benz-c350e-2016",
+      "make": "Mercedes-Benz",
+      "model": "C350e",
+      "year": 2016,
+      "mpg": 30,
+      "miPerKwh": 1.79,
+      "batteryKwh": 6.2,
+      "evRangeMi": 11
+    },
+    {
+      "id": "mercedes-benz-glc350e-4matic-2020",
+      "make": "Mercedes-Benz",
+      "model": "GLC350e 4matic",
+      "year": 2020,
+      "mpg": 25,
+      "miPerKwh": 2.04,
+      "batteryKwh": 10.8,
+      "evRangeMi": 22
+    },
+    {
+      "id": "mercedes-benz-glc350e-4matic-2019",
+      "make": "Mercedes-Benz",
+      "model": "GLC350e 4matic",
+      "year": 2019,
+      "mpg": 25,
+      "miPerKwh": 1.69,
+      "batteryKwh": 5.9,
+      "evRangeMi": 10
+    },
+    {
+      "id": "mercedes-benz-glc350e-4matic-2018",
+      "make": "Mercedes-Benz",
+      "model": "GLC350e 4matic",
+      "year": 2018,
+      "mpg": 25,
+      "miPerKwh": 1.69,
+      "batteryKwh": 5.9,
+      "evRangeMi": 10
+    },
+    {
       "id": "mercedes-benz-glc350e-4matic-with-eq-hybrid-tech-2025",
       "make": "Mercedes-Benz",
       "model": "GLC350e 4matic with EQ Hybrid Tech",
@@ -895,6 +2835,86 @@
       "evRangeMi": 50
     },
     {
+      "id": "mercedes-benz-gle550e-4matic-2018",
+      "make": "Mercedes-Benz",
+      "model": "GLE550e 4matic",
+      "year": 2018,
+      "mpg": 21,
+      "miPerKwh": 1.45,
+      "batteryKwh": 6.9,
+      "evRangeMi": 10
+    },
+    {
+      "id": "mercedes-benz-gle550e-4matic-2017",
+      "make": "Mercedes-Benz",
+      "model": "GLE550e 4matic",
+      "year": 2017,
+      "mpg": 21,
+      "miPerKwh": 1.45,
+      "batteryKwh": 8.3,
+      "evRangeMi": 12
+    },
+    {
+      "id": "mercedes-benz-gle550e-4matic-2016",
+      "make": "Mercedes-Benz",
+      "model": "GLE550e 4matic",
+      "year": 2016,
+      "mpg": 21,
+      "miPerKwh": 1.47,
+      "batteryKwh": 8.2,
+      "evRangeMi": 12
+    },
+    {
+      "id": "mercedes-benz-s550e-2017",
+      "make": "Mercedes-Benz",
+      "model": "S550e",
+      "year": 2017,
+      "mpg": 26,
+      "miPerKwh": 1.69,
+      "batteryKwh": 8.3,
+      "evRangeMi": 14
+    },
+    {
+      "id": "mercedes-benz-s550e-2016",
+      "make": "Mercedes-Benz",
+      "model": "S550e",
+      "year": 2016,
+      "mpg": 26,
+      "miPerKwh": 1.69,
+      "batteryKwh": 8.3,
+      "evRangeMi": 14
+    },
+    {
+      "id": "mercedes-benz-s550e-2015",
+      "make": "Mercedes-Benz",
+      "model": "S550e",
+      "year": 2015,
+      "mpg": 26,
+      "miPerKwh": 1.69,
+      "batteryKwh": 8.3,
+      "evRangeMi": 14
+    },
+    {
+      "id": "mercedes-benz-s560e-2020",
+      "make": "Mercedes-Benz",
+      "model": "S560e",
+      "year": 2020,
+      "mpg": 23,
+      "miPerKwh": 1.89,
+      "batteryKwh": 10.1,
+      "evRangeMi": 19
+    },
+    {
+      "id": "mercedes-benz-s560e-2019",
+      "make": "Mercedes-Benz",
+      "model": "S560e",
+      "year": 2019,
+      "mpg": 23,
+      "miPerKwh": 1.89,
+      "batteryKwh": 11.7,
+      "evRangeMi": 22
+    },
+    {
       "id": "mercedes-benz-s580e-4matic-2025",
       "make": "Mercedes-Benz",
       "model": "S580e 4matic",
@@ -903,6 +2923,16 @@
       "miPerKwh": 1.89,
       "batteryKwh": 25.4,
       "evRangeMi": 48
+    },
+    {
+      "id": "mercedes-benz-s580e-4matic-2023",
+      "make": "Mercedes-Benz",
+      "model": "S580e 4matic",
+      "year": 2023,
+      "mpg": 23,
+      "miPerKwh": 1.96,
+      "batteryKwh": 23.5,
+      "evRangeMi": 46
     },
     {
       "id": "mini-cooper-se-countryman-all4-2023",
@@ -915,6 +2945,56 @@
       "evRangeMi": 18
     },
     {
+      "id": "mini-cooper-se-countryman-all4-2022",
+      "make": "MINI",
+      "model": "Cooper SE Countryman All4",
+      "year": 2022,
+      "mpg": 29,
+      "miPerKwh": 2.17,
+      "batteryKwh": 8.3,
+      "evRangeMi": 18
+    },
+    {
+      "id": "mini-cooper-se-countryman-all4-2021",
+      "make": "MINI",
+      "model": "Cooper SE Countryman All4",
+      "year": 2021,
+      "mpg": 29,
+      "miPerKwh": 2.17,
+      "batteryKwh": 8.3,
+      "evRangeMi": 18
+    },
+    {
+      "id": "mini-cooper-se-countryman-all4-2020",
+      "make": "MINI",
+      "model": "Cooper SE Countryman All4",
+      "year": 2020,
+      "mpg": 29,
+      "miPerKwh": 2.17,
+      "batteryKwh": 8.3,
+      "evRangeMi": 18
+    },
+    {
+      "id": "mini-cooper-se-countryman-all4-2019",
+      "make": "MINI",
+      "model": "Cooper SE Countryman All4",
+      "year": 2019,
+      "mpg": 27,
+      "miPerKwh": 1.96,
+      "batteryKwh": 6.1,
+      "evRangeMi": 12
+    },
+    {
+      "id": "mini-cooper-se-countryman-all4-2018",
+      "make": "MINI",
+      "model": "Cooper SE Countryman All4",
+      "year": 2018,
+      "mpg": 27,
+      "miPerKwh": 1.96,
+      "batteryKwh": 6.1,
+      "evRangeMi": 12
+    },
+    {
       "id": "mitsubishi-outlander-phev-2026",
       "make": "Mitsubishi",
       "model": "Outlander PHEV",
@@ -923,6 +3003,86 @@
       "miPerKwh": 2.13,
       "batteryKwh": 20.7,
       "evRangeMi": 44
+    },
+    {
+      "id": "mitsubishi-outlander-phev-2025",
+      "make": "Mitsubishi",
+      "model": "Outlander PHEV",
+      "year": 2025,
+      "mpg": 26,
+      "miPerKwh": 1.92,
+      "batteryKwh": 19.8,
+      "evRangeMi": 38
+    },
+    {
+      "id": "mitsubishi-outlander-phev-2024",
+      "make": "Mitsubishi",
+      "model": "Outlander PHEV",
+      "year": 2024,
+      "mpg": 26,
+      "miPerKwh": 1.92,
+      "batteryKwh": 19.8,
+      "evRangeMi": 38
+    },
+    {
+      "id": "mitsubishi-outlander-phev-2023",
+      "make": "Mitsubishi",
+      "model": "Outlander PHEV",
+      "year": 2023,
+      "mpg": 26,
+      "miPerKwh": 1.92,
+      "batteryKwh": 19.8,
+      "evRangeMi": 38
+    },
+    {
+      "id": "mitsubishi-outlander-phev-2022",
+      "make": "Mitsubishi",
+      "model": "Outlander PHEV",
+      "year": 2022,
+      "mpg": 26,
+      "miPerKwh": 2.22,
+      "batteryKwh": 10.8,
+      "evRangeMi": 24
+    },
+    {
+      "id": "mitsubishi-outlander-phev-2021",
+      "make": "Mitsubishi",
+      "model": "Outlander PHEV",
+      "year": 2021,
+      "mpg": 26,
+      "miPerKwh": 2.22,
+      "batteryKwh": 10.8,
+      "evRangeMi": 24
+    },
+    {
+      "id": "mitsubishi-outlander-phev-2020",
+      "make": "Mitsubishi",
+      "model": "Outlander PHEV",
+      "year": 2020,
+      "mpg": 25,
+      "miPerKwh": 2.22,
+      "batteryKwh": 9.9,
+      "evRangeMi": 22
+    },
+    {
+      "id": "mitsubishi-outlander-phev-2019",
+      "make": "Mitsubishi",
+      "model": "Outlander PHEV",
+      "year": 2019,
+      "mpg": 25,
+      "miPerKwh": 2.22,
+      "batteryKwh": 9.9,
+      "evRangeMi": 22
+    },
+    {
+      "id": "mitsubishi-outlander-phev-2018",
+      "make": "Mitsubishi",
+      "model": "Outlander PHEV",
+      "year": 2018,
+      "mpg": 25,
+      "miPerKwh": 2.22,
+      "batteryKwh": 9.9,
+      "evRangeMi": 22
     },
     {
       "id": "polestar-1-2021",
@@ -935,6 +3095,26 @@
       "evRangeMi": 52
     },
     {
+      "id": "polestar-1-2020",
+      "make": "Polestar",
+      "model": "1",
+      "year": 2020,
+      "mpg": 26,
+      "miPerKwh": 1.75,
+      "batteryKwh": 29.6,
+      "evRangeMi": 52
+    },
+    {
+      "id": "porsche-918-spyder-2015",
+      "make": "Porsche",
+      "model": "918 Spyder",
+      "year": 2015,
+      "mpg": 22,
+      "miPerKwh": 2,
+      "batteryKwh": 6,
+      "evRangeMi": 12
+    },
+    {
       "id": "porsche-cayenne-e-hybrid-2025",
       "make": "Porsche",
       "model": "Cayenne e-Hybrid",
@@ -945,6 +3125,36 @@
       "evRangeMi": 29
     },
     {
+      "id": "porsche-cayenne-e-hybrid-2021",
+      "make": "Porsche",
+      "model": "Cayenne e-Hybrid",
+      "year": 2021,
+      "mpg": 21,
+      "miPerKwh": 1.39,
+      "batteryKwh": 12.2,
+      "evRangeMi": 17
+    },
+    {
+      "id": "porsche-cayenne-e-hybrid-2020",
+      "make": "Porsche",
+      "model": "Cayenne e-Hybrid",
+      "year": 2020,
+      "mpg": 21,
+      "miPerKwh": 1.41,
+      "batteryKwh": 9.9,
+      "evRangeMi": 14
+    },
+    {
+      "id": "porsche-cayenne-e-hybrid-2019",
+      "make": "Porsche",
+      "model": "Cayenne e-Hybrid",
+      "year": 2019,
+      "mpg": 21,
+      "miPerKwh": 1.39,
+      "batteryKwh": 9.4,
+      "evRangeMi": 13
+    },
+    {
       "id": "porsche-cayenne-e-hybrid-coupe-2025",
       "make": "Porsche",
       "model": "Cayenne e-Hybrid Coupe",
@@ -953,6 +3163,66 @@
       "miPerKwh": 1.59,
       "batteryKwh": 18.3,
       "evRangeMi": 29
+    },
+    {
+      "id": "porsche-cayenne-e-hybrid-coupe-2021",
+      "make": "Porsche",
+      "model": "Cayenne e-Hybrid Coupe",
+      "year": 2021,
+      "mpg": 21,
+      "miPerKwh": 1.39,
+      "batteryKwh": 12.2,
+      "evRangeMi": 17
+    },
+    {
+      "id": "porsche-cayenne-e-hybrid-coupe-2020",
+      "make": "Porsche",
+      "model": "Cayenne e-Hybrid Coupe",
+      "year": 2020,
+      "mpg": 21,
+      "miPerKwh": 1.41,
+      "batteryKwh": 9.9,
+      "evRangeMi": 14
+    },
+    {
+      "id": "porsche-cayenne-s-e-hybrid-2018",
+      "make": "Porsche",
+      "model": "Cayenne S e-Hybrid",
+      "year": 2018,
+      "mpg": 22,
+      "miPerKwh": 1.43,
+      "batteryKwh": 9.8,
+      "evRangeMi": 14
+    },
+    {
+      "id": "porsche-cayenne-s-e-hybrid-2017",
+      "make": "Porsche",
+      "model": "Cayenne S e-Hybrid",
+      "year": 2017,
+      "mpg": 22,
+      "miPerKwh": 1.41,
+      "batteryKwh": 9.9,
+      "evRangeMi": 14
+    },
+    {
+      "id": "porsche-cayenne-s-e-hybrid-2016",
+      "make": "Porsche",
+      "model": "Cayenne S e-Hybrid",
+      "year": 2016,
+      "mpg": 22,
+      "miPerKwh": 1.45,
+      "batteryKwh": 9.7,
+      "evRangeMi": 14
+    },
+    {
+      "id": "porsche-cayenne-s-e-hybrid-2015",
+      "make": "Porsche",
+      "model": "Cayenne S e-Hybrid",
+      "year": 2015,
+      "mpg": 22,
+      "miPerKwh": 1.45,
+      "batteryKwh": 9.7,
+      "evRangeMi": 14
     },
     {
       "id": "porsche-cayenne-s-e-hybrid-2025",
@@ -1005,6 +3275,26 @@
       "evRangeMi": 15
     },
     {
+      "id": "porsche-cayenne-turbo-s-e-hybrid-2021",
+      "make": "Porsche",
+      "model": "Cayenne Turbo S e-Hybrid",
+      "year": 2021,
+      "mpg": 18,
+      "miPerKwh": 1.22,
+      "batteryKwh": 12.3,
+      "evRangeMi": 15
+    },
+    {
+      "id": "porsche-cayenne-turbo-s-e-hybrid-2020",
+      "make": "Porsche",
+      "model": "Cayenne Turbo S e-Hybrid",
+      "year": 2020,
+      "mpg": 18,
+      "miPerKwh": 1.32,
+      "batteryKwh": 9.1,
+      "evRangeMi": 12
+    },
+    {
       "id": "porsche-cayenne-turbo-s-e-hybrid-coupe-2023",
       "make": "Porsche",
       "model": "Cayenne Turbo S e-Hybrid Coupe",
@@ -1013,6 +3303,26 @@
       "miPerKwh": 1.22,
       "batteryKwh": 12.3,
       "evRangeMi": 15
+    },
+    {
+      "id": "porsche-cayenne-turbo-s-e-hybrid-coupe-2021",
+      "make": "Porsche",
+      "model": "Cayenne Turbo S e-Hybrid Coupe",
+      "year": 2021,
+      "mpg": 18,
+      "miPerKwh": 1.22,
+      "batteryKwh": 12.3,
+      "evRangeMi": 15
+    },
+    {
+      "id": "porsche-cayenne-turbo-s-e-hybrid-coupe-2020",
+      "make": "Porsche",
+      "model": "Cayenne Turbo S e-Hybrid Coupe",
+      "year": 2020,
+      "mpg": 18,
+      "miPerKwh": 1.32,
+      "batteryKwh": 9.1,
+      "evRangeMi": 12
     },
     {
       "id": "porsche-cayenne-turbo-s-coupe-e-hybrid-2022",
@@ -1045,6 +3355,56 @@
       "evRangeMi": 28
     },
     {
+      "id": "porsche-panamera-4-e-hybrid-2023",
+      "make": "Porsche",
+      "model": "Panamera 4 e-Hybrid",
+      "year": 2023,
+      "mpg": 22,
+      "miPerKwh": 1.56,
+      "batteryKwh": 12.2,
+      "evRangeMi": 19
+    },
+    {
+      "id": "porsche-panamera-4-e-hybrid-2021",
+      "make": "Porsche",
+      "model": "Panamera 4 e-Hybrid",
+      "year": 2021,
+      "mpg": 22,
+      "miPerKwh": 1.56,
+      "batteryKwh": 12.2,
+      "evRangeMi": 19
+    },
+    {
+      "id": "porsche-panamera-4-e-hybrid-2020",
+      "make": "Porsche",
+      "model": "Panamera 4 e-Hybrid",
+      "year": 2020,
+      "mpg": 23,
+      "miPerKwh": 1.54,
+      "batteryKwh": 9.1,
+      "evRangeMi": 14
+    },
+    {
+      "id": "porsche-panamera-4-e-hybrid-2019",
+      "make": "Porsche",
+      "model": "Panamera 4 e-Hybrid",
+      "year": 2019,
+      "mpg": 23,
+      "miPerKwh": 1.54,
+      "batteryKwh": 9.1,
+      "evRangeMi": 14
+    },
+    {
+      "id": "porsche-panamera-4-e-hybrid-2018",
+      "make": "Porsche",
+      "model": "Panamera 4 e-Hybrid",
+      "year": 2018,
+      "mpg": 22,
+      "miPerKwh": 1.69,
+      "batteryKwh": 9.4,
+      "evRangeMi": 16
+    },
+    {
       "id": "porsche-panamera-4-e-hybrid-executive-2021",
       "make": "Porsche",
       "model": "Panamera 4 e-Hybrid Executive",
@@ -1053,6 +3413,36 @@
       "miPerKwh": 1.56,
       "batteryKwh": 12.2,
       "evRangeMi": 19
+    },
+    {
+      "id": "porsche-panamera-4-e-hybrid-executive-2020",
+      "make": "Porsche",
+      "model": "Panamera 4 e-Hybrid Executive",
+      "year": 2020,
+      "mpg": 23,
+      "miPerKwh": 1.54,
+      "batteryKwh": 9.1,
+      "evRangeMi": 14
+    },
+    {
+      "id": "porsche-panamera-4-e-hybrid-executive-2019",
+      "make": "Porsche",
+      "model": "Panamera 4 e-Hybrid Executive",
+      "year": 2019,
+      "mpg": 23,
+      "miPerKwh": 1.54,
+      "batteryKwh": 9.1,
+      "evRangeMi": 14
+    },
+    {
+      "id": "porsche-panamera-4-e-hybrid-executive-2018",
+      "make": "Porsche",
+      "model": "Panamera 4 e-Hybrid Executive",
+      "year": 2018,
+      "mpg": 22,
+      "miPerKwh": 1.69,
+      "batteryKwh": 9.4,
+      "evRangeMi": 16
     },
     {
       "id": "porsche-panamera-4-e-hybrid-st-2021",
@@ -1065,6 +3455,36 @@
       "evRangeMi": 19
     },
     {
+      "id": "porsche-panamera-4-e-hybrid-st-2020",
+      "make": "Porsche",
+      "model": "Panamera 4 e-Hybrid ST",
+      "year": 2020,
+      "mpg": 23,
+      "miPerKwh": 1.54,
+      "batteryKwh": 9.1,
+      "evRangeMi": 14
+    },
+    {
+      "id": "porsche-panamera-4-e-hybrid-st-2019",
+      "make": "Porsche",
+      "model": "Panamera 4 e-Hybrid ST",
+      "year": 2019,
+      "mpg": 23,
+      "miPerKwh": 1.54,
+      "batteryKwh": 9.1,
+      "evRangeMi": 14
+    },
+    {
+      "id": "porsche-panamera-4-e-hybrid-st-2018",
+      "make": "Porsche",
+      "model": "Panamera 4 e-Hybrid ST",
+      "year": 2018,
+      "mpg": 22,
+      "miPerKwh": 1.69,
+      "batteryKwh": 9.4,
+      "evRangeMi": 16
+    },
+    {
       "id": "porsche-panamera-4-e-hybrid-exec-st-2022",
       "make": "Porsche",
       "model": "Panamera 4 E-Hybrid/Exec/ST",
@@ -1072,6 +3492,16 @@
       "mpg": 22,
       "miPerKwh": 1.56,
       "batteryKwh": 12.2,
+      "evRangeMi": 19
+    },
+    {
+      "id": "porsche-panamera-4s-e-hybrid-2021",
+      "make": "Porsche",
+      "model": "Panamera 4S e-Hybrid",
+      "year": 2021,
+      "mpg": 22,
+      "miPerKwh": 1.52,
+      "batteryKwh": 12.5,
       "evRangeMi": 19
     },
     {
@@ -1083,6 +3513,16 @@
       "miPerKwh": 1.59,
       "batteryKwh": 17.6,
       "evRangeMi": 28
+    },
+    {
+      "id": "porsche-panamera-4s-e-hybrid-2023",
+      "make": "Porsche",
+      "model": "Panamera 4S E-Hybrid",
+      "year": 2023,
+      "mpg": 22,
+      "miPerKwh": 1.52,
+      "batteryKwh": 12.5,
+      "evRangeMi": 19
     },
     {
       "id": "porsche-panamera-4s-e-hybrid-executive-2021",
@@ -1115,6 +3555,36 @@
       "evRangeMi": 19
     },
     {
+      "id": "porsche-panamera-s-e-hybrid-2016",
+      "make": "Porsche",
+      "model": "Panamera S E-Hybrid",
+      "year": 2016,
+      "mpg": 25,
+      "miPerKwh": 1.96,
+      "batteryKwh": 8.2,
+      "evRangeMi": 16
+    },
+    {
+      "id": "porsche-panamera-s-e-hybrid-2015",
+      "make": "Porsche",
+      "model": "Panamera S E-Hybrid",
+      "year": 2015,
+      "mpg": 25,
+      "miPerKwh": 1.92,
+      "batteryKwh": 8.3,
+      "evRangeMi": 16
+    },
+    {
+      "id": "porsche-panamera-s-e-hybrid-2014",
+      "make": "Porsche",
+      "model": "Panamera S E-Hybrid",
+      "year": 2014,
+      "mpg": 25,
+      "miPerKwh": 1.92,
+      "batteryKwh": 8.3,
+      "evRangeMi": 16
+    },
+    {
       "id": "porsche-panamera-turbo-s-e-hybrid-2023",
       "make": "Porsche",
       "model": "Panamera Turbo S e-Hybrid",
@@ -1123,6 +3593,46 @@
       "miPerKwh": 1.43,
       "batteryKwh": 11.9,
       "evRangeMi": 17
+    },
+    {
+      "id": "porsche-panamera-turbo-s-e-hybrid-2021",
+      "make": "Porsche",
+      "model": "Panamera Turbo S e-Hybrid",
+      "year": 2021,
+      "mpg": 19,
+      "miPerKwh": 1.43,
+      "batteryKwh": 11.9,
+      "evRangeMi": 17
+    },
+    {
+      "id": "porsche-panamera-turbo-s-e-hybrid-2020",
+      "make": "Porsche",
+      "model": "Panamera Turbo S e-Hybrid",
+      "year": 2020,
+      "mpg": 20,
+      "miPerKwh": 1.52,
+      "batteryKwh": 9.2,
+      "evRangeMi": 14
+    },
+    {
+      "id": "porsche-panamera-turbo-s-e-hybrid-2019",
+      "make": "Porsche",
+      "model": "Panamera Turbo S e-Hybrid",
+      "year": 2019,
+      "mpg": 20,
+      "miPerKwh": 1.52,
+      "batteryKwh": 9.2,
+      "evRangeMi": 14
+    },
+    {
+      "id": "porsche-panamera-turbo-s-e-hybrid-2018",
+      "make": "Porsche",
+      "model": "Panamera Turbo S e-Hybrid",
+      "year": 2018,
+      "mpg": 21,
+      "miPerKwh": 1.49,
+      "batteryKwh": 9.4,
+      "evRangeMi": 14
     },
     {
       "id": "porsche-panamera-turbo-s-e-hybrid-executive-2021",
@@ -1135,6 +3645,36 @@
       "evRangeMi": 17
     },
     {
+      "id": "porsche-panamera-turbo-s-e-hybrid-executive-2020",
+      "make": "Porsche",
+      "model": "Panamera Turbo S e-Hybrid Executive",
+      "year": 2020,
+      "mpg": 20,
+      "miPerKwh": 1.52,
+      "batteryKwh": 9.2,
+      "evRangeMi": 14
+    },
+    {
+      "id": "porsche-panamera-turbo-s-e-hybrid-executive-2019",
+      "make": "Porsche",
+      "model": "Panamera Turbo S e-Hybrid Executive",
+      "year": 2019,
+      "mpg": 20,
+      "miPerKwh": 1.52,
+      "batteryKwh": 9.2,
+      "evRangeMi": 14
+    },
+    {
+      "id": "porsche-panamera-turbo-s-e-hybrid-executive-2018",
+      "make": "Porsche",
+      "model": "Panamera Turbo S e-Hybrid Executive",
+      "year": 2018,
+      "mpg": 21,
+      "miPerKwh": 1.49,
+      "batteryKwh": 9.4,
+      "evRangeMi": 14
+    },
+    {
       "id": "porsche-panamera-turbo-s-e-hybrid-st-2021",
       "make": "Porsche",
       "model": "Panamera Turbo S e-Hybrid ST",
@@ -1143,6 +3683,36 @@
       "miPerKwh": 1.43,
       "batteryKwh": 11.9,
       "evRangeMi": 17
+    },
+    {
+      "id": "porsche-panamera-turbo-s-e-hybrid-st-2020",
+      "make": "Porsche",
+      "model": "Panamera Turbo S e-Hybrid ST",
+      "year": 2020,
+      "mpg": 20,
+      "miPerKwh": 1.52,
+      "batteryKwh": 9.2,
+      "evRangeMi": 14
+    },
+    {
+      "id": "porsche-panamera-turbo-s-e-hybrid-st-2019",
+      "make": "Porsche",
+      "model": "Panamera Turbo S e-Hybrid ST",
+      "year": 2019,
+      "mpg": 20,
+      "miPerKwh": 1.52,
+      "batteryKwh": 9.2,
+      "evRangeMi": 14
+    },
+    {
+      "id": "porsche-panamera-turbo-s-e-hybrid-st-2018",
+      "make": "Porsche",
+      "model": "Panamera Turbo S e-Hybrid ST",
+      "year": 2018,
+      "mpg": 21,
+      "miPerKwh": 1.49,
+      "batteryKwh": 9.4,
+      "evRangeMi": 14
     },
     {
       "id": "porsche-panamera-turbo-s-e-hybrid-exec-st-2022",
@@ -1165,6 +3735,36 @@
       "evRangeMi": 18
     },
     {
+      "id": "subaru-crosstrek-hybrid-awd-2021",
+      "make": "Subaru",
+      "model": "Crosstrek Hybrid AWD",
+      "year": 2021,
+      "mpg": 35,
+      "miPerKwh": 2.63,
+      "batteryKwh": 6.5,
+      "evRangeMi": 17
+    },
+    {
+      "id": "subaru-crosstrek-hybrid-awd-2020",
+      "make": "Subaru",
+      "model": "Crosstrek Hybrid AWD",
+      "year": 2020,
+      "mpg": 35,
+      "miPerKwh": 2.63,
+      "batteryKwh": 6.5,
+      "evRangeMi": 17
+    },
+    {
+      "id": "subaru-crosstrek-hybrid-awd-2019",
+      "make": "Subaru",
+      "model": "Crosstrek Hybrid AWD",
+      "year": 2019,
+      "mpg": 35,
+      "miPerKwh": 2.63,
+      "batteryKwh": 6.5,
+      "evRangeMi": 17
+    },
+    {
       "id": "toyota-prius-phev-2025",
       "make": "Toyota",
       "model": "Prius PHEV",
@@ -1185,6 +3785,46 @@
       "evRangeMi": 44
     },
     {
+      "id": "toyota-prius-plug-in-hybrid-2015",
+      "make": "Toyota",
+      "model": "Prius Plug-in Hybrid",
+      "year": 2015,
+      "mpg": 50,
+      "miPerKwh": 3.45,
+      "batteryKwh": 3.2,
+      "evRangeMi": 11
+    },
+    {
+      "id": "toyota-prius-plug-in-hybrid-2014",
+      "make": "Toyota",
+      "model": "Prius Plug-in Hybrid",
+      "year": 2014,
+      "mpg": 50,
+      "miPerKwh": 3.45,
+      "batteryKwh": 3.2,
+      "evRangeMi": 11
+    },
+    {
+      "id": "toyota-prius-plug-in-hybrid-2013",
+      "make": "Toyota",
+      "model": "Prius Plug-in Hybrid",
+      "year": 2013,
+      "mpg": 50,
+      "miPerKwh": 3.45,
+      "batteryKwh": 3.2,
+      "evRangeMi": 11
+    },
+    {
+      "id": "toyota-prius-plug-in-hybrid-2012",
+      "make": "Toyota",
+      "model": "Prius Plug-in Hybrid",
+      "year": 2012,
+      "mpg": 50,
+      "miPerKwh": 3.45,
+      "batteryKwh": 3.2,
+      "evRangeMi": 11
+    },
+    {
       "id": "toyota-prius-prime-2024",
       "make": "Toyota",
       "model": "Prius Prime",
@@ -1195,10 +3835,90 @@
       "evRangeMi": 40
     },
     {
+      "id": "toyota-prius-prime-2023",
+      "make": "Toyota",
+      "model": "Prius Prime",
+      "year": 2023,
+      "mpg": 48,
+      "miPerKwh": 3.45,
+      "batteryKwh": 11.6,
+      "evRangeMi": 40
+    },
+    {
+      "id": "toyota-prius-prime-2022",
+      "make": "Toyota",
+      "model": "Prius Prime",
+      "year": 2022,
+      "mpg": 54,
+      "miPerKwh": 4,
+      "batteryKwh": 6.3,
+      "evRangeMi": 25
+    },
+    {
+      "id": "toyota-prius-prime-2021",
+      "make": "Toyota",
+      "model": "Prius Prime",
+      "year": 2021,
+      "mpg": 54,
+      "miPerKwh": 4,
+      "batteryKwh": 6.3,
+      "evRangeMi": 25
+    },
+    {
+      "id": "toyota-prius-prime-2020",
+      "make": "Toyota",
+      "model": "Prius Prime",
+      "year": 2020,
+      "mpg": 54,
+      "miPerKwh": 4,
+      "batteryKwh": 6.3,
+      "evRangeMi": 25
+    },
+    {
+      "id": "toyota-prius-prime-2019",
+      "make": "Toyota",
+      "model": "Prius Prime",
+      "year": 2019,
+      "mpg": 54,
+      "miPerKwh": 4,
+      "batteryKwh": 6.3,
+      "evRangeMi": 25
+    },
+    {
+      "id": "toyota-prius-prime-2018",
+      "make": "Toyota",
+      "model": "Prius Prime",
+      "year": 2018,
+      "mpg": 54,
+      "miPerKwh": 4,
+      "batteryKwh": 6.3,
+      "evRangeMi": 25
+    },
+    {
+      "id": "toyota-prius-prime-2017",
+      "make": "Toyota",
+      "model": "Prius Prime",
+      "year": 2017,
+      "mpg": 54,
+      "miPerKwh": 4,
+      "batteryKwh": 6.3,
+      "evRangeMi": 25
+    },
+    {
       "id": "toyota-prius-prime-se-2024",
       "make": "Toyota",
       "model": "Prius Prime SE",
       "year": 2024,
+      "mpg": 52,
+      "miPerKwh": 3.85,
+      "batteryKwh": 11.4,
+      "evRangeMi": 44
+    },
+    {
+      "id": "toyota-prius-prime-se-2023",
+      "make": "Toyota",
+      "model": "Prius Prime SE",
+      "year": 2023,
       "mpg": 52,
       "miPerKwh": 3.85,
       "batteryKwh": 11.4,
@@ -1225,6 +3945,36 @@
       "evRangeMi": 42
     },
     {
+      "id": "toyota-rav4-prime-4wd-2023",
+      "make": "Toyota",
+      "model": "RAV4 Prime 4WD",
+      "year": 2023,
+      "mpg": 38,
+      "miPerKwh": 2.78,
+      "batteryKwh": 15.1,
+      "evRangeMi": 42
+    },
+    {
+      "id": "toyota-rav4-prime-4wd-2022",
+      "make": "Toyota",
+      "model": "RAV4 Prime 4WD",
+      "year": 2022,
+      "mpg": 38,
+      "miPerKwh": 2.78,
+      "batteryKwh": 15.1,
+      "evRangeMi": 42
+    },
+    {
+      "id": "toyota-rav4-prime-4wd-2021",
+      "make": "Toyota",
+      "model": "RAV4 Prime 4WD",
+      "year": 2021,
+      "mpg": 38,
+      "miPerKwh": 2.78,
+      "batteryKwh": 15.1,
+      "evRangeMi": 42
+    },
+    {
       "id": "volvo-s60-awd-phev-2021",
       "make": "Volvo",
       "model": "S60 AWD PHEV",
@@ -1232,6 +3982,26 @@
       "mpg": 30,
       "miPerKwh": 2.13,
       "batteryKwh": 10.3,
+      "evRangeMi": 22
+    },
+    {
+      "id": "volvo-s60-awd-phev-2020",
+      "make": "Volvo",
+      "model": "S60 AWD PHEV",
+      "year": 2020,
+      "mpg": 30,
+      "miPerKwh": 2.13,
+      "batteryKwh": 10.3,
+      "evRangeMi": 22
+    },
+    {
+      "id": "volvo-s60-awd-phev-2019",
+      "make": "Volvo",
+      "model": "S60 AWD PHEV",
+      "year": 2019,
+      "mpg": 31,
+      "miPerKwh": 2.33,
+      "batteryKwh": 9.5,
       "evRangeMi": 22
     },
     {
@@ -1255,6 +4025,26 @@
       "evRangeMi": 40
     },
     {
+      "id": "volvo-s60-t8-awd-recharge-2023",
+      "make": "Volvo",
+      "model": "S60 T8 AWD Recharge",
+      "year": 2023,
+      "mpg": 31,
+      "miPerKwh": 2.27,
+      "batteryKwh": 17.6,
+      "evRangeMi": 40
+    },
+    {
+      "id": "volvo-s60-t8-awd-recharge-2022",
+      "make": "Volvo",
+      "model": "S60 T8 AWD Recharge",
+      "year": 2022,
+      "mpg": 30,
+      "miPerKwh": 2.13,
+      "batteryKwh": 10.3,
+      "evRangeMi": 22
+    },
+    {
       "id": "volvo-s60-t8-awd-recharge-ext-range-2022",
       "make": "Volvo",
       "model": "S60 T8 AWD Recharge ext. Range",
@@ -1272,6 +4062,36 @@
       "mpg": 30,
       "miPerKwh": 2,
       "batteryKwh": 10.5,
+      "evRangeMi": 21
+    },
+    {
+      "id": "volvo-s90-awd-phev-2020",
+      "make": "Volvo",
+      "model": "S90 AWD PHEV",
+      "year": 2020,
+      "mpg": 30,
+      "miPerKwh": 2,
+      "batteryKwh": 10.5,
+      "evRangeMi": 21
+    },
+    {
+      "id": "volvo-s90-awd-phev-2019",
+      "make": "Volvo",
+      "model": "S90 AWD PHEV",
+      "year": 2019,
+      "mpg": 29,
+      "miPerKwh": 2.22,
+      "batteryKwh": 9.5,
+      "evRangeMi": 21
+    },
+    {
+      "id": "volvo-s90-awd-phev-2018",
+      "make": "Volvo",
+      "model": "S90 AWD PHEV",
+      "year": 2018,
+      "mpg": 29,
+      "miPerKwh": 2.22,
+      "batteryKwh": 9.5,
       "evRangeMi": 21
     },
     {
@@ -1305,10 +4125,30 @@
       "evRangeMi": 38
     },
     {
+      "id": "volvo-s90-t8-awd-recharge-ext-range-2022",
+      "make": "Volvo",
+      "model": "S90 T8 AWD Recharge ext. Range",
+      "year": 2022,
+      "mpg": 29,
+      "miPerKwh": 2.08,
+      "batteryKwh": 18.2,
+      "evRangeMi": 38
+    },
+    {
       "id": "volvo-v60-awd-phev-2021",
       "make": "Volvo",
       "model": "V60 AWD PHEV",
       "year": 2021,
+      "mpg": 30,
+      "miPerKwh": 2.13,
+      "batteryKwh": 10.3,
+      "evRangeMi": 22
+    },
+    {
+      "id": "volvo-v60-awd-phev-2020",
+      "make": "Volvo",
+      "model": "V60 AWD PHEV",
+      "year": 2020,
       "mpg": 30,
       "miPerKwh": 2.13,
       "batteryKwh": 10.3,
@@ -1345,6 +4185,16 @@
       "evRangeMi": 40
     },
     {
+      "id": "volvo-v60-t8-awd-recharge-ext-range-2022",
+      "make": "Volvo",
+      "model": "V60 T8 AWD Recharge ext. Range",
+      "year": 2022,
+      "mpg": 31,
+      "miPerKwh": 2.27,
+      "batteryKwh": 17.6,
+      "evRangeMi": 40
+    },
+    {
       "id": "volvo-xc60-awd-phev-2021",
       "make": "Volvo",
       "model": "XC60 AWD PHEV",
@@ -1353,6 +4203,36 @@
       "miPerKwh": 1.75,
       "batteryKwh": 14.3,
       "evRangeMi": 25
+    },
+    {
+      "id": "volvo-xc60-awd-phev-2020",
+      "make": "Volvo",
+      "model": "XC60 AWD PHEV",
+      "year": 2020,
+      "mpg": 27,
+      "miPerKwh": 1.75,
+      "batteryKwh": 14.3,
+      "evRangeMi": 25
+    },
+    {
+      "id": "volvo-xc60-awd-phev-2019",
+      "make": "Volvo",
+      "model": "XC60 AWD PHEV",
+      "year": 2019,
+      "mpg": 26,
+      "miPerKwh": 1.82,
+      "batteryKwh": 9.4,
+      "evRangeMi": 17
+    },
+    {
+      "id": "volvo-xc60-awd-phev-2018",
+      "make": "Volvo",
+      "model": "XC60 AWD PHEV",
+      "year": 2018,
+      "mpg": 26,
+      "miPerKwh": 1.89,
+      "batteryKwh": 9.5,
+      "evRangeMi": 18
     },
     {
       "id": "volvo-xc60-t8-awd-2026",
@@ -1365,6 +4245,16 @@
       "evRangeMi": 36
     },
     {
+      "id": "volvo-xc60-t8-awd-2025",
+      "make": "Volvo",
+      "model": "XC60 T8 AWD",
+      "year": 2025,
+      "mpg": 28,
+      "miPerKwh": 2,
+      "batteryKwh": 17.5,
+      "evRangeMi": 35
+    },
+    {
       "id": "volvo-xc60-t8-awd-recharge-2024",
       "make": "Volvo",
       "model": "XC60 T8 AWD Recharge",
@@ -1373,6 +4263,26 @@
       "miPerKwh": 2,
       "batteryKwh": 17.5,
       "evRangeMi": 35
+    },
+    {
+      "id": "volvo-xc60-t8-awd-recharge-2023",
+      "make": "Volvo",
+      "model": "XC60 T8 AWD Recharge",
+      "year": 2023,
+      "mpg": 28,
+      "miPerKwh": 2,
+      "batteryKwh": 17.5,
+      "evRangeMi": 35
+    },
+    {
+      "id": "volvo-xc60-t8-awd-recharge-2022",
+      "make": "Volvo",
+      "model": "XC60 T8 AWD Recharge",
+      "year": 2022,
+      "mpg": 25,
+      "miPerKwh": 1.79,
+      "batteryKwh": 10.6,
+      "evRangeMi": 19
     },
     {
       "id": "volvo-xc60-t8-awd-recharge-ext-range-2022",
@@ -1395,6 +4305,56 @@
       "evRangeMi": 18
     },
     {
+      "id": "volvo-xc90-awd-phev-2020",
+      "make": "Volvo",
+      "model": "XC90 AWD PHEV",
+      "year": 2020,
+      "mpg": 27,
+      "miPerKwh": 1.72,
+      "batteryKwh": 14.5,
+      "evRangeMi": 25
+    },
+    {
+      "id": "volvo-xc90-awd-phev-2019",
+      "make": "Volvo",
+      "model": "XC90 AWD PHEV",
+      "year": 2019,
+      "mpg": 25,
+      "miPerKwh": 1.82,
+      "batteryKwh": 9.4,
+      "evRangeMi": 17
+    },
+    {
+      "id": "volvo-xc90-awd-phev-2018",
+      "make": "Volvo",
+      "model": "XC90 AWD PHEV",
+      "year": 2018,
+      "mpg": 27,
+      "miPerKwh": 2,
+      "batteryKwh": 9.5,
+      "evRangeMi": 19
+    },
+    {
+      "id": "volvo-xc90-awd-phev-2017",
+      "make": "Volvo",
+      "model": "XC90 AWD PHEV",
+      "year": 2017,
+      "mpg": 25,
+      "miPerKwh": 1.67,
+      "batteryKwh": 8.4,
+      "evRangeMi": 14
+    },
+    {
+      "id": "volvo-xc90-awd-phev-2016",
+      "make": "Volvo",
+      "model": "XC90 AWD PHEV",
+      "year": 2016,
+      "mpg": 25,
+      "miPerKwh": 1.72,
+      "batteryKwh": 7.5,
+      "evRangeMi": 13
+    },
+    {
       "id": "volvo-xc90-t8-awd-2026",
       "make": "Volvo",
       "model": "XC90 T8 AWD",
@@ -1405,6 +4365,16 @@
       "evRangeMi": 33
     },
     {
+      "id": "volvo-xc90-t8-awd-2025",
+      "make": "Volvo",
+      "model": "XC90 T8 AWD",
+      "year": 2025,
+      "mpg": 27,
+      "miPerKwh": 1.82,
+      "batteryKwh": 17.6,
+      "evRangeMi": 32
+    },
+    {
       "id": "volvo-xc90-t8-awd-recharge-2024",
       "make": "Volvo",
       "model": "XC90 T8 AWD Recharge",
@@ -1413,6 +4383,26 @@
       "miPerKwh": 1.82,
       "batteryKwh": 17.6,
       "evRangeMi": 32
+    },
+    {
+      "id": "volvo-xc90-t8-awd-recharge-2023",
+      "make": "Volvo",
+      "model": "XC90 T8 AWD Recharge",
+      "year": 2023,
+      "mpg": 27,
+      "miPerKwh": 1.82,
+      "batteryKwh": 17.6,
+      "evRangeMi": 32
+    },
+    {
+      "id": "volvo-xc90-t8-awd-recharge-2022",
+      "make": "Volvo",
+      "model": "XC90 T8 AWD Recharge",
+      "year": 2022,
+      "mpg": 27,
+      "miPerKwh": 1.72,
+      "batteryKwh": 10.4,
+      "evRangeMi": 18
     },
     {
       "id": "volvo-xc90-t8-awd-recharge-ext-range-2022",
