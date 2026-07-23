@@ -1,6 +1,6 @@
 // main.js - wire inputs → calc → render. Persist to localStorage.
 
-import { breakevenKwhPrice, chargeSession, effectiveKwhPrice, verdict, rateAtTime, rateAtElapsed, cheapestPeriod, sessionCost } from "./calc.js";
+import { breakevenKwhPrice, chargeSession, verdict, rateAtTime, rateAtElapsed, cheapestPeriod, sessionCost, timeFeeCost, minutesForTimeBudget } from "./calc.js";
 import * as U from "./units.js";
 import { loadPrefs, savePrefs, clearPrefs, DEFAULT_PREFS } from "./storage.js";
 import { loadCars, getCar, getCars, carLabel } from "./cars.js";
@@ -57,37 +57,56 @@ function render() {
   const sub = $("subline");
   const timeline = $("timeline");
   const touNote = $("touNote");
+  const timeNote = $("timeNote");
   const detailLine = $("detailLine");
-  const hasFees = m.sessionFee > 0;
 
-  // Resolve the ONE active pricing model into a single {session, effective}.
-  // tod integrates cost over the clock (starting now); dur integrates over
-  // elapsed charging time; flat is a single rate. Modes are mutually exclusive.
-  let session = null, effective = NaN, hasRate = false, schedule = null;
+  // Resolve the ONE active energy-pricing model into a charge session + its base
+  // cost (session fee + energy). tod integrates cost over the clock (starting
+  // now); dur integrates over elapsed charging time; flat is a single rate.
+  // The by-the-hour time fee is layered on top of whichever mode is active.
+  let session = null, baseTotal = NaN, hasRate = false, schedule = null;
   if (rateMode === "tod") {
     schedule = readSchedule();
     if (schedule.length) {
       const rateOf = (clock) => rateAtTime(schedule, clock);
       session = sessionCost({ batteryKwh: m.batteryKwh, startPct: m.startPct, targetPct: m.targetPct, powerKw: m.powerKw, startClockMin: nowMinutes(), rateOf, sessionFee: m.sessionFee });
+      baseTotal = session.totalCost;
+      hasRate = Number.isFinite(session.effectivePerKwh);
     }
   } else if (rateMode === "dur") {
     const tiers = readDurationTiers();
     if (tiers.length) {
       const rateOf = (_clock, elapsed) => rateAtElapsed(tiers, elapsed);
       session = sessionCost({ batteryKwh: m.batteryKwh, startPct: m.startPct, targetPct: m.targetPct, powerKw: m.powerKw, startClockMin: 0, rateOf, sessionFee: m.sessionFee });
+      baseTotal = session.totalCost;
+      hasRate = Number.isFinite(session.effectivePerKwh);
     }
   }
-  if (session) {
-    effective = session.effectivePerKwh;
-    hasRate = Number.isFinite(effective);
-  } else {
+  if (!session) {
     // Flat rate (also the fallback when a schedule/tier list isn't filled in yet).
     session = chargeSession({ batteryKwh: m.batteryKwh, startPct: m.startPct, targetPct: m.targetPct, powerKw: m.powerKw });
     hasRate = Number.isFinite(m.yourRate) && m.yourRate >= 0;
-    effective = hasRate ? effectiveKwhPrice({ sessionFee: m.sessionFee, ratePerKwh: m.yourRate, kwhFromCharger: session.kwhFromCharger }) : NaN;
-    if (hasRate && !Number.isFinite(effective)) effective = m.yourRate;
+    baseTotal = hasRate ? m.sessionFee + m.yourRate * session.kwhFromCharger : NaN;
+  }
+
+  // Layer the by-the-hour "time connected" fee on top of the energy cost.
+  const kwh = session.kwhFromCharger;
+  const timeTiers = readTimeFee();
+  const timeFee = timeFeeCost(timeTiers, session.minutes);
+  const hasTimeFee = timeFee > 0;
+  const hasFees = m.sessionFee > 0 || hasTimeFee;
+
+  let effective = NaN;
+  if (hasRate) {
+    effective = kwh > 0 ? (baseTotal + timeFee) / kwh : m.yourRate;
   }
   const showEffective = rateMode !== "flat" || hasFees;
+
+  // For time-fee stations: the longest you can stay plugged in and still beat gas.
+  let worthWithin = null;
+  if (hasTimeFee && hasRate && Number.isFinite(be) && kwh > 0) {
+    worthWithin = minutesForTimeBudget(timeTiers, be * kwh - baseTotal);
+  }
 
   if (!Number.isFinite(be)) {
     card.dataset.verdict = "close";
@@ -98,6 +117,7 @@ function render() {
       : "Pick your car to start.";
     timeline.hidden = true;
     touNote.hidden = true;
+    timeNote.hidden = true;
     detailLine.hidden = true;
   } else if (!hasRate) {
     // No charger price yet - the break-even IS the headline answer.
@@ -106,6 +126,7 @@ function render() {
     sub.textContent = "Break-even price. Enter the charger's price for a yes/no.";
     timeline.hidden = true;
     touNote.hidden = true;
+    timeNote.hidden = true;
     detailLine.hidden = true;
   } else {
     const v = verdict(effective, be);
@@ -153,9 +174,27 @@ function render() {
     } else {
       touNote.hidden = true;
     }
+
+    // By-the-hour time fee: how long you can stay plugged in and still beat gas.
+    if (hasTimeFee && worthWithin != null && Number.isFinite(worthWithin)) {
+      const chargeMin = session.minutes;
+      timeNote.hidden = false;
+      if (worthWithin <= 0) {
+        timeNote.textContent = `\u23F1\uFE0F The by-the-hour fee alone costs more than gas here.`;
+      } else if (worthWithin >= chargeMin) {
+        const buffer = worthWithin - chargeMin;
+        timeNote.textContent = buffer >= 1
+          ? `\u23F1\uFE0F Worth it if you unplug within ${formatDuration(worthWithin)} (about ${formatDuration(buffer)} of slack once it's full).`
+          : `\u23F1\uFE0F Worth it only right as it finishes, around ${formatDuration(worthWithin)} plugged in.`;
+      } else {
+        timeNote.textContent = `\u23F1\uFE0F The by-the-hour fee wins after ${formatDuration(worthWithin)}, but a full charge takes ${formatDuration(chargeMin)}. Charge less or use gas.`;
+      }
+    } else {
+      timeNote.hidden = true;
+    }
   }
 
-  renderAdvanced(m, be, cur, session, effective);
+  renderAdvanced(m, be, cur, session, effective, timeFee);
   updatePresetActive();
   persistFrom(m);
 }
@@ -169,11 +208,18 @@ function updatePresetActive() {
   }
 }
 
-function renderAdvanced(m, be, cur, session, effective) {
+function renderAdvanced(m, be, cur, session, effective, timeFee) {
   $("advKwh").textContent = Number.isFinite(session.kwhIntoBattery)
     ? `${session.kwhIntoBattery.toFixed(1)} kWh`
     : "-";
   $("advTime").textContent = formatDuration(session.minutes);
+  const tfRow = $("advTimeFeeRow");
+  if (timeFee > 0) {
+    tfRow.hidden = false;
+    $("advTimeFee").textContent = money(timeFee, cur);
+  } else {
+    tfRow.hidden = true;
+  }
   $("advEffective").textContent = money(effective, cur);
 
   const av = $("advVerdict");
@@ -297,6 +343,32 @@ function addDurRow(min = 0, rate = "") {
     `</div>` +
     `<button type="button" class="tou-del" aria-label="Remove tier">\u00d7</button>`;
   $("durRows").appendChild(row);
+}
+
+// Build by-the-hour time-fee tiers from the editor rows: [{ start(min), perHour }].
+function readTimeFee() {
+  const tiers = [];
+  for (const r of document.querySelectorAll("#timeFeeRows .tf-row")) {
+    const min = parseNum(r.querySelector(".tf-min").value);
+    const perHour = parseNum(r.querySelector(".tf-rate").value);
+    if (!Number.isFinite(perHour) || perHour <= 0) continue;
+    tiers.push({ start: Number.isFinite(min) ? min : 0, perHour });
+  }
+  return tiers;
+}
+
+function addTimeFeeRow(min = 0, perHour = "") {
+  const row = document.createElement("div");
+  row.className = "tou-row tf-row";
+  row.innerHTML =
+    `<div class="dur-after">after <input type="text" inputmode="numeric" class="dur-min tf-min" value="${min}" /> min</div>` +
+    `<div class="input-money tou-rate-wrap">` +
+    `<span class="input-money__sym">${prefs.currency}</span>` +
+    `<input type="text" inputmode="decimal" class="tf-rate" placeholder="2.04" value="${perHour}" />` +
+    `</div>` +
+    `<span class="tf-unit">/hr</span>` +
+    `<button type="button" class="tou-del" aria-label="Remove tier">\u00d7</button>`;
+  $("timeFeeRows").appendChild(row);
 }
 
 // Reflect the selected pricing mode: show the right editor, and disable the flat
@@ -489,6 +561,18 @@ function attachEvents() {
     render();
   });
 
+  $("timeFeeAdd").addEventListener("click", () => {
+    addTimeFeeRow();
+    render();
+  });
+  $("timeFeeRows").addEventListener("input", render);
+  $("timeFeeRows").addEventListener("click", (e) => {
+    if (e.target.classList.contains("tou-del")) {
+      e.target.closest(".tou-row").remove();
+      render();
+    }
+  });
+
   // Info note: show on hover/focus (desktop), tap to pin open (touch).
   {
     const infoBtn = $("carInfoBtn");
@@ -540,6 +624,7 @@ function attachEvents() {
     if (flatRadio) flatRadio.checked = true;
     $("touRows").innerHTML = "";
     $("durRows").innerHTML = "";
+    $("timeFeeRows").innerHTML = "";
     $("carInfoNote").hidden = true;
     $("carInfoBtn").setAttribute("aria-expanded", "false");
     boot();
@@ -569,6 +654,7 @@ function boot() {
     }
     $("nicknameField").hidden = true;
   }
+  if ($("timeFeeRows").children.length === 0) addTimeFeeRow(0, "");
   writeDisplayValues();
   applyRateMode();
   render();

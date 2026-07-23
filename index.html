@@ -71,6 +71,7 @@
       <p class="result__detail" id="detailLine" hidden></p>
       <p class="result__time" id="timeline" hidden></p>
       <p class="result__time result__tou" id="touNote" hidden></p>
+      <p class="result__time result__tou" id="timeNote" hidden></p>
     </section>
 
     <!-- Core inputs -->
@@ -124,6 +125,15 @@
           </div>
         </div>
 
+        <details class="tweak" id="timeFeeTweak">
+          <summary>Time fee (some chargers bill by the hour)</summary>
+          <div class="tweak__body">
+            <div id="timeFeeRows" class="tou-rows"></div>
+            <button type="button" id="timeFeeAdd" class="link tou-add">+ Add tier</button>
+            <p class="hint">A charge for the time you&rsquo;re plugged in, on top of energy. Set the rate from 0 min, then add a tier for when it changes. Example: $2.04/hr from 0 min, then $5/hr after 240 min. Leave blank if your charger doesn&rsquo;t do this.</p>
+          </div>
+        </details>
+
         <div class="field">
           <p class="sublabel">Charger speed</p>
           <div class="presets" id="powerPresets">
@@ -159,6 +169,9 @@
           </div>
           <div class="advanced-result__row">
             <span>Time to charge (est.)</span><strong id="advTime">-</strong>
+          </div>
+          <div class="advanced-result__row" id="advTimeFeeRow" hidden>
+            <span>Time fee</span><strong id="advTimeFee">-</strong>
           </div>
           <div class="advanced-result__row">
             <span>Effective price</span><strong id="advEffective">-</strong>

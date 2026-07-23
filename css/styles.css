@@ -397,6 +397,7 @@ input[type="text"]:focus {
 }
 .tou-del:active { transform: scale(0.96); }
 .tou-add { display: inline-block; margin-top: 2px; }
+.tf-unit { flex: 0 0 auto; font-size: 14px; font-weight: 600; color: var(--muted); }
 .result__tou { color: var(--text); }
 
 /* Exclusive pricing-mode selector */

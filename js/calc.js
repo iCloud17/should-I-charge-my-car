@@ -209,3 +209,54 @@ export function sessionCost({
     effectivePerKwh: kwhFromCharger > 0 ? totalCost / kwhFromCharger : NaN,
   };
 }
+
+// --- Time-connected fee (charged by the hour while plugged in) --------------
+
+/**
+ * Total time-based fee for staying plugged in `minutes`, given tiers
+ * [{ start, perHour }] where start is the elapsed connected minute the tier
+ * kicks in and perHour is the currency-per-hour rate from that point until the
+ * next tier. Example (ChargePoint): first 4 hrs at $2.04/hr, then $5/hr =
+ * [{ start: 0, perHour: 2.04 }, { start: 240, perHour: 5 }].
+ */
+export function timeFeeCost(tiers, minutes) {
+  const s = (tiers || [])
+    .filter((t) => Number.isFinite(t.start) && Number.isFinite(t.perHour))
+    .sort((a, b) => a.start - b.start);
+  if (!s.length || !(minutes > 0)) return 0;
+  let cost = 0;
+  for (let i = 0; i < s.length; i++) {
+    const from = Math.max(s[i].start, 0);
+    const to = i + 1 < s.length ? s[i + 1].start : Infinity;
+    if (minutes <= from) break;
+    const spanMin = Math.min(minutes, to) - from; // minutes billed at this tier
+    if (spanMin > 0) cost += (spanMin / 60) * s[i].perHour;
+  }
+  return cost;
+}
+
+/**
+ * The largest number of connected minutes whose cumulative time fee stays within
+ * `budget` (the dollars still available before charging costs the same as gas).
+ * Returns 0 if there's no budget, and Infinity if a free tier means the fee never
+ * catches up. Used to tell the user "worth it if you unplug within X".
+ */
+export function minutesForTimeBudget(tiers, budget) {
+  if (!(budget > 0)) return 0;
+  const s = (tiers || [])
+    .filter((t) => Number.isFinite(t.start) && Number.isFinite(t.perHour))
+    .sort((a, b) => a.start - b.start);
+  if (!s.length) return Infinity;
+  let remaining = budget;
+  for (let i = 0; i < s.length; i++) {
+    const from = Math.max(s[i].start, 0);
+    const to = i + 1 < s.length ? s[i + 1].start : Infinity;
+    const perMin = s[i].perHour / 60;
+    if (perMin <= 0) return to === Infinity ? Infinity : to; // free tier
+    const affordableMin = remaining / perMin;
+    const spanMin = to - from;
+    if (affordableMin <= spanMin) return from + affordableMin;
+    remaining -= spanMin * perMin;
+  }
+  return Infinity;
+}
