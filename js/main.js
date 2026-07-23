@@ -146,6 +146,7 @@ function writeDisplayValues() {
   $("targetPct").value = prefs.targetPct;
   $("startPctOut").textContent = `${prefs.startPct}%`;
   $("targetPctOut").textContent = `${prefs.targetPct}%`;
+  $("carNickname").value = prefs.customName || "";
   for (const id of ["curSym1", "curSym2", "curSym3"]) $(id).textContent = prefs.currency;
 }
 
@@ -167,6 +168,8 @@ function toggleUnits() {
 }
 
 // --- Car selection ---
+const CUSTOM_ID = "__custom__";
+
 function setCar(car, { keepCustom = false } = {}) {
   prefs.carId = car.id;
   if (!keepCustom) {
@@ -180,9 +183,25 @@ function setCar(car, { keepCustom = false } = {}) {
   render();
 }
 
+// Switch to a user-defined car: keep the current numbers, drive the label from
+// the nickname, and open the editor so it's obvious where to enter values.
+function setCustomCar() {
+  prefs.carId = CUSTOM_ID;
+  savePrefs(prefs);
+  $("carName").textContent = prefs.customName || "My car";
+  $("customize").open = true;
+  writeDisplayValues();
+  render();
+}
+
 function buildCarSelect() {
   const sel = $("carSelect");
   sel.innerHTML = "";
+  const custom = document.createElement("option");
+  custom.value = CUSTOM_ID;
+  custom.textContent = "\u270F\uFE0F  My own car (enter numbers)";
+  if (prefs.carId === CUSTOM_ID) custom.selected = true;
+  sel.appendChild(custom);
   for (const car of getCars()) {
     const opt = document.createElement("option");
     opt.value = car.id;
@@ -215,8 +234,21 @@ function attachEvents() {
   });
   dialog.addEventListener("close", () => {
     if (dialog.returnValue === "pick") {
-      const car = getCar($("carSelect").value);
-      if (car) setCar(car);
+      const val = $("carSelect").value;
+      if (val === CUSTOM_ID) {
+        setCustomCar();
+      } else {
+        const car = getCar(val);
+        if (car) setCar(car);
+      }
+    }
+  });
+
+  $("carNickname").addEventListener("input", (e) => {
+    prefs.customName = e.target.value.trim();
+    savePrefs(prefs);
+    if (prefs.carId === CUSTOM_ID) {
+      $("carName").textContent = prefs.customName || "My car";
     }
   });
 
@@ -231,8 +263,12 @@ function attachEvents() {
 // --- Boot ---
 function boot() {
   applyUnitLabels();
-  const car = getCar(prefs.carId) || getCars()[0];
-  if (car) $("carName").textContent = car.model;
+  if (prefs.carId === CUSTOM_ID) {
+    $("carName").textContent = prefs.customName || "My car";
+  } else {
+    const car = getCar(prefs.carId) || getCars()[0];
+    if (car) $("carName").textContent = car.model;
+  }
   writeDisplayValues();
   render();
 }

@@ -11,6 +11,7 @@ export const DEFAULT_PREFS = {
   batteryKwh: 15.1,
   gasPrice: 3.89, // canonical: currency per gallon
   yourRate: 0.30, // currency per kWh the charger charges
+  customName: "", // user's nickname for a custom car
   units: "imperial", // "imperial" | "metric"
   currency: "$",
   // Advanced (Mode 2) — flat rate + fees + charge session.

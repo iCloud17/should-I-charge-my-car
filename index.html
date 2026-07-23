@@ -56,8 +56,12 @@
 
     <!-- Customize car values -->
     <details class="card disclosure" id="customize">
-      <summary>Customize car numbers</summary>
+      <summary>Your car &amp; numbers</summary>
       <div class="disclosure__body">
+        <div class="field">
+          <label for="carNickname">Car name <span class="label-opt">(optional)</span></label>
+          <input id="carNickname" type="text" autocomplete="off" maxlength="40" placeholder="e.g., My RAV4" />
+        </div>
         <div class="field">
           <label for="mpg" id="mpgLabel">Gas MPG</label>
           <input id="mpg" type="text" inputmode="decimal" autocomplete="off" value="38" />
@@ -70,7 +74,7 @@
           <label for="batteryKwh">Battery size (kWh)</label>
           <input id="batteryKwh" type="text" inputmode="decimal" autocomplete="off" value="18.1" />
         </div>
-        <p class="hint">Real-world numbers beat EPA estimates — adjust to what you actually get.</p>
+        <p class="hint">Only <strong>MPG</strong> and <strong>mi/kWh</strong> change the result — the name is just a label. Real-world numbers beat EPA estimates.</p>
       </div>
     </details>
 
@@ -126,6 +130,7 @@
   <dialog id="carDialog" class="dialog">
     <form method="dialog" class="dialog__inner">
       <h2 class="dialog__title">Choose your car</h2>
+      <p class="dialog__hint">Pick a model to pre-fill its numbers, or choose &ldquo;My own car&rdquo; and enter your own below.</p>
       <select id="carSelect" class="dialog__select" size="10"></select>
       <div class="dialog__actions">
         <button value="cancel" class="btn btn--ghost">Cancel</button>
