@@ -91,7 +91,10 @@ function render() {
   if (!Number.isFinite(be)) {
     card.dataset.verdict = "close";
     headline.textContent = "\u2014";
-    sub.textContent = "Enter your car's MPG and mi/kWh to get started.";
+    const haveCar = Number.isFinite(m.mpg) && Number.isFinite(m.miPerKwh);
+    sub.textContent = haveCar
+      ? "Enter your local gas price to see the break-even."
+      : "Pick your car to start.";
     timeline.hidden = true;
     touNote.hidden = true;
   } else if (!hasRate) {
@@ -495,6 +498,14 @@ function attachEvents() {
     clearPrefs();
     prefs = { ...DEFAULT_PREFS };
     savePrefs(prefs);
+    // Reset volatile UI too: pricing mode, schedule/tier rows, info note.
+    rateMode = "flat";
+    const flatRadio = document.querySelector('input[name="rateMode"][value="flat"]');
+    if (flatRadio) flatRadio.checked = true;
+    $("touRows").innerHTML = "";
+    $("durRows").innerHTML = "";
+    $("carInfoNote").hidden = true;
+    $("carInfoBtn").setAttribute("aria-expanded", "false");
     boot();
   });
 }
@@ -508,13 +519,19 @@ function boot() {
     $("nicknameField").hidden = false;
     $("tweak").open = true;
   } else {
-    const car = getCar(prefs.carId) || getCars()[0];
+    const car = getCar(prefs.carId);
     if (car) {
       $("carName").textContent = `${car.make} ${car.model}`;
       $("carSearch").value = carLabel(car);
+      $("tweak").open = false;
+    } else {
+      // Clean slate — nudge the user to pick a car.
+      $("carName").textContent = "Select your car";
+      $("carSearch").value = "";
+      $("carTile").open = true;
+      $("tweak").open = false;
     }
     $("nicknameField").hidden = true;
-    $("tweak").open = false;
   }
   writeDisplayValues();
   applyRateMode();

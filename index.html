@@ -22,7 +22,7 @@
       <summary>
         <span class="car-summary">
           <span class="car-summary__icon" aria-hidden="true">🚗</span>
-          <span class="car-summary__name" id="carName">RAV4 Prime 4WD</span>
+          <span class="car-summary__name" id="carName">Select your car</span>
         </span>
       </summary>
       <div class="disclosure__body">
@@ -48,11 +48,11 @@
             <div class="field-row">
               <div class="field">
                 <label for="mpg" id="mpgLabel">Gas MPG</label>
-                <input id="mpg" type="text" inputmode="decimal" autocomplete="off" value="38" />
+                <input id="mpg" type="text" inputmode="decimal" autocomplete="off" value="" />
               </div>
               <div class="field">
                 <label for="miPerKwh" id="effLabel">Electric mi/kWh</label>
-                <input id="miPerKwh" type="text" inputmode="decimal" autocomplete="off" value="2.78" />
+                <input id="miPerKwh" type="text" inputmode="decimal" autocomplete="off" value="" />
               </div>
             </div>
             <p class="hint">Auto-filled from your car — only change these if you track your own real-world numbers.</p>
@@ -63,8 +63,8 @@
 
     <!-- Result card: the hero -->
     <section class="card result" id="resultCard" data-verdict="worth">
-      <p class="result__headline" id="headline">$0.28/kWh</p>
-      <p class="result__sub" id="subline">Break-even price. Enter the charger&rsquo;s price for a yes/no.</p>
+      <p class="result__headline" id="headline">—</p>
+      <p class="result__sub" id="subline">Pick your car to start.</p>
       <p class="result__time" id="timeline" hidden></p>
       <p class="result__time result__tou" id="touNote" hidden></p>
     </section>
@@ -75,7 +75,7 @@
         <label for="gasPrice" id="gasPriceLabel">Gas price (per gallon)</label>
         <div class="input-money">
           <span class="input-money__sym" id="curSym1">$</span>
-          <input id="gasPrice" type="text" inputmode="decimal" autocomplete="off" value="3.89" />
+          <input id="gasPrice" type="text" inputmode="decimal" autocomplete="off" value="" placeholder="e.g. 3.89" />
         </div>
       </div>
 
@@ -83,7 +83,7 @@
         <label for="yourRate">Charger price (per kWh)</label>
         <div class="input-money">
           <span class="input-money__sym" id="curSym2">$</span>
-          <input id="yourRate" type="text" inputmode="decimal" autocomplete="off" value="0.30" placeholder="optional" />
+          <input id="yourRate" type="text" inputmode="decimal" autocomplete="off" value="" placeholder="e.g. 0.30" />
         </div>
       </div>
       <p class="hint" id="rateModeNote" hidden></p>
@@ -127,7 +127,7 @@
           </div>
           <div class="field">
             <label for="batteryKwh">Battery size (kWh)</label>
-            <input id="batteryKwh" type="text" inputmode="decimal" autocomplete="off" value="15.1" />
+            <input id="batteryKwh" type="text" inputmode="decimal" autocomplete="off" value="" />
           </div>
         </div>
         <p class="hint">Charge power &amp; battery auto-fill from your car and only affect the time estimate — leave them if you&rsquo;re not sure.</p>

@@ -1,5 +1,5 @@
 // service-worker.js — cache-first offline support for the static app shell.
-const CACHE = "sicc-v3";
+const CACHE = "sicc-v4";
 const ASSETS = [
   "./",
   "./index.html",
@@ -16,7 +16,13 @@ const ASSETS = [
 ];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  // Fetch each asset fresh from the network (cache: "reload") so a previous
+  // service worker can't poison the new cache with stale files during install.
+  event.waitUntil(
+    caches.open(CACHE)
+      .then((c) => c.addAll(ASSETS.map((u) => new Request(u, { cache: "reload" }))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener("activate", (event) => {
