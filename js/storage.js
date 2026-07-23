@@ -3,12 +3,12 @@
 const KEY = "sicc.prefs.v1";
 
 export const DEFAULT_PREFS = {
-  carId: "rav4-prime-2023",
+  carId: "toyota-rav4-prime-4wd-2024",
   // Canonical values (MPG, mi/kWh, kWh). Populated from the chosen car but
   // overridable by the user; we store them so custom edits survive reloads.
   mpg: 38,
-  miPerKwh: 2.9,
-  batteryKwh: 18.1,
+  miPerKwh: 2.78,
+  batteryKwh: 15.1,
   gasPrice: 3.89, // canonical: currency per gallon
   yourRate: 0.30, // currency per kWh the charger charges
   units: "imperial", // "imperial" | "metric"
