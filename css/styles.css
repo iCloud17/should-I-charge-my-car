@@ -557,6 +557,14 @@ output { font-weight: 800; color: var(--text); }
   padding: 4px 6px 0;
 }
 .app__foot-note { font-size: 12px; color: var(--muted); }
+.app__foot-right { display: flex; align-items: center; gap: 12px; }
+.app__foot-gh {
+  display: inline-flex;
+  color: var(--muted);
+  transition: color 0.15s;
+}
+.app__foot-gh:hover { color: var(--text); }
+.app__foot-gh:active { transform: scale(0.92); }
 .link {
   background: none;
   border: none;
