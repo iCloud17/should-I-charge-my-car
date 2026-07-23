@@ -9,12 +9,12 @@ export function parseNum(value) {
 }
 
 export function money(value, currency = "$", digits = 2) {
-  if (!Number.isFinite(value)) return "—";
+  if (!Number.isFinite(value)) return "-";
   return `${currency}${value.toFixed(digits)}`;
 }
 
 export function formatDuration(minutes) {
-  if (!Number.isFinite(minutes) || minutes <= 0) return "—";
+  if (!Number.isFinite(minutes) || minutes <= 0) return "-";
   const total = Math.round(minutes);
   const h = Math.floor(total / 60);
   const m = total % 60;
@@ -28,7 +28,7 @@ export function animateValue(el, to, { currency = "$", digits = 2, duration = 35
   const from = el._val ?? to;
   el._val = to;
   if (!Number.isFinite(to)) {
-    el.textContent = "—";
+    el.textContent = "-";
     return;
   }
   const start = performance.now();

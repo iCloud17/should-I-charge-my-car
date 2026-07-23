@@ -91,7 +91,7 @@ function render() {
 
   if (!Number.isFinite(be)) {
     card.dataset.verdict = "close";
-    headline.textContent = "\u2014";
+    headline.textContent = "\u2026";
     const haveCar = Number.isFinite(m.mpg) && Number.isFinite(m.miPerKwh);
     sub.textContent = haveCar
       ? "Enter your local gas price to see the break-even."
@@ -121,9 +121,9 @@ function render() {
     const gasUnit = prefs.units === "metric" ? "/L" : "/gal";
     const pct = gasPerMile > 0 ? Math.round((Math.abs(gasPerMile - elecPerMile) / gasPerMile) * 100) : 0;
     sub.textContent = v === "worth"
-      ? `Like ${money(equivDisp, cur)}${gasUnit} gas \u2014 ${pct}% cheaper`
+      ? `Like ${money(equivDisp, cur)}${gasUnit} gas, ${pct}% cheaper`
       : v === "gas"
-        ? `Like ${money(equivDisp, cur)}${gasUnit} gas \u2014 ${pct}% pricier`
+        ? `Like ${money(equivDisp, cur)}${gasUnit} gas, ${pct}% pricier`
         : `About the same as gas (~${money(equivDisp, cur)}${gasUnit})`;
 
     detailLine.hidden = false;
@@ -162,7 +162,7 @@ function render() {
 function renderAdvanced(m, be, cur, session, effective) {
   $("advKwh").textContent = Number.isFinite(session.kwhIntoBattery)
     ? `${session.kwhIntoBattery.toFixed(1)} kWh`
-    : "—";
+    : "-";
   $("advTime").textContent = formatDuration(session.minutes);
   $("advEffective").textContent = money(effective, cur);
 
@@ -170,13 +170,13 @@ function renderAdvanced(m, be, cur, session, effective) {
   if (Number.isFinite(effective) && Number.isFinite(be)) {
     const vv = verdict(effective, be);
     if (vv === "worth") {
-      av.textContent = `✅ Worth charging — all-in ${money(effective, cur)}/kWh beats break-even.`;
+      av.textContent = `✅ Worth charging: all-in ${money(effective, cur)}/kWh beats break-even.`;
       av.style.color = "var(--worth)";
     } else if (vv === "gas") {
-      av.textContent = `❌ Not worth it — fees push you to ${money(effective, cur)}/kWh. Use gas.`;
+      av.textContent = `❌ Not worth it: fees push you to ${money(effective, cur)}/kWh. Use gas.`;
       av.style.color = "var(--gas)";
     } else {
-      av.textContent = `≈ Right at break-even (${money(effective, cur)}/kWh) — your call.`;
+      av.textContent = `≈ Right at break-even (${money(effective, cur)}/kWh). Your call.`;
       av.style.color = "var(--close)";
     }
   } else {
@@ -412,7 +412,7 @@ function renderCarResults(query) {
   if (!results.length && query.trim()) {
     const none = document.createElement("li");
     none.className = "combo__none";
-    none.textContent = "No matches — try a make or model.";
+    none.textContent = "No matches, try a make or model.";
     ul.appendChild(none);
   }
 
