@@ -1,45 +1,52 @@
 # Should I Charge My Car?
 
-A simple, mobile-first static web app for plug-in hybrid (PHEV) owners.
-Enter your car and local gas price, and it tells you the **maximum $/kWh you can
-pay for charging before gasoline becomes the cheaper option** - plus (later) how
-long it's actually worth charging given session fees and tiered rates.
+A charging-cost calculator for plug-in hybrid (PHEV) owners: it tells you whether charging is cheaper than gas, based on your car, the local gas price, and what the charger costs.
 
-## Status
+Enter those, and you get a verdict, the break-even price, and how much you save or overpay. Meant for checking on your phone while you're standing at the charger.
 
-Early scaffolding. Repository initialized.
+## What it does
 
-## Planned features
+- Gives a clear verdict: charge it, toss-up, or use gas.
+- Calculates the break-even charging price: the highest $/kWh at which charging still beats gas for your car.
+- Puts it in plain terms, e.g. "like $1.64/gal gas, 58% cheaper."
+- Estimates how long to charge to your target level.
+- Handles real charger pricing: flat, time-of-day (peak/off-peak), or duration tiers, plus session fees.
+- Includes 441 plug-in hybrids from the US EPA (2012 to 2026), searchable, or enter your own numbers.
+- Supports Imperial or metric units and any currency.
+- Saves your car on your device and works offline (installable PWA).
 
-- **Break-even $/kWh** - the core number: below it, charging is worth it; above it, use gas.
-- **Should I charge here?** - factor in session fees, tiered/idle rates → effective $/kWh vs break-even.
-- **How long to charge?** - optimal minutes given charging power, battery state, and rate schedule.
-- **Bundled car data** - a curated `phevs.json` seeded from fueleconomy.gov (with manual override).
-- **Any units, any currency** - Imperial/metric toggle.
-- **Saved car** - persisted in `localStorage`, so returning visits are pre-filled.
-- **Phone-first + PWA** - installable, works offline at the charger.
+## How it works
 
-## Tech
+Charging is worth it when it costs less per mile than gas.
 
-Plain HTML + CSS + vanilla JS (ES modules). No build step. Hostable on GitHub Pages.
+- Gas cost per mile = gas price / MPG
+- Electric cost per mile = charger price / miles per kWh
 
-## Development
+Set them equal and you get the break-even charging price:
 
-Just open `index.html`, or serve the folder:
+```
+break-even $/kWh = gas price x (miles per kWh / MPG)
+```
+
+Below that, charging wins; above it, gas is cheaper. That is the whole idea. Everything else is just accounting for charger pricing schemes, which rarely keep it that simple.
+
+## Run locally
+
+No build step, no dependencies:
 
 ```sh
 python3 -m http.server 8000
-# then visit http://localhost:8000
+# open http://localhost:8000
 ```
 
-## Disclaimer
+## Tech
 
-Vehicle efficiency figures are approximate and user-editable; verify against your
-own real-world numbers.
+Vanilla HTML, CSS, and JavaScript (ES modules). No framework, no build, no backend. Installable offline PWA, hostable free on GitHub Pages.
+
+## Car data
+
+MPG and electric-efficiency figures come from the US DOE/EPA at [fueleconomy.gov](https://www.fueleconomy.gov), the same source as window-sticker ratings. They are estimates, and every field is editable, so you can use your own numbers.
 
 ## License
 
-Licensed under the [GNU AGPL-3.0](LICENSE). You're free to use, modify, and share
-it, but derivatives must stay open under the same license, and if you run a
-modified version as a network service you must offer its source to users
-(see the license, section 13).
+[GNU AGPL-3.0](LICENSE). Free to use, modify, and share; derivatives stay open under the same license, and a hosted modified version must offer its source to users.
