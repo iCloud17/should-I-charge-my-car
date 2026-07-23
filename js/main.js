@@ -732,7 +732,15 @@ async function init() {
   boot();
 
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+    const isLocal = ["localhost", "127.0.0.1", "[::1]", ""].includes(location.hostname);
+    if (isLocal) {
+      // Local dev: don't let a cached service worker hide file changes. Tear
+      // down any existing registration + caches so every reload is fresh.
+      navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister())).catch(() => {});
+      if (self.caches) caches.keys().then((ks) => ks.forEach((k) => caches.delete(k))).catch(() => {});
+    } else {
+      navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+    }
   }
 }
 
