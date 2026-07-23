@@ -16,8 +16,7 @@ npm-debug.log*
 
 # Local browser-testing artifacts (screenshots, Playwright output)
 .playwright-mcp/
-home.png
-metric-advanced.png
+/*.png
 
 # Seed script cache (large bulk CSV from fueleconomy.gov)
 scripts/.vehicles.cache.csv

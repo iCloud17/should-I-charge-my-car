@@ -166,6 +166,32 @@ body {
   position: relative;
   z-index: 1;
 }
+.result__headline {
+  margin: 8px 0 8px;
+  font-size: 40px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  color: var(--accent);
+  position: relative;
+  z-index: 1;
+  transition: color 0.25s ease;
+}
+.result__sub {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  position: relative;
+  z-index: 1;
+}
+.result__time {
+  margin: 10px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  position: relative;
+  z-index: 1;
+}
 
 /* --- Fields --- */
 .field { display: flex; flex-direction: column; gap: 6px; }

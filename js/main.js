@@ -4,7 +4,7 @@ import { breakevenKwhPrice, chargeSession, effectiveKwhPrice, verdict } from "./
 import * as U from "./units.js";
 import { loadPrefs, savePrefs, clearPrefs, DEFAULT_PREFS } from "./storage.js";
 import { loadCars, getCar, getCars, carLabel } from "./cars.js";
-import { $, parseNum, money, formatDuration, animateValue } from "./ui.js";
+import { $, parseNum, money, formatDuration } from "./ui.js";
 
 let prefs = loadPrefs();
 
@@ -50,38 +50,41 @@ function render() {
   const m = readInputs();
   const cur = prefs.currency;
 
-  // Mode 1: break-even
   const be = breakevenKwhPrice({ gasPrice: m.gasPrice, mpg: m.mpg, miPerKwh: m.miPerKwh });
-  animateValue($("breakevenValue"), be, { currency: cur, digits: 2 });
-
   const card = $("resultCard");
-  const v = verdict(m.yourRate, be);
-  card.dataset.verdict = Number.isFinite(m.yourRate) ? (v === "unknown" ? "worth" : v) : "worth";
+  const headline = $("headline");
+  const sub = $("subline");
+  const timeline = $("timeline");
+  const hasRate = Number.isFinite(m.yourRate) && m.yourRate >= 0;
 
-  $("verdictText").textContent = Number.isFinite(be)
-    ? `Charging beats gas below ${money(be, cur)} per kWh.`
-    : "Enter your car's numbers to see the break-even price.";
-
-  // Compare: your charger price vs break-even
-  const compareBox = $("compareBox");
-  if (Number.isFinite(m.yourRate) && Number.isFinite(be)) {
-    compareBox.hidden = false;
-    compareBox.dataset.verdict = v;
-    const diff = Math.abs(m.yourRate - be);
-    if (v === "worth") {
-      $("compareText").textContent = `Worth it — you're ${money(diff, cur)}/kWh under break-even. Charge up.`;
-    } else if (v === "gas") {
-      $("compareText").textContent = `Skip it — ${money(diff, cur)}/kWh over break-even. Gas is cheaper.`;
-    } else {
-      $("compareText").textContent = `Basically a wash — right around break-even.`;
-    }
+  if (!Number.isFinite(be)) {
+    card.dataset.verdict = "close";
+    headline.textContent = "\u2014";
+    sub.textContent = "Enter your car's MPG and mi/kWh to get started.";
+    timeline.hidden = true;
+  } else if (!hasRate) {
+    // No charger price yet — the break-even IS the headline answer.
+    card.dataset.verdict = "worth";
+    headline.textContent = `${money(be, cur)}/kWh`;
+    sub.textContent = "Break-even price. Enter the charger's price for a yes/no.";
+    timeline.hidden = true;
   } else {
-    compareBox.hidden = true;
+    const v = verdict(m.yourRate, be);
+    card.dataset.verdict = v === "unknown" ? "close" : v;
+    headline.textContent = v === "worth" ? "\u26A1 Charge it" : v === "gas" ? "\u26FD Use gas" : "\u2248 Toss-up";
+    sub.textContent = `You pay ${money(m.yourRate, cur)} · break-even ${money(be, cur)}/kWh`;
+
+    // "How long" at a glance, using your saved battery / power / charge target.
+    const s = chargeSession({ batteryKwh: m.batteryKwh, startPct: m.startPct, targetPct: m.targetPct, powerKw: m.powerKw });
+    if (v !== "gas" && Number.isFinite(s.minutes) && s.minutes > 0) {
+      timeline.hidden = false;
+      timeline.textContent = `~${formatDuration(s.minutes)} to ${m.targetPct}% at ${round(m.powerKw, 1)} kW`;
+    } else {
+      timeline.hidden = true;
+    }
   }
 
-  // Advanced: charge session + effective price
   renderAdvanced(m, be, cur);
-
   persistFrom(m);
 }
 

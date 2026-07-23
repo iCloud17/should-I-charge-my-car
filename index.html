@@ -25,9 +25,9 @@
         <span class="car-chip__edit">change ›</span>
       </button>
 
-      <p class="result__label">Break-even charging price</p>
-      <p class="result__value"><span id="breakevenValue">$0.35</span><span class="result__unit">/kWh</span></p>
-      <p class="result__verdict" id="verdictText">Charging is worth it below this price.</p>
+      <p class="result__headline" id="headline">$0.28/kWh</p>
+      <p class="result__sub" id="subline">Break-even price. Enter the charger&rsquo;s price for a yes/no.</p>
+      <p class="result__time" id="timeline" hidden></p>
     </section>
 
     <!-- Core inputs -->
@@ -46,11 +46,6 @@
           <span class="input-money__sym" id="curSym2">$</span>
           <input id="yourRate" type="text" inputmode="decimal" autocomplete="off" value="0.30" placeholder="optional" />
         </div>
-      </div>
-
-      <div class="compare" id="compareBox" hidden>
-        <span class="compare__dot" aria-hidden="true"></span>
-        <span id="compareText">—</span>
       </div>
     </section>
 
