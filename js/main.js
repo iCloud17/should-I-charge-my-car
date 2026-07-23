@@ -322,41 +322,75 @@ function setCar(car, { keepCustom = false } = {}) {
   }
   savePrefs(prefs);
   $("carName").textContent = `${car.make} ${car.model}`;
+  $("carSearch").value = carLabel(car);
   $("nicknameField").hidden = true;
-  $("carSelect").value = car.id;
+  $("tweak").open = false;
   writeDisplayValues();
   render();
 }
 
 // Switch to a user-defined car: keep the current numbers, drive the label from
-// the nickname, and reveal the name field so it's obvious where to enter it.
+// the nickname, and reveal the numbers so the user can enter their own.
 function setCustomCar() {
   prefs.carId = CUSTOM_ID;
   savePrefs(prefs);
   $("carName").textContent = prefs.customName || "My car";
+  $("carSearch").value = "My own car";
   $("nicknameField").hidden = false;
-  $("carSelect").value = CUSTOM_ID;
+  $("tweak").open = true;
   $("carTile").open = true;
   writeDisplayValues();
   render();
-  $("carNickname").focus();
+  $("mpg").focus();
 }
 
-function buildCarSelect() {
-  const sel = $("carSelect");
-  sel.innerHTML = "";
-  const custom = document.createElement("option");
-  custom.value = CUSTOM_ID;
-  custom.textContent = "\u270F\uFE0F  My own car (enter numbers)";
-  if (prefs.carId === CUSTOM_ID) custom.selected = true;
-  sel.appendChild(custom);
-  for (const car of getCars()) {
-    const opt = document.createElement("option");
-    opt.value = car.id;
-    opt.textContent = carLabel(car);
-    if (car.id === prefs.carId) opt.selected = true;
-    sel.appendChild(opt);
+// --- Searchable car picker (typeahead over the bundled dataset) ---
+function filterCars(query) {
+  const q = query.trim().toLowerCase();
+  const all = getCars();
+  if (!q) return all.slice(0, 8);
+  const tokens = q.split(/\s+/);
+  const matches = all.filter((c) => {
+    const label = `${c.year} ${c.make} ${c.model}`.toLowerCase();
+    return tokens.every((t) => label.includes(t));
+  });
+  return matches.slice(0, 10);
+}
+
+function renderCarResults(query) {
+  const ul = $("carResults");
+  ul.innerHTML = "";
+
+  const custom = document.createElement("li");
+  custom.className = "combo__item combo__item--custom";
+  custom.dataset.id = CUSTOM_ID;
+  custom.setAttribute("role", "option");
+  custom.textContent = "\u270F\uFE0F My own car (enter numbers)";
+  ul.appendChild(custom);
+
+  const results = filterCars(query);
+  for (const car of results) {
+    const li = document.createElement("li");
+    li.className = "combo__item";
+    li.dataset.id = car.id;
+    li.setAttribute("role", "option");
+    li.textContent = carLabel(car);
+    ul.appendChild(li);
   }
+  if (!results.length && query.trim()) {
+    const none = document.createElement("li");
+    none.className = "combo__none";
+    none.textContent = "No matches — try a make or model.";
+    ul.appendChild(none);
+  }
+
+  ul.hidden = false;
+  $("carSearch").setAttribute("aria-expanded", "true");
+}
+
+function hideCarResults() {
+  $("carResults").hidden = true;
+  $("carSearch").setAttribute("aria-expanded", "false");
 }
 
 // --- Events ---
@@ -406,14 +440,21 @@ function attachEvents() {
     }
   });
 
-  $("carSelect").addEventListener("change", (e) => {
-    const val = e.target.value;
-    if (val === CUSTOM_ID) {
-      setCustomCar();
-    } else {
-      const car = getCar(val);
-      if (car) setCar(car);
-    }
+  $("carSearch").addEventListener("focus", (e) => {
+    e.target.select();
+    renderCarResults(e.target.value === "My own car" ? "" : e.target.value);
+  });
+  $("carSearch").addEventListener("input", (e) => renderCarResults(e.target.value));
+  $("carSearch").addEventListener("blur", () => setTimeout(hideCarResults, 120));
+  $("carResults").addEventListener("mousedown", (e) => {
+    const li = e.target.closest(".combo__item");
+    if (!li) return;
+    e.preventDefault(); // select before the input's blur hides the list
+    const id = li.dataset.id;
+    if (id === CUSTOM_ID) setCustomCar();
+    else { const car = getCar(id); if (car) setCar(car); }
+    hideCarResults();
+    $("carSearch").blur();
   });
 
   $("carNickname").addEventListener("input", (e) => {
@@ -435,17 +476,19 @@ function attachEvents() {
 // --- Boot ---
 function boot() {
   applyUnitLabels();
-  buildCarSelect();
   if (prefs.carId === CUSTOM_ID) {
     $("carName").textContent = prefs.customName || "My car";
+    $("carSearch").value = "My own car";
     $("nicknameField").hidden = false;
+    $("tweak").open = true;
   } else {
     const car = getCar(prefs.carId) || getCars()[0];
     if (car) {
       $("carName").textContent = `${car.make} ${car.model}`;
-      $("carSelect").value = car.id;
+      $("carSearch").value = carLabel(car);
     }
     $("nicknameField").hidden = true;
+    $("tweak").open = false;
   }
   writeDisplayValues();
   applyRateMode();

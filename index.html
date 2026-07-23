@@ -27,24 +27,33 @@
       </summary>
       <div class="disclosure__body">
         <div class="field">
-          <label for="carSelect">Car</label>
-          <select id="carSelect" class="car-select"></select>
-        </div>
-        <div class="field" id="nicknameField" hidden>
-          <label for="carNickname">Car name <span class="label-opt">(optional)</span></label>
-          <input id="carNickname" type="text" autocomplete="off" maxlength="40" placeholder="e.g., My RAV4" />
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label for="mpg" id="mpgLabel">Gas MPG</label>
-            <input id="mpg" type="text" inputmode="decimal" autocomplete="off" value="38" />
-          </div>
-          <div class="field">
-            <label for="miPerKwh" id="effLabel">Electric mi/kWh</label>
-            <input id="miPerKwh" type="text" inputmode="decimal" autocomplete="off" value="2.78" />
+          <label for="carSearch">Your car</label>
+          <div class="combo">
+            <input id="carSearch" type="text" autocomplete="off" spellcheck="false" placeholder="Search make or model…" role="combobox" aria-expanded="false" aria-controls="carResults" aria-autocomplete="list" />
+            <ul id="carResults" class="combo__results" role="listbox" hidden></ul>
           </div>
         </div>
-        <p class="hint">Pick your model to auto-fill, or choose <strong>My own car</strong> to enter your own. Only <strong>MPG</strong> and <strong>mi/kWh</strong> change the result.</p>
+
+        <details class="tweak" id="tweak">
+          <summary>Adjust numbers</summary>
+          <div class="tweak__body">
+            <div class="field" id="nicknameField" hidden>
+              <label for="carNickname">Car name <span class="label-opt">(optional)</span></label>
+              <input id="carNickname" type="text" autocomplete="off" maxlength="40" placeholder="e.g., My RAV4" />
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="mpg" id="mpgLabel">Gas MPG</label>
+                <input id="mpg" type="text" inputmode="decimal" autocomplete="off" value="38" />
+              </div>
+              <div class="field">
+                <label for="miPerKwh" id="effLabel">Electric mi/kWh</label>
+                <input id="miPerKwh" type="text" inputmode="decimal" autocomplete="off" value="2.78" />
+              </div>
+            </div>
+            <p class="hint">Auto-filled from your car — only change these if you track your own real-world numbers.</p>
+          </div>
+        </details>
       </div>
     </details>
 
@@ -117,6 +126,7 @@
             <input id="batteryKwh" type="text" inputmode="decimal" autocomplete="off" value="15.1" />
           </div>
         </div>
+        <p class="hint">Charge power &amp; battery auto-fill from your car and only affect the time estimate — leave them if you&rsquo;re not sure.</p>
 
         <div class="field">
           <label for="startPct">Battery now: <output id="startPctOut">20%</output></label>
