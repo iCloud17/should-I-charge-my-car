@@ -36,3 +36,10 @@ python3 -m http.server 8000
 
 Vehicle efficiency figures are approximate and user-editable; verify against your
 own real-world numbers.
+
+## License
+
+Licensed under the [GNU AGPL-3.0](LICENSE). You're free to use, modify, and share
+it, but derivatives must stay open under the same license, and if you run a
+modified version as a network service you must offer its source to users
+(see the license, section 13).
