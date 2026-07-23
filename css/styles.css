@@ -60,6 +60,23 @@ body {
   gap: 14px;
 }
 
+/* Desktop: keep the phone-first column, but center it and dress the page so it
+   doesn't look like a lonely strip on a big empty canvas. */
+@media (min-width: 700px) {
+  body {
+    background:
+      radial-gradient(900px 520px at 50% -8%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 70%),
+      var(--bg);
+  }
+  .app {
+    width: 468px;
+    max-width: 468px;
+    padding-top: max(40px, calc((100vh - 700px) / 2));
+    padding-bottom: 40px;
+    gap: 16px;
+  }
+}
+
 .app__head {
   display: flex;
   align-items: center;

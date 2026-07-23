@@ -138,8 +138,8 @@ function applyUnitLabels() {
 
 function writeDisplayValues() {
   const s = prefs.units;
-  $("gasPrice").value = round(U.gasPriceForDisplay(prefs.gasPrice, s), 2);
-  $("yourRate").value = round(prefs.yourRate, 2);
+  $("gasPrice").value = fixed2(U.gasPriceForDisplay(prefs.gasPrice, s));
+  $("yourRate").value = fixed2(prefs.yourRate);
   $("mpg").value = round(U.economyForDisplay(prefs.mpg, s), 1);
   $("miPerKwh").value = round(U.efficiencyForDisplay(prefs.miPerKwh, s), 2);
   $("batteryKwh").value = round(prefs.batteryKwh, 1);
@@ -157,6 +157,11 @@ function round(n, d) {
   if (!Number.isFinite(n)) return "";
   const f = Math.pow(10, d);
   return String(Math.round(n * f) / f);
+}
+
+// Currency-style fixed 2-decimal display (e.g., 0.3 -> "0.30"); blank if unset.
+function fixed2(n) {
+  return Number.isFinite(n) ? n.toFixed(2) : "";
 }
 
 function toggleUnits() {
