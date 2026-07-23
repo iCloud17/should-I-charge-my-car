@@ -60,10 +60,19 @@ body {
   gap: 14px;
 }
 
-/* Desktop: keep the phone-first column, but center it and dress the page so it
-   doesn't look like a lonely strip on a big empty canvas. */
+/* Desktop: keep the phone-first column, but center it fluidly with no magic
+   height numbers so it adapts to any content size, and dress the page so it
+   isn't a lonely strip on an empty canvas. `safe center` centers when it fits
+   and falls back to top-aligned scrolling when the content is taller than the
+   viewport (prevents the classic flexbox top-clipping). */
 @media (min-width: 700px) {
   body {
+    min-height: 100dvh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    align-items: safe center;
+    padding: 40px 16px;
     background:
       radial-gradient(900px 520px at 50% -8%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 70%),
       var(--bg);
@@ -71,8 +80,7 @@ body {
   .app {
     width: 468px;
     max-width: 468px;
-    padding-top: max(40px, calc((100vh - 700px) / 2));
-    padding-bottom: 40px;
+    padding: 0;
     gap: 16px;
   }
 }
