@@ -6,7 +6,7 @@ const KEY = "sicc.prefs.v1";
 // time-of-day schedule) change at every stop, so we intentionally do NOT save
 // them - the user re-enters those on the spot.
 const PERSIST_KEYS = [
-  "carId", "customName", "mpg", "miPerKwh", "batteryKwh",
+  "carId", "customName", "carOverrides", "mpg", "miPerKwh", "batteryKwh",
   "gasPrice", "units", "currency", "powerKw", "startPct", "targetPct", "themeMode",
 ];
 
@@ -19,6 +19,7 @@ export const DEFAULT_PREFS = {
   gasPrice: null, // canonical: currency per gallon (stable - persisted once entered)
   yourRate: null, // currency per kWh at the charger (volatile - NOT persisted)
   customName: "", // user's nickname for a custom car
+  carOverrides: {}, // per-car edited numbers: { [carId]: { mpg, miPerKwh, batteryKwh } }
   units: "imperial", // "imperial" | "metric"
   currency: "$",
   themeMode: "auto", // "auto" (follows local time) | "light" | "dark"
@@ -36,6 +37,7 @@ export function loadPrefs() {
     const parsed = JSON.parse(raw);
     const prefs = { ...DEFAULT_PREFS, ...parsed };
     prefs.currency = safeCurrency(prefs.currency);
+    prefs.carOverrides = safeOverrides(prefs.carOverrides);
     return prefs;
   } catch {
     return { ...DEFAULT_PREFS };
@@ -46,6 +48,23 @@ export function loadPrefs() {
 function safeCurrency(cur) {
   const c = String(cur == null ? "$" : cur).replace(/[<>&"'`]/g, "").trim().slice(0, 3);
   return c || "$";
+}
+
+// Per-car edited numbers merged back from storage. Keep only finite numeric
+// fields and skip prototype-polluting keys, so a tampered store can't inject junk.
+function safeOverrides(raw) {
+  const out = {};
+  if (!raw || typeof raw !== "object") return out;
+  for (const [id, v] of Object.entries(raw)) {
+    if (id === "__proto__" || id === "constructor" || id === "prototype") continue;
+    if (!v || typeof v !== "object") continue;
+    const o = {};
+    for (const k of ["mpg", "miPerKwh", "batteryKwh"]) {
+      if (Number.isFinite(v[k])) o[k] = v[k];
+    }
+    if (Object.keys(o).length) out[id] = o;
+  }
+  return out;
 }
 
 export function savePrefs(prefs) {

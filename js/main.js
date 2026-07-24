@@ -580,9 +580,11 @@ const CUSTOM_ID = "__custom__";
 function setCar(car, { keepCustom = false } = {}) {
   prefs.carId = car.id;
   if (!keepCustom) {
-    prefs.mpg = car.mpg;
-    prefs.miPerKwh = car.miPerKwh;
-    prefs.batteryKwh = car.batteryKwh;
+    // Prefer the user's saved edits for this car, else the dataset values.
+    const ov = prefs.carOverrides ? prefs.carOverrides[car.id] : null;
+    prefs.mpg = ov && Number.isFinite(ov.mpg) ? ov.mpg : car.mpg;
+    prefs.miPerKwh = ov && Number.isFinite(ov.miPerKwh) ? ov.miPerKwh : car.miPerKwh;
+    prefs.batteryKwh = ov && Number.isFinite(ov.batteryKwh) ? ov.batteryKwh : car.batteryKwh;
   }
   savePrefs(prefs);
   $("carName").textContent = `${car.make} ${car.model}`;
@@ -597,6 +599,14 @@ function setCar(car, { keepCustom = false } = {}) {
 // the nickname, and reveal the numbers so the user can enter their own.
 function setCustomCar() {
   prefs.carId = CUSTOM_ID;
+  // Restore this custom car's saved numbers if we have them; otherwise keep
+  // whatever's showing so the user can adjust from there.
+  const ov = prefs.carOverrides ? prefs.carOverrides[CUSTOM_ID] : null;
+  if (ov) {
+    if (Number.isFinite(ov.mpg)) prefs.mpg = ov.mpg;
+    if (Number.isFinite(ov.miPerKwh)) prefs.miPerKwh = ov.miPerKwh;
+    if (Number.isFinite(ov.batteryKwh)) prefs.batteryKwh = ov.batteryKwh;
+  }
   savePrefs(prefs);
   $("carName").textContent = prefs.customName || "My car";
   $("carSearch").value = "My own car";
@@ -670,6 +680,18 @@ function hideCarResults() {
 function attachEvents() {
   const liveIds = ["gasPrice", "yourRate", "mpg", "miPerKwh", "batteryKwh", "sessionFee", "powerKw"];
   for (const id of liveIds) $(id).addEventListener("input", render);
+
+  // Remember the user's edits per car: tweaking the car numbers saves an
+  // override keyed to the current car, so switching away and back restores them.
+  for (const id of ["mpg", "miPerKwh", "batteryKwh"]) {
+    $(id).addEventListener("input", () => {
+      if (!prefs.carId) return;
+      const m = readInputs();
+      if (!prefs.carOverrides || typeof prefs.carOverrides !== "object") prefs.carOverrides = {};
+      prefs.carOverrides[prefs.carId] = { mpg: m.mpg, miPerKwh: m.miPerKwh, batteryKwh: m.batteryKwh };
+      savePrefs(prefs);
+    });
+  }
 
   // Focusing a number field selects its contents ONLY while it still holds its
   // untouched default (e.g. the "0" in a new station-time-rate row), so one
