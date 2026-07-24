@@ -61,6 +61,7 @@ function render() {
   const timeline = $("timeline");
   const touNote = $("touNote");
   const timeNote = $("timeNote");
+  const worthTip = $("worthTip");
   const detailLine = $("detailLine");
 
   // Resolve the ONE active energy-pricing model into a rate function of the
@@ -68,13 +69,13 @@ function render() {
   // time; flat is a single rate. The by-the-hour time fee is layered on top.
   const timeTiers = readTimeFee();
   const hasTimeTiers = timeTiers.length > 0;
-  let rateOf = null, schedule = null, hasRate = false, startClockMin = 0;
+  let rateOf = null, schedule = null, hasRate = false, startClockMin = 0, durTiers = null;
   if (rateMode === "tod") {
     schedule = readSchedule();
     if (schedule.length) { rateOf = (clock) => rateAtTime(schedule, clock); hasRate = true; startClockMin = nowMinutes(); }
   } else if (rateMode === "dur") {
-    const tiers = readDurationTiers();
-    if (tiers.length) { rateOf = (_clock, elapsed) => rateAtElapsed(tiers, elapsed); hasRate = true; }
+    durTiers = readDurationTiers();
+    if (durTiers.length) { rateOf = (_clock, elapsed) => rateAtElapsed(durTiers, elapsed); hasRate = true; }
   }
   if (!rateOf) {
     // Flat rate (also the fallback when a schedule/tier list isn't filled in yet).
@@ -88,12 +89,16 @@ function render() {
   const full = chargeCurve({ ...curveArgs, capMinutes: Infinity });
   const fullChargeMin = full.fullMinutes;
 
-  // The slider only applies (partial charge) when there's a time fee to trade off.
+  // Stopping early can change the outcome only when the price gets worse the
+  // longer you charge: a by-the-hour time fee, or rising by-duration tiers. In
+  // those modes the "Charge for" slider prices a partial charge; otherwise the
+  // effective price is flat and stopping early changes nothing.
+  const canStopEarly = hasTimeTiers || rateMode === "dur";
   let cap = Infinity;
-  if (hasTimeTiers && capTouched && Number.isFinite(chargeCapMin) && chargeCapMin < fullChargeMin - 0.5) cap = chargeCapMin;
+  if (canStopEarly && capTouched && Number.isFinite(chargeCapMin) && chargeCapMin < fullChargeMin - 0.5) cap = chargeCapMin;
   const session = cap === Infinity ? full : chargeCurve({ ...curveArgs, capMinutes: cap });
 
-  updateChargeSlider(hasTimeTiers && fullChargeMin > 0, fullChargeMin, session.minutes, session.soc);
+  updateChargeSlider(canStopEarly && fullChargeMin > 0, fullChargeMin, session.minutes, session.soc, hasTimeTiers);
 
   const kwh = session.kwhFromCharger;
   const timeFee = session.timeFee;
@@ -107,8 +112,10 @@ function render() {
   const showEffective = rateMode !== "flat" || hasFees;
 
   // The longest you can charge here while still beating gas (accurate crossover).
-  const worthLimitMin = hasTimeFee && full.everWorth ? full.worthLimitMin : null;
-  const fullNotWorth = hasTimeFee && !full.everWorth;
+  // Applies whenever charging longer worsens the effective price: a time fee or
+  // rising by-duration tiers. chargeCurve already folds tier rates into it.
+  const worthLimitMin = canStopEarly && full.everWorth ? full.worthLimitMin : null;
+  const fullNotWorth = canStopEarly && !full.everWorth;
 
   if (!Number.isFinite(be)) {
     card.dataset.verdict = "close";
@@ -120,6 +127,7 @@ function render() {
     timeline.hidden = true;
     touNote.hidden = true;
     timeNote.hidden = true;
+    worthTip.hidden = true;
     detailLine.hidden = true;
   } else if (!hasRate) {
     // No charger price yet - the break-even IS the headline answer.
@@ -129,11 +137,40 @@ function render() {
     timeline.hidden = true;
     touNote.hidden = true;
     timeNote.hidden = true;
+    worthTip.hidden = true;
+    detailLine.hidden = true;
+  } else if (Number.isFinite(m.startPct) && Number.isFinite(m.targetPct) && !(m.targetPct > m.startPct)) {
+    // Battery is already at (or above) the charge target - there's nothing to
+    // charge, so a gas/charge verdict would be misleading. Show a neutral state.
+    card.dataset.verdict = "none";
+    const atFull = m.targetPct >= 100 || m.startPct >= 100;
+    headline.textContent = atFull ? "\uD83D\uDD0B Battery's full" : "\uD83D\uDD0B Nothing to charge";
+    sub.textContent = atFull
+      ? "Already full, so there's nothing to charge."
+      : `Already at your ${Math.round(m.targetPct)}% target. Raise \u201cCharge to\u201d to compare.`;
+    timeline.hidden = true;
+    touNote.hidden = true;
+    timeNote.hidden = true;
+    worthTip.hidden = true;
     detailLine.hidden = true;
   } else {
     const v = verdict(effective, be);
-    card.dataset.verdict = v === "unknown" ? "close" : v;
-    headline.textContent = v === "worth" ? "\u26A1 Charge it" : v === "gas" ? "\u26FD Use gas" : "\u2248 Toss-up";
+
+    // Best-value recommendation: when a shorter charge is genuinely worth it
+    // (rising by-duration tiers) but the currently-selected charge isn't, the
+    // honest tone is amber "charge briefly," not a red "use gas." Gating on the
+    // live verdict (not on whether the slider was touched) means nudging the
+    // slider never snaps to a scary red - it stays amber until you actually
+    // land on a worth-it duration, then turns green.
+    const sweet = (rateMode === "dur" && worthLimitMin != null && worthLimitMin < fullChargeMin - 0.5)
+      ? durSweetSpot(durTiers, be, curveArgs, m, cur)
+      : null;
+    const showBriefly = sweet && v !== "worth";
+
+    card.dataset.verdict = showBriefly ? "close" : (v === "unknown" ? "close" : v);
+    headline.textContent = showBriefly
+      ? "\u26A1 Charge briefly"
+      : v === "worth" ? "\u26A1 Charge it" : v === "gas" ? "\u26FD Use gas" : "\u2248 Toss-up";
 
     // Layman framing: the gas price that would cost the same per mile, plus how
     // much cheaper/pricier charging is per mile. Everyone intuits gas prices.
@@ -143,6 +180,8 @@ function render() {
     const equivDisp = U.gasPriceForDisplay(equivGas, prefs.units);
     const gasUnit = prefs.units === "metric" ? "/L" : "/gal";
     const pct = gasPerMile > 0 ? Math.round((Math.abs(gasPerMile - elecPerMile) / gasPerMile) * 100) : 0;
+    // The sub always describes the CURRENT selection (updates live with the
+    // slider), so it never disagrees with the price shown for it just below.
     sub.textContent = v === "worth"
       ? `Like ${money(equivDisp, cur)}${gasUnit} gas, ${pct}% cheaper`
       : v === "gas"
@@ -155,7 +194,7 @@ function render() {
       : `You pay ${money(m.yourRate, cur)} \u00b7 break-even ${money(be, cur)}/kWh`;
 
     // "How long" at a glance, using your saved battery / power / charge target.
-    if (v !== "gas" && Number.isFinite(session.minutes) && session.minutes > 0) {
+    if (!showBriefly && v !== "gas" && Number.isFinite(session.minutes) && session.minutes > 0) {
       timeline.hidden = false;
       timeline.textContent = `Est. ${formatDuration(session.minutes)} to ${Math.round(session.soc)}% at ${round(m.powerKw, 2)} kW`;
     } else {
@@ -177,14 +216,23 @@ function render() {
       touNote.hidden = true;
     }
 
-    // By-the-hour time fee: how far you can charge before gas wins. The
-    // "Charge for" slider in Advanced lets you dial in a shorter, cheaper charge.
-    if (hasTimeFee && fullNotWorth) {
+    // Best-value tip: when a shorter charge is the smart move (rising duration
+    // tiers), keep the verdict and surface the sweet spot in a distinct green
+    // block (miles + saving). Otherwise fall back to the plain worth-limit note
+    // (time fee) or hide it. The "Charge for" slider answers "how far can I go."
+    worthTip.hidden = true;
+    if (sweet) {
+      timeNote.hidden = true;
+      worthTip.hidden = false;
+      $("worthTipLead").textContent = `\uD83D\uDCA1 Best value: charge about ${formatDuration(sweet.min)}`;
+      $("worthTipSub").textContent = `~${sweet.range} ${sweet.rangeUnit} \u00b7 like ${sweet.equiv}${sweet.unit} gas, ${sweet.pct}% cheaper`;
+    } else if (fullNotWorth) {
       timeNote.hidden = false;
       timeNote.textContent = `\u23F1\uFE0F Even a short charge here costs more than gas.`;
-    } else if (hasTimeFee && worthLimitMin != null && worthLimitMin < fullChargeMin - 0.5) {
+    } else if (worthLimitMin != null && worthLimitMin < fullChargeMin - 0.5) {
       timeNote.hidden = false;
-      timeNote.textContent = `\u23F1\uFE0F Worth it up to about ${formatDuration(worthLimitMin)} of charging (~${Math.round(full.worthLimitSoc)}%). Longer, and the time fee beats gas.`;
+      const why = hasTimeTiers ? "the time fee beats gas" : "the rate climbs past gas";
+      timeNote.textContent = `\u23F1\uFE0F Worth it up to about ${formatDuration(worthLimitMin)} of charging (~${Math.round(full.worthLimitSoc)}%). Longer, and ${why}.`;
     } else {
       timeNote.hidden = true;
     }
@@ -205,9 +253,44 @@ function updatePresetActive() {
 }
 
 // The "Charge for" slider spans 0 to the full-charge time. It only shows when a
+// The "sweet spot" for rising by-duration tiers: charge through the cheap tiers
+// and stop where the next tier's rate first crosses break-even. Every kWh past
+// that point costs more than gas, so this maximizes dollars saved. Returns the
+// partial charge's gas-equivalent framing (same as the hero), or null when
+// there's no clean cheap->pricey crossover.
+function durSweetSpot(tiers, breakeven, curveArgs, m, cur) {
+  if (!tiers || !(breakeven > 0)) return null;
+  if (!(m.mpg > 0) || !(m.miPerKwh > 0)) return null;
+  const sorted = tiers
+    .filter((t) => Number.isFinite(t.start) && Number.isFinite(t.rate))
+    .sort((a, b) => a.start - b.start);
+  let stopMin = null;
+  for (const t of sorted) { if (t.rate > breakeven) { stopMin = t.start; break; } }
+  if (!(stopMin > 0)) return null; // first tier already over gas, or all tiers cheap
+  const best = chargeCurve({ ...curveArgs, capMinutes: stopMin });
+  const eff = best.effectivePerKwh;
+  if (!(eff > 0)) return null;
+  const equivGas = (eff * m.mpg) / m.miPerKwh; // canonical $/gallon
+  const equivDisp = U.gasPriceForDisplay(equivGas, prefs.units);
+  const gpm = m.gasPrice / m.mpg;
+  const epm = eff / m.miPerKwh;
+  const pct = gpm > 0 ? Math.round(((gpm - epm) / gpm) * 100) : 0;
+  const distMiles = m.miPerKwh * best.kwhIntoBattery; // canonical miles added
+  const distDisp = prefs.units === "metric" ? U.kmFromMiles(distMiles) : distMiles;
+  return {
+    min: stopMin,
+    soc: Math.round(best.soc),
+    range: Math.round(distDisp),
+    rangeUnit: U.labels(prefs.units).distance,
+    equiv: money(equivDisp, cur),
+    unit: prefs.units === "metric" ? "/L" : "/gal",
+    pct,
+  };
+}
+
 // time fee makes a shorter charge worth considering. Untouched, it sits at the
 // full charge so nothing changes; drag it back to price a partial top-up.
-function updateChargeSlider(show, fullChargeMin, curMin, curSoc) {
+function updateChargeSlider(show, fullChargeMin, curMin, curSoc, hasTimeFeeContext = true) {
   const field = $("chargeForField");
   field.hidden = !show;
   if (!show) return;
@@ -220,7 +303,9 @@ function updateChargeSlider(show, fullChargeMin, curMin, curSoc) {
   $("chargeForOut").textContent = `${formatDuration(Number(slider.value))} (~${Math.round(curSoc)}%)`;
   $("chargeForNote").textContent = Number(slider.value) >= maxMin - 0.5
     ? "Full charge to your target."
-    : "Stopping early: less energy, but less time fee.";
+    : (hasTimeFeeContext
+        ? "Stopping early: less energy, but less time fee."
+        : "Stopping early: less energy, and you skip the pricier later rate.");
 }
 
 function renderAdvanced(m, be, cur, session, effective, timeFee) {
@@ -245,25 +330,6 @@ function renderAdvanced(m, be, cur, session, effective, timeFee) {
     $("advTimeFee").textContent = money(timeFee, cur);
   } else {
     tfRow.hidden = true;
-  }
-  $("advEffective").textContent = money(effective, cur);
-
-  const av = $("advVerdict");
-  if (Number.isFinite(effective) && Number.isFinite(be)) {
-    const vv = verdict(effective, be);
-    if (vv === "worth") {
-      av.textContent = `✅ Worth it: ${money(effective, cur)}/kWh, under your ${money(be, cur)}/kWh break-even.`;
-      av.style.color = "var(--worth)";
-    } else if (vv === "gas") {
-      av.textContent = `❌ Not worth it: ${money(effective, cur)}/kWh, over your ${money(be, cur)}/kWh break-even. Use gas.`;
-      av.style.color = "var(--gas)";
-    } else {
-      av.textContent = `≈ About break-even: ${money(effective, cur)}/kWh vs ${money(be, cur)}/kWh. Your call.`;
-      av.style.color = "var(--close)";
-    }
-  } else {
-    av.textContent = "Add the energy rate to compare.";
-    av.style.color = "var(--muted)";
   }
 }
 

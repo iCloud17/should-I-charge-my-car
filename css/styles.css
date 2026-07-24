@@ -215,6 +215,7 @@ body {
 .result[data-verdict="worth"] { --accent: var(--worth); }
 .result[data-verdict="close"] { --accent: var(--close); }
 .result[data-verdict="gas"]   { --accent: var(--gas); }
+.result[data-verdict="none"]  { --accent: var(--muted); }
 
 /* Car tile: summary chip + inline picker */
 .car-summary { display: inline-flex; align-items: center; gap: 10px; }
@@ -397,6 +398,21 @@ body {
   position: relative;
   z-index: 1;
 }
+/* Best-value "smart tip": a distinct green block under the yes/no verdict that
+   surfaces the cheaper short-charge without contradicting the headline. Uses
+   --worth directly so it stays green even when the verdict accent is red. */
+.result__tip {
+  margin: 14px 0 0;
+  padding: 11px 13px;
+  border-radius: var(--radius-sm);
+  text-align: left;
+  background: color-mix(in srgb, var(--worth) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--worth) 45%, transparent);
+  position: relative;
+  z-index: 1;
+}
+.result__tip-lead { margin: 0; font-size: 14px; font-weight: 800; color: var(--worth); }
+.result__tip-sub { margin: 3px 0 0; font-size: 13px; font-weight: 600; color: var(--text); }
 
 /* --- Fields --- */
 .field { display: flex; flex-direction: column; gap: 6px; }
