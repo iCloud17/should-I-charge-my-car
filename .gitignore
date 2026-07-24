@@ -23,3 +23,6 @@ scripts/.vehicles.cache.csv
 
 # Local design notes (not part of the shipped app)
 DESIGN.md
+
+# Vendored AI design skill (ui-ux-pro-max) + Copilot prompt wrapper; local tooling, not shipped
+.github/

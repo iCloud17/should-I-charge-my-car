@@ -35,6 +35,20 @@
       </div>
     </header>
 
+    <!-- Verdict: pinned at the top so your answer stays on screen while you edit.
+         The dock wrapper pins the card and masks the small gap above it so page
+         content doesn't peek through while scrolling. -->
+    <div class="result-dock">
+      <section class="card result" id="resultCard" data-verdict="worth">
+        <p class="result__headline" id="headline">…</p>
+        <p class="result__sub" id="subline">Pick your car to start.</p>
+        <p class="result__detail" id="detailLine" hidden></p>
+        <p class="result__time" id="timeline" hidden></p>
+        <p class="result__time result__tou" id="touNote" hidden></p>
+        <p class="result__time result__tou" id="timeNote" hidden></p>
+      </section>
+    </div>
+
     <!-- Car tile: pick or customize your car -->
     <details class="card disclosure car-tile" id="carTile" open>
       <summary>
@@ -118,16 +132,6 @@
           </div>
         </div>
       </details>
-    </section>
-
-    <!-- Verdict: right under the prices so the answer follows the inputs -->
-    <section class="card result" id="resultCard" data-verdict="worth">
-      <p class="result__headline" id="headline">…</p>
-      <p class="result__sub" id="subline">Pick your car to start.</p>
-      <p class="result__detail" id="detailLine" hidden></p>
-      <p class="result__time" id="timeline" hidden></p>
-      <p class="result__time result__tou" id="touNote" hidden></p>
-      <p class="result__time result__tou" id="timeNote" hidden></p>
     </section>
 
     <!-- Charger fees: optional extras, only if the charger lists them -->
