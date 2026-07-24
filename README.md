@@ -1,16 +1,25 @@
 # Should I Charge My Car?
 
-A charging-cost calculator for plug-in hybrid (PHEV) owners: it tells you whether charging is cheaper than gas, based on your car, the local gas price, and what the charger costs.
+**[Try it live &rarr;](https://icloud17.github.io/should-I-charge-my-car/)**
 
-Enter those, and you get a verdict, the break-even price, and how much you save or overpay. Meant for checking on your phone while you're standing at the charger.
+A dead-simple calculator for **plug-in hybrid (PHEV)** owners that answers one question: **is charging actually cheaper than just burning gas right now?**
+
+A PHEV runs on either electricity or gasoline, so every charge is a real choice, and public charging (or a pricey home rate) can easily cost more per mile than gas. Enter your car, the local gas price, and what the charger costs, and you get a clear verdict, the break-even price, and how much you save or overpay. Built to check on your phone while you're standing at the charger.
+
+<p align="center">
+  <img src="screenshots/verdict-charge-it.png" width="300" alt="Charge it verdict, like $1.78/gal gas, 54% cheaper" />
+  &nbsp;&nbsp;
+  <img src="screenshots/charge-briefly.png" width="300" alt="Charge briefly, the best value is a short charge before the rate climbs past gas" />
+</p>
 
 ## What it does
 
-- Gives a clear verdict: charge it, toss-up, or use gas.
+- Gives a clear verdict at a glance: **Charge it**, **Toss-up**, **Use gas**, or **Charge briefly**.
 - Calculates the break-even charging price: the highest $/kWh at which charging still beats gas for your car.
-- Puts it in plain terms, e.g. "like $1.64/gal gas, 58% cheaper."
-- Estimates how long to charge to your target level.
-- Handles real charger pricing: flat, time-of-day (peak/off-peak), or duration tiers, plus session fees.
+- Puts it in plain terms, e.g. "like $1.78/gal gas, 54% cheaper."
+- Estimates how long to charge to your target level, and the range you add.
+- Handles real charger pricing: flat, time-of-day (peak/off-peak), or by-duration tiers, plus one-time session fees and per-hour connected-time fees.
+- Finds the **sweet spot** when charging gets pricier the longer you go: how long to charge for the best deal, with a "Charge for" slider to price partial charges.
 - Includes 441 plug-in hybrids from the US EPA (2012 to 2026), searchable, or enter your own numbers.
 - Supports Imperial or metric units and any currency.
 - Saves your car on your device and works offline (installable PWA).
