@@ -2,12 +2,15 @@
 //
 // Update strategy (no manual version bumps needed):
 //   - The cache name is intentionally STABLE. You never have to change it.
-//   - Navigations (the HTML) are network-first, so a fresh deploy shows up on
-//     the next load when online, falling back to cache when offline.
-//   - Other assets (JS/CSS/JSON/icons) are stale-while-revalidate: served
-//     instantly from cache and refreshed in the background for the next load.
-// Change files freely; clients pick them up automatically.
+//   - Everything is NETWORK-FIRST: when online, each load fetches the latest
+//     files, so a fresh deploy shows up on the very next load (no "stale until
+//     the following visit" lag). Successful responses refresh the cache as they
+//     go.
+//   - It falls back to cache on failure OR after a short timeout, so the app
+//     still loads instantly on weak charger signal or fully offline.
+// Change files freely; clients get them on their next online load.
 const CACHE = "sicc";
+const NET_TIMEOUT_MS = 2500; // weak signal: stop waiting and serve cache
 const ASSETS = [
   "./",
   "./index.html",
@@ -41,38 +44,33 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// Network-first with an offline/slow fallback to cache. Guarantees the latest
+// deploy whenever the network answers in time, while staying instant + usable
+// on weak charger signal or offline. A slow-but-eventually-successful fetch
+// still refreshes the cache for the next load.
+function networkFirst(request) {
+  return new Promise((resolve) => {
+    const serveCache = () =>
+      caches.match(request).then((cached) =>
+        resolve(cached || (request.mode === "navigate" ? caches.match("./index.html") : Response.error()))
+      );
+    const timer = setTimeout(serveCache, NET_TIMEOUT_MS);
+    fetch(request)
+      .then((res) => {
+        clearTimeout(timer);
+        if (res && res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(request, copy));
+        }
+        resolve(res);
+      })
+      .catch(() => { clearTimeout(timer); serveCache(); });
+  });
+}
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
   if (new URL(request.url).origin !== self.location.origin) return; // pass through cross-origin
-
-  // HTML shell: network-first so new deploys appear right away, cache as backup.
-  if (request.mode === "navigate") {
-    event.respondWith(
-      fetch(request)
-        .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(request, copy));
-          return res;
-        })
-        .catch(() => caches.match(request).then((c) => c || caches.match("./index.html")))
-    );
-    return;
-  }
-
-  // Static assets: stale-while-revalidate (instant, self-updating).
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      const network = fetch(request)
-        .then((res) => {
-          if (res && res.ok) {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(request, copy));
-          }
-          return res;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
-  );
+  event.respondWith(networkFirst(request));
 });
