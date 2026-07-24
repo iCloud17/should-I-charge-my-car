@@ -52,6 +52,8 @@ python3 -m http.server 8000
 
 Vanilla HTML, CSS, and JavaScript (ES modules). No framework, no build, no backend. Installable offline PWA, hostable free on GitHub Pages.
 
+Designed and built with [GitHub Copilot](https://github.com/features/copilot).
+
 ## Car data
 
 MPG and electric-efficiency figures come from the US DOE/EPA at [fueleconomy.gov](https://www.fueleconomy.gov), the same source as window-sticker ratings. They are estimates, and every field is editable, so you can use your own numbers.
