@@ -210,12 +210,19 @@ function render() {
     const equivDisp = U.gasPriceForDisplay(equivGas, prefs.units);
     const gasUnit = prefs.units === "metric" ? "/L" : "/gal";
     const pct = gasPerMile > 0 ? Math.round((Math.abs(gasPerMile - elecPerMile) / gasPerMile) * 100) : 0;
+    // "Pricier" as a percentage reads as confusing once it passes ~100% (2x),
+    // so at 2x and above we switch to a rounded multiplier ("~2x", "~2.5x",
+    // "~3x") in 0.5 steps; under 2x the percentage is clear, so keep it.
+    const mult = gasPerMile > 0 ? elecPerMile / gasPerMile : NaN;
+    const pricier = mult >= 2
+      ? `~${Math.round(mult * 2) / 2}x the price`
+      : `${pct}% pricier`;
     // The sub always describes the CURRENT selection (updates live with the
     // slider), so it never disagrees with the price shown for it just below.
     sub.textContent = v === "worth"
       ? `Like ${money(equivDisp, cur)}${gasUnit} gas, ${pct}% cheaper`
       : v === "gas"
-        ? `Like ${money(equivDisp, cur)}${gasUnit} gas, ${pct}% pricier`
+        ? `Like ${money(equivDisp, cur)}${gasUnit} gas, ${pricier}`
         : `About the same as gas (~${money(equivDisp, cur)}${gasUnit})`;
 
     detailLine.hidden = false;
