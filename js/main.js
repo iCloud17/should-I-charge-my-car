@@ -12,6 +12,21 @@ let rateMode = "flat"; // "flat" | "tod" | "dur" (volatile - never persisted)
 let chargeCapMin = null; // "charge for" slider value in minutes (volatile)
 let capTouched = false;  // has the user dragged the "charge for" slider?
 
+// --- Analytics: privacy-safe, categorical GoatCounter events. Sends only which
+// features/outcomes were used, never the user's numbers. Each path fires at most
+// once per session and no-ops when GoatCounter isn't available (localhost,
+// blocked, or not yet loaded - in which case it retries on the next render).
+const sentEvents = new Set();
+function track(path) {
+  if (sentEvents.has(path)) return;
+  try {
+    const gc = window.goatcounter;
+    if (!gc || typeof gc.count !== "function") return;
+    gc.count({ path: `e-${path}`, title: path, event: true });
+    sentEvents.add(path);
+  } catch (_) { /* analytics must never break the app */ }
+}
+
 // --- Read canonical model values from the DOM (converting from display units) ---
 function readInputs() {
   const system = prefs.units;
@@ -111,6 +126,18 @@ function render() {
   }
   const showEffective = rateMode !== "flat" || hasFees;
 
+  // --- Analytics: categorical funnel + feature usage (each once per session) ---
+  if (Number.isFinite(m.mpg) && Number.isFinite(m.miPerKwh)) {
+    track("car-selected");
+    track(prefs.carId && prefs.carId !== CUSTOM_ID ? "car-from-list" : "car-custom");
+  }
+  if (hasRate) {
+    track("charger-priced");
+    track(rateMode === "tod" ? "mode-time-of-day" : rateMode === "dur" ? "mode-by-duration" : "mode-flat");
+  }
+  if (m.sessionFee > 0) track("fees-session");
+  if (hasTimeTiers) track("fees-time");
+
   // The longest you can charge here while still beating gas (accurate crossover).
   // Applies whenever charging longer worsens the effective price: a time fee or
   // rising by-duration tiers. chargeCurve already folds tier rates into it.
@@ -166,6 +193,9 @@ function render() {
       ? durSweetSpot(durTiers, be, curveArgs, m, cur)
       : null;
     const showBriefly = sweet && v !== "worth";
+
+    track("verdict-shown");
+    track(showBriefly ? "verdict-charge-briefly" : v === "worth" ? "verdict-charge-it" : v === "gas" ? "verdict-use-gas" : "verdict-toss-up");
 
     card.dataset.verdict = showBriefly ? "close" : (v === "unknown" ? "close" : v);
     headline.textContent = showBriefly
@@ -684,6 +714,7 @@ function attachEvents() {
   $("chargeForMin").addEventListener("input", (e) => {
     capTouched = true;
     chargeCapMin = parseNum(e.target.value);
+    track("feature-charge-for-slider");
     render();
   });
 
