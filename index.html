@@ -176,7 +176,10 @@
 
         <div class="field-row">
           <div class="field">
-            <label for="powerKw">Charge power (kW)</label>
+            <div class="field-label-row">
+              <label for="powerKw">Charge power (kW)</label>
+              <button type="button" id="powerInfoBtn" class="info-btn" aria-label="How is the charge rate set?" aria-expanded="false">i</button>
+            </div>
             <input id="powerKw" type="text" min="0" step="any" inputmode="decimal" autocomplete="off" value="6.6" />
           </div>
           <div class="field">
@@ -184,6 +187,7 @@
             <input id="batteryKwh" type="text" min="0" step="any" inputmode="decimal" autocomplete="off" value="" />
           </div>
         </div>
+        <p class="hint info-note" id="powerInfoNote" hidden>This car&rsquo;s max AC charge rate is estimated from EPA charge-time data, so it&rsquo;s approximate. It affects the time estimate and the Level 2 cap, not the charge-or-gas verdict. Edit it if you know your car&rsquo;s exact rate.</p>
         <p class="hint">PHEVs charge on AC only, so speed is capped by the car&rsquo;s onboard charger. Power and battery affect the time estimate only.</p>
 
         <div class="field">

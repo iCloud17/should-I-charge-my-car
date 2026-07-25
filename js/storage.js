@@ -19,7 +19,7 @@ export const DEFAULT_PREFS = {
   gasPrice: null, // canonical: currency per gallon (stable - persisted once entered)
   yourRate: null, // currency per kWh at the charger (volatile - NOT persisted)
   customName: "", // user's nickname for a custom car
-  carOverrides: {}, // per-car edited numbers: { [carId]: { mpg, miPerKwh, batteryKwh } }
+  carOverrides: {}, // per-car edited numbers: { [carId]: { mpg, miPerKwh, batteryKwh, powerKw } }
   units: "imperial", // "imperial" | "metric"
   currency: "$",
   themeMode: "auto", // "auto" (follows local time) | "light" | "dark"
@@ -59,7 +59,7 @@ function safeOverrides(raw) {
     if (id === "__proto__" || id === "constructor" || id === "prototype") continue;
     if (!v || typeof v !== "object") continue;
     const o = {};
-    for (const k of ["mpg", "miPerKwh", "batteryKwh"]) {
+    for (const k of ["mpg", "miPerKwh", "batteryKwh", "powerKw"]) {
       if (Number.isFinite(v[k])) o[k] = v[k];
     }
     if (Object.keys(o).length) out[id] = o;

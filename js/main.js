@@ -268,11 +268,27 @@ function render() {
   persistFrom(m);
 }
 
+// The car's onboard-charger ceiling: an explicit override wins, else the car's
+// EPA-derived max, else no limit. Presets are the outlet level and get capped
+// to this so we never claim the car pulls more than its charger allows.
+function carMaxKw() {
+  const car = prefs.carId && prefs.carId !== CUSTOM_ID ? getCar(prefs.carId) : null;
+  const ov = prefs.carOverrides ? prefs.carOverrides[prefs.carId] : null;
+  if (ov && Number.isFinite(ov.powerKw)) return ov.powerKw;
+  if (car && Number.isFinite(car.chargeKw)) return car.chargeKw;
+  return Infinity;
+}
+
 // Highlight the charger-speed preset that matches the current power, if any.
+// A preset is compared at its capped value so, e.g., Level 2 still highlights
+// on a car whose charger tops out below 6.6 kW (the click caps it too).
 function updatePresetActive() {
   const kw = parseNum($("powerKw").value);
+  const max = carMaxKw();
   for (const btn of document.querySelectorAll("#powerPresets .preset")) {
-    const match = Number.isFinite(kw) && Math.abs(parseNum(btn.dataset.kw) - kw) < 0.05;
+    const preset = parseNum(btn.dataset.kw);
+    const effective = Number.isFinite(preset) ? Math.min(preset, max) : preset;
+    const match = Number.isFinite(kw) && Number.isFinite(effective) && Math.abs(effective - kw) < 0.05;
     btn.classList.toggle("is-active", match);
   }
 }
@@ -573,6 +589,11 @@ function setCar(car, { keepCustom = false } = {}) {
     prefs.mpg = ov && Number.isFinite(ov.mpg) ? ov.mpg : car.mpg;
     prefs.miPerKwh = ov && Number.isFinite(ov.miPerKwh) ? ov.miPerKwh : car.miPerKwh;
     prefs.batteryKwh = ov && Number.isFinite(ov.batteryKwh) ? ov.batteryKwh : car.batteryKwh;
+    // Max onboard AC charge power drives the time estimate. Use the user's saved
+    // edit, else the car's rated kW, else fall back to the generic default.
+    prefs.powerKw = ov && Number.isFinite(ov.powerKw) ? ov.powerKw
+      : Number.isFinite(car.chargeKw) ? car.chargeKw
+      : DEFAULT_PREFS.powerKw;
   }
   savePrefs(prefs);
   $("carName").textContent = `${car.make} ${car.model}`;
@@ -671,12 +692,12 @@ function attachEvents() {
 
   // Remember the user's edits per car: tweaking the car numbers saves an
   // override keyed to the current car, so switching away and back restores them.
-  for (const id of ["mpg", "miPerKwh", "batteryKwh"]) {
+  for (const id of ["mpg", "miPerKwh", "batteryKwh", "powerKw"]) {
     $(id).addEventListener("input", () => {
       if (!prefs.carId) return;
       const m = readInputs();
       if (!prefs.carOverrides || typeof prefs.carOverrides !== "object") prefs.carOverrides = {};
-      prefs.carOverrides[prefs.carId] = { mpg: m.mpg, miPerKwh: m.miPerKwh, batteryKwh: m.batteryKwh };
+      prefs.carOverrides[prefs.carId] = { mpg: m.mpg, miPerKwh: m.miPerKwh, batteryKwh: m.batteryKwh, powerKw: m.powerKw };
       savePrefs(prefs);
     });
   }
@@ -793,7 +814,13 @@ function attachEvents() {
   $("powerPresets").addEventListener("click", (e) => {
     const btn = e.target.closest(".preset");
     if (!btn) return;
-    $("powerKw").value = btn.dataset.kw;
+    // Presets are the outlet's rate (Level 1 / Level 2). The car can't pull more
+    // than its onboard charger, so cap the preset at the car's max. Manual entry
+    // into the field stays the user's authority and is never capped here.
+    const preset = parseNum(btn.dataset.kw);
+    const carMax = carMaxKw();
+    const kw = Number.isFinite(preset) ? Math.min(preset, carMax) : preset;
+    $("powerKw").value = round(kw, 2);
     render();
   });
 
@@ -810,10 +837,10 @@ function attachEvents() {
     }
   });
 
-  // Info note: show on hover/focus (desktop), tap to pin open (touch).
-  {
-    const infoBtn = $("carInfoBtn");
-    const infoNote = $("carInfoNote");
+  // Info notes: show on hover/focus (desktop), tap to pin open (touch).
+  const wireInfo = (btnId, noteId) => {
+    const infoBtn = $(btnId), infoNote = $(noteId);
+    if (!infoBtn || !infoNote) return;
     let pinned = false;
     const show = (v) => {
       infoNote.hidden = !v;
@@ -824,7 +851,9 @@ function attachEvents() {
     infoBtn.addEventListener("focus", () => show(true));
     infoBtn.addEventListener("blur", () => { if (!pinned) show(false); });
     infoBtn.addEventListener("click", () => { pinned = !pinned; show(pinned); });
-  }
+  };
+  wireInfo("carInfoBtn", "carInfoNote");
+  wireInfo("powerInfoBtn", "powerInfoNote");
 
   $("carSearch").addEventListener("focus", (e) => {
     e.target.select();

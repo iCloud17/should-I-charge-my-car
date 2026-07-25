@@ -235,6 +235,9 @@ body {
   margin-bottom: 6px;
 }
 .field-label-row label { margin: 0; }
+/* Inside a two-column row the label-row's bottom margin would push its input
+   lower than the plain-label column's input, so drop it to keep them aligned. */
+.field-row .field-label-row { margin-bottom: 0; }
 .info-btn {
   position: relative;
   width: 18px;
@@ -474,6 +477,10 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 
 .field-row { display: flex; gap: 12px; }
 .field-row .field { flex: 1; margin-top: 0; }
+/* The charge-power row sits right below the preset buttons. The generic
+   `.field + .field` rhythm doesn't match `.field + .field-row`, leaving zero
+   gap, which lets the info button's tap target overlap the presets above. */
+.field:has(.presets) + .field-row { margin-top: 14px; }
 
 .hint {
   margin: 12px 0 0;

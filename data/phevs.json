@@ -2,7 +2,7 @@
   "_source": "US DOE/EPA fueleconomy.gov bulk data (vehicles.csv)",
   "_sourceUrl": "https://www.fueleconomy.gov/feg/epadata/vehicles.csv",
   "_generatedAt": "2026-07-23",
-  "_note": "PHEVs (atvType='Plug-in Hybrid'), every model year >= 2012. mpg=comb08 (gas), miPerKwh=100/combE, evRangeMi from EPA electric range, batteryKwh=estimated usable energy. All values user-editable.",
+  "_note": "PHEVs (atvType='Plug-in Hybrid'), every model year >= 2012. mpg=comb08 (gas), miPerKwh=100/combE, evRangeMi from EPA electric range, batteryKwh=estimated usable energy. chargeKw=effective AC charge power (kW) derived as batteryKwh/charge240 from EPA 240V charge hours; see scripts/patch-chargekw.mjs. Approximate (EPA-rounded time, estimated battery), user-editable.",
   "cars": [
     {
       "id": "alfa-romeo-tonale-eawd-2025",
@@ -12,7 +12,8 @@
       "mpg": 29,
       "miPerKwh": 2.27,
       "batteryKwh": 14.5,
-      "evRangeMi": 33
+      "evRangeMi": 33,
+      "chargeKw": 3.6
     },
     {
       "id": "alfa-romeo-tonale-eawd-2024",
@@ -22,7 +23,8 @@
       "mpg": 29,
       "miPerKwh": 2.27,
       "batteryKwh": 14.5,
-      "evRangeMi": 33
+      "evRangeMi": 33,
+      "chargeKw": 3.6
     },
     {
       "id": "aston-martin-valhalla-2026",
@@ -32,7 +34,8 @@
       "mpg": 16,
       "miPerKwh": 1.79,
       "batteryKwh": 3.4,
-      "evRangeMi": 6
+      "evRangeMi": 6,
+      "chargeKw": 1.7
     },
     {
       "id": "audi-a3-e-tron-2018",
@@ -42,7 +45,8 @@
       "mpg": 36,
       "miPerKwh": 2.44,
       "batteryKwh": 6.6,
-      "evRangeMi": 16
+      "evRangeMi": 16,
+      "chargeKw": 2.6
     },
     {
       "id": "audi-a3-e-tron-2017",
@@ -52,7 +56,8 @@
       "mpg": 34,
       "miPerKwh": 2.44,
       "batteryKwh": 6.6,
-      "evRangeMi": 16
+      "evRangeMi": 16,
+      "chargeKw": 2.6
     },
     {
       "id": "audi-a3-e-tron-2016",
@@ -62,7 +67,8 @@
       "mpg": 35,
       "miPerKwh": 2.5,
       "batteryKwh": 6.4,
-      "evRangeMi": 16
+      "evRangeMi": 16,
+      "chargeKw": 2.6
     },
     {
       "id": "audi-a3-e-tron-ultra-2016",
@@ -72,7 +78,8 @@
       "mpg": 39,
       "miPerKwh": 2.63,
       "batteryKwh": 6.5,
-      "evRangeMi": 17
+      "evRangeMi": 17,
+      "chargeKw": 2.6
     },
     {
       "id": "audi-a7-quattro-2021",
@@ -82,7 +89,8 @@
       "mpg": 29,
       "miPerKwh": 2.17,
       "batteryKwh": 8.3,
-      "evRangeMi": 18
+      "evRangeMi": 18,
+      "chargeKw": 3.5
     },
     {
       "id": "audi-a7-tfsi-e-quattro-2022",
@@ -92,7 +100,8 @@
       "mpg": 27,
       "miPerKwh": 2.08,
       "batteryKwh": 12.5,
-      "evRangeMi": 26
+      "evRangeMi": 26,
+      "chargeKw": 4.2
     },
     {
       "id": "audi-a8-l-2021",
@@ -102,7 +111,8 @@
       "mpg": 23,
       "miPerKwh": 1.59,
       "batteryKwh": 11.3,
-      "evRangeMi": 18
+      "evRangeMi": 18,
+      "chargeKw": 4.7
     },
     {
       "id": "audi-a8-l-2020",
@@ -112,7 +122,8 @@
       "mpg": 23,
       "miPerKwh": 1.59,
       "batteryKwh": 10.7,
-      "evRangeMi": 17
+      "evRangeMi": 17,
+      "chargeKw": 4.5
     },
     {
       "id": "audi-q5-2021",
@@ -122,7 +133,8 @@
       "mpg": 27,
       "miPerKwh": 2.27,
       "batteryKwh": 8.4,
-      "evRangeMi": 19
+      "evRangeMi": 19,
+      "chargeKw": 3.5
     },
     {
       "id": "audi-q5-2020",
@@ -132,7 +144,8 @@
       "mpg": 27,
       "miPerKwh": 1.92,
       "batteryKwh": 10.4,
-      "evRangeMi": 20
+      "evRangeMi": 20,
+      "chargeKw": 4.3
     },
     {
       "id": "audi-q5-plug-in-hybrid-quattro-2025",
@@ -142,7 +155,8 @@
       "mpg": 26,
       "miPerKwh": 1.72,
       "batteryKwh": 16.8,
-      "evRangeMi": 29
+      "evRangeMi": 29,
+      "chargeKw": 5.6
     },
     {
       "id": "audi-q5-tfsi-e-quattro-2023",
@@ -152,7 +166,8 @@
       "mpg": 26,
       "miPerKwh": 1.79,
       "batteryKwh": 15.7,
-      "evRangeMi": 28
+      "evRangeMi": 28,
+      "chargeKw": 5.2
     },
     {
       "id": "audi-q5-tfsi-e-quattro-2022",
@@ -162,7 +177,8 @@
       "mpg": 26,
       "miPerKwh": 1.79,
       "batteryKwh": 12.9,
-      "evRangeMi": 23
+      "evRangeMi": 23,
+      "chargeKw": 4.3
     },
     {
       "id": "bentley-bentayga-2021",
@@ -172,7 +188,8 @@
       "mpg": 19,
       "miPerKwh": 1.37,
       "batteryKwh": 13.1,
-      "evRangeMi": 18
+      "evRangeMi": 18,
+      "chargeKw": 4.4
     },
     {
       "id": "bentley-bentayga-2020",
@@ -182,7 +199,8 @@
       "mpg": 19,
       "miPerKwh": 1.41,
       "batteryKwh": 12.8,
-      "evRangeMi": 18
+      "evRangeMi": 18,
+      "chargeKw": 4.3
     },
     {
       "id": "bentley-bentayga-hybrid-2026",
@@ -192,7 +210,8 @@
       "mpg": 21,
       "miPerKwh": 1.49,
       "batteryKwh": 14.1,
-      "evRangeMi": 21
+      "evRangeMi": 21,
+      "chargeKw": 4.7
     },
     {
       "id": "bentley-bentayga-hybrid-2025",
@@ -202,7 +221,8 @@
       "mpg": 21,
       "miPerKwh": 1.49,
       "batteryKwh": 17.4,
-      "evRangeMi": 26
+      "evRangeMi": 26,
+      "chargeKw": 5.8
     },
     {
       "id": "bentley-bentayga-hybrid-2023",
@@ -212,7 +232,8 @@
       "mpg": 20,
       "miPerKwh": 1.41,
       "batteryKwh": 16.3,
-      "evRangeMi": 23
+      "evRangeMi": 23,
+      "chargeKw": 5.4
     },
     {
       "id": "bentley-continental-gt-2026",
@@ -222,7 +243,8 @@
       "mpg": 19,
       "miPerKwh": 1.56,
       "batteryKwh": 19.2,
-      "evRangeMi": 30
+      "evRangeMi": 30,
+      "chargeKw": 6.4
     },
     {
       "id": "bentley-continental-gt-2025",
@@ -232,7 +254,8 @@
       "mpg": 19,
       "miPerKwh": 1.56,
       "batteryKwh": 25,
-      "evRangeMi": 39
+      "evRangeMi": 39,
+      "chargeKw": 8.3
     },
     {
       "id": "bentley-continental-gt-speed-2025",
@@ -242,7 +265,8 @@
       "mpg": 19,
       "miPerKwh": 1.56,
       "batteryKwh": 25,
-      "evRangeMi": 39
+      "evRangeMi": 39,
+      "chargeKw": 8.3
     },
     {
       "id": "bentley-continental-gtc-2026",
@@ -252,7 +276,8 @@
       "mpg": 19,
       "miPerKwh": 1.56,
       "batteryKwh": 19.2,
-      "evRangeMi": 30
+      "evRangeMi": 30,
+      "chargeKw": 6.4
     },
     {
       "id": "bentley-continental-gtc-2025",
@@ -262,7 +287,8 @@
       "mpg": 19,
       "miPerKwh": 1.56,
       "batteryKwh": 25,
-      "evRangeMi": 39
+      "evRangeMi": 39,
+      "chargeKw": 8.3
     },
     {
       "id": "bentley-continental-gtc-speed-2025",
@@ -272,7 +298,8 @@
       "mpg": 19,
       "miPerKwh": 1.56,
       "batteryKwh": 25,
-      "evRangeMi": 39
+      "evRangeMi": 39,
+      "chargeKw": 8.3
     },
     {
       "id": "bentley-flying-spur-2026",
@@ -282,7 +309,8 @@
       "mpg": 19,
       "miPerKwh": 1.56,
       "batteryKwh": 19.2,
-      "evRangeMi": 30
+      "evRangeMi": 30,
+      "chargeKw": 6.4
     },
     {
       "id": "bentley-flying-spur-2025",
@@ -292,7 +320,8 @@
       "mpg": 19,
       "miPerKwh": 1.56,
       "batteryKwh": 25,
-      "evRangeMi": 39
+      "evRangeMi": 39,
+      "chargeKw": 8.3
     },
     {
       "id": "bentley-flying-spur-hybrid-2024",
@@ -302,7 +331,8 @@
       "mpg": 19,
       "miPerKwh": 1.35,
       "batteryKwh": 15.5,
-      "evRangeMi": 21
+      "evRangeMi": 21,
+      "chargeKw": 5.2
     },
     {
       "id": "bentley-flying-spur-hybrid-2023",
@@ -312,7 +342,8 @@
       "mpg": 19,
       "miPerKwh": 1.35,
       "batteryKwh": 15.5,
-      "evRangeMi": 21
+      "evRangeMi": 21,
+      "chargeKw": 5.2
     },
     {
       "id": "bentley-flying-spur-hybrid-2022",
@@ -322,7 +353,8 @@
       "mpg": 19,
       "miPerKwh": 1.35,
       "batteryKwh": 15.5,
-      "evRangeMi": 21
+      "evRangeMi": 21,
+      "chargeKw": 5.2
     },
     {
       "id": "bentley-flying-spur-speed-2025",
@@ -332,7 +364,8 @@
       "mpg": 19,
       "miPerKwh": 1.56,
       "batteryKwh": 25,
-      "evRangeMi": 39
+      "evRangeMi": 39,
+      "chargeKw": 8.3
     },
     {
       "id": "bmw-330e-2021",
@@ -342,7 +375,8 @@
       "mpg": 28,
       "miPerKwh": 2.22,
       "batteryKwh": 10.4,
-      "evRangeMi": 23
+      "evRangeMi": 23,
+      "chargeKw": 3.5
     },
     {
       "id": "bmw-330e-2018",
@@ -352,7 +386,8 @@
       "mpg": 30,
       "miPerKwh": 2.13,
       "batteryKwh": 6.6,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 3.3
     },
     {
       "id": "bmw-330e-2017",
@@ -362,7 +397,8 @@
       "mpg": 30,
       "miPerKwh": 2.13,
       "batteryKwh": 6.6,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 3.3
     },
     {
       "id": "bmw-330e-2016",
@@ -372,7 +408,8 @@
       "mpg": 31,
       "miPerKwh": 2.13,
       "batteryKwh": 6.6,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 3.3
     },
     {
       "id": "bmw-330e-sedan-2024",
@@ -382,7 +419,8 @@
       "mpg": 27,
       "miPerKwh": 2.08,
       "batteryKwh": 10.1,
-      "evRangeMi": 21
+      "evRangeMi": 21,
+      "chargeKw": 3.4
     },
     {
       "id": "bmw-330e-sedan-2023",
@@ -392,7 +430,8 @@
       "mpg": 27,
       "miPerKwh": 2.08,
       "batteryKwh": 10.1,
-      "evRangeMi": 21
+      "evRangeMi": 21,
+      "chargeKw": 3.4
     },
     {
       "id": "bmw-330e-sedan-2022",
@@ -402,7 +441,8 @@
       "mpg": 28,
       "miPerKwh": 2.22,
       "batteryKwh": 10.4,
-      "evRangeMi": 23
+      "evRangeMi": 23,
+      "chargeKw": 3.5
     },
     {
       "id": "bmw-330e-xdrive-2021",
@@ -412,7 +452,8 @@
       "mpg": 25,
       "miPerKwh": 1.96,
       "batteryKwh": 10.2,
-      "evRangeMi": 20
+      "evRangeMi": 20,
+      "chargeKw": 3.4
     },
     {
       "id": "bmw-330e-xdrive-sedan-2024",
@@ -422,7 +463,8 @@
       "mpg": 26,
       "miPerKwh": 2.22,
       "batteryKwh": 9.5,
-      "evRangeMi": 21
+      "evRangeMi": 21,
+      "chargeKw": 3.2
     },
     {
       "id": "bmw-330e-xdrive-sedan-2023",
@@ -432,7 +474,8 @@
       "mpg": 26,
       "miPerKwh": 2.22,
       "batteryKwh": 9.5,
-      "evRangeMi": 21
+      "evRangeMi": 21,
+      "chargeKw": 3.2
     },
     {
       "id": "bmw-330e-xdrive-sedan-2022",
@@ -442,7 +485,8 @@
       "mpg": 25,
       "miPerKwh": 1.96,
       "batteryKwh": 10.2,
-      "evRangeMi": 20
+      "evRangeMi": 20,
+      "chargeKw": 3.4
     },
     {
       "id": "bmw-530e-2021",
@@ -452,7 +496,8 @@
       "mpg": 26,
       "miPerKwh": 2.04,
       "batteryKwh": 10.3,
-      "evRangeMi": 21
+      "evRangeMi": 21,
+      "chargeKw": 3.4
     },
     {
       "id": "bmw-530e-2020",
@@ -462,7 +507,8 @@
       "mpg": 27,
       "miPerKwh": 2.13,
       "batteryKwh": 9.9,
-      "evRangeMi": 21
+      "evRangeMi": 21,
+      "chargeKw": 3.3
     },
     {
       "id": "bmw-530e-2019",
@@ -472,7 +518,8 @@
       "mpg": 29,
       "miPerKwh": 2.17,
       "batteryKwh": 7.4,
-      "evRangeMi": 16
+      "evRangeMi": 16,
+      "chargeKw": 3.7
     },
     {
       "id": "bmw-530e-2018",
@@ -482,7 +529,8 @@
       "mpg": 29,
       "miPerKwh": 2.17,
       "batteryKwh": 7.4,
-      "evRangeMi": 16
+      "evRangeMi": 16,
+      "chargeKw": 3.7
     },
     {
       "id": "bmw-530e-sedan-2023",
@@ -492,7 +540,8 @@
       "mpg": 26,
       "miPerKwh": 2.04,
       "batteryKwh": 10.3,
-      "evRangeMi": 21
+      "evRangeMi": 21,
+      "chargeKw": 3.4
     },
     {
       "id": "bmw-530e-sedan-2022",
@@ -502,7 +551,8 @@
       "mpg": 26,
       "miPerKwh": 2.04,
       "batteryKwh": 10.3,
-      "evRangeMi": 21
+      "evRangeMi": 21,
+      "chargeKw": 3.4
     },
     {
       "id": "bmw-530e-xdrive-2021",
@@ -512,7 +562,8 @@
       "mpg": 25,
       "miPerKwh": 1.89,
       "batteryKwh": 10.1,
-      "evRangeMi": 19
+      "evRangeMi": 19,
+      "chargeKw": 3.4
     },
     {
       "id": "bmw-530e-xdrive-2020",
@@ -522,7 +573,8 @@
       "mpg": 25,
       "miPerKwh": 1.92,
       "batteryKwh": 9.9,
-      "evRangeMi": 19
+      "evRangeMi": 19,
+      "chargeKw": 3.3
     },
     {
       "id": "bmw-530e-xdrive-2019",
@@ -532,7 +584,8 @@
       "mpg": 28,
       "miPerKwh": 2.04,
       "batteryKwh": 7.4,
-      "evRangeMi": 15
+      "evRangeMi": 15,
+      "chargeKw": 3.7
     },
     {
       "id": "bmw-530e-xdrive-2018",
@@ -542,7 +595,8 @@
       "mpg": 28,
       "miPerKwh": 2.04,
       "batteryKwh": 7.4,
-      "evRangeMi": 15
+      "evRangeMi": 15,
+      "chargeKw": 3.7
     },
     {
       "id": "bmw-530e-xdrive-sedan-2023",
@@ -552,7 +606,8 @@
       "mpg": 25,
       "miPerKwh": 1.89,
       "batteryKwh": 10.1,
-      "evRangeMi": 19
+      "evRangeMi": 19,
+      "chargeKw": 3.4
     },
     {
       "id": "bmw-530e-xdrive-sedan-2022",
@@ -562,7 +617,8 @@
       "mpg": 25,
       "miPerKwh": 1.89,
       "batteryKwh": 10.1,
-      "evRangeMi": 19
+      "evRangeMi": 19,
+      "chargeKw": 3.4
     },
     {
       "id": "bmw-550e-xdrive-sedan-2026",
@@ -572,7 +628,8 @@
       "mpg": 25,
       "miPerKwh": 2.04,
       "batteryKwh": 16.7,
-      "evRangeMi": 34
+      "evRangeMi": 34,
+      "chargeKw": 8.4
     },
     {
       "id": "bmw-550e-xdrive-sedan-2025",
@@ -582,7 +639,8 @@
       "mpg": 24,
       "miPerKwh": 2,
       "batteryKwh": 17,
-      "evRangeMi": 34
+      "evRangeMi": 34,
+      "chargeKw": 4.3
     },
     {
       "id": "bmw-740e-xdrive-2019",
@@ -592,7 +650,8 @@
       "mpg": 27,
       "miPerKwh": 1.92,
       "batteryKwh": 7.3,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 2.4
     },
     {
       "id": "bmw-740e-xdrive-2018",
@@ -602,7 +661,8 @@
       "mpg": 27,
       "miPerKwh": 1.92,
       "batteryKwh": 7.3,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 2.4
     },
     {
       "id": "bmw-740e-xdrive-2017",
@@ -612,7 +672,8 @@
       "mpg": 27,
       "miPerKwh": 1.92,
       "batteryKwh": 7.3,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 2.4
     },
     {
       "id": "bmw-745e-xdrive-2022",
@@ -622,7 +683,8 @@
       "mpg": 22,
       "miPerKwh": 1.67,
       "batteryKwh": 10.2,
-      "evRangeMi": 17
+      "evRangeMi": 17,
+      "chargeKw": 2.6
     },
     {
       "id": "bmw-745e-xdrive-2021",
@@ -632,7 +694,8 @@
       "mpg": 22,
       "miPerKwh": 1.67,
       "batteryKwh": 10.2,
-      "evRangeMi": 17
+      "evRangeMi": 17,
+      "chargeKw": 2.6
     },
     {
       "id": "bmw-745e-xdrive-2020",
@@ -642,7 +705,8 @@
       "mpg": 22,
       "miPerKwh": 1.64,
       "batteryKwh": 9.8,
-      "evRangeMi": 16
+      "evRangeMi": 16,
+      "chargeKw": 2.5
     },
     {
       "id": "bmw-750e-xdrive-sedan-2026",
@@ -652,7 +716,8 @@
       "mpg": 24,
       "miPerKwh": 2.08,
       "batteryKwh": 16.8,
-      "evRangeMi": 35
+      "evRangeMi": 35,
+      "chargeKw": 8.4
     },
     {
       "id": "bmw-750e-xdrive-sedan-2025",
@@ -662,7 +727,8 @@
       "mpg": 25,
       "miPerKwh": 2,
       "batteryKwh": 17,
-      "evRangeMi": 34
+      "evRangeMi": 34,
+      "chargeKw": 5.7
     },
     {
       "id": "bmw-i3-94ah-with-range-extender-2018",
@@ -672,7 +738,8 @@
       "mpg": 35,
       "miPerKwh": 3.23,
       "batteryKwh": 30.1,
-      "evRangeMi": 97
+      "evRangeMi": 97,
+      "chargeKw": 6
     },
     {
       "id": "bmw-i3-rex-2016",
@@ -682,7 +749,8 @@
       "mpg": 39,
       "miPerKwh": 3.45,
       "batteryKwh": 20.9,
-      "evRangeMi": 72
+      "evRangeMi": 72,
+      "chargeKw": 5.2
     },
     {
       "id": "bmw-i3-rex-2015",
@@ -692,7 +760,8 @@
       "mpg": 39,
       "miPerKwh": 3.45,
       "batteryKwh": 20.9,
-      "evRangeMi": 72
+      "evRangeMi": 72,
+      "chargeKw": 5.2
     },
     {
       "id": "bmw-i3-rex-2014",
@@ -702,7 +771,8 @@
       "mpg": 39,
       "miPerKwh": 3.45,
       "batteryKwh": 20.9,
-      "evRangeMi": 72
+      "evRangeMi": 72,
+      "chargeKw": 5.2
     },
     {
       "id": "bmw-i3-rex-94-amp-hour-battery-2017",
@@ -712,7 +782,8 @@
       "mpg": 35,
       "miPerKwh": 3.33,
       "batteryKwh": 29.1,
-      "evRangeMi": 97
+      "evRangeMi": 97,
+      "chargeKw": 5.8
     },
     {
       "id": "bmw-i3-with-range-extender-2021",
@@ -722,7 +793,8 @@
       "mpg": 31,
       "miPerKwh": 3.13,
       "batteryKwh": 40.3,
-      "evRangeMi": 126
+      "evRangeMi": 126,
+      "chargeKw": 5.8
     },
     {
       "id": "bmw-i3-with-range-extender-2020",
@@ -732,7 +804,8 @@
       "mpg": 31,
       "miPerKwh": 3.13,
       "batteryKwh": 40.3,
-      "evRangeMi": 126
+      "evRangeMi": 126,
+      "chargeKw": 5.8
     },
     {
       "id": "bmw-i3-with-range-extender-2019",
@@ -742,7 +815,8 @@
       "mpg": 31,
       "miPerKwh": 3.13,
       "batteryKwh": 40.3,
-      "evRangeMi": 126
+      "evRangeMi": 126,
+      "chargeKw": 5.8
     },
     {
       "id": "bmw-i3s-94ah-with-range-extender-2018",
@@ -752,7 +826,8 @@
       "mpg": 35,
       "miPerKwh": 3.23,
       "batteryKwh": 30.1,
-      "evRangeMi": 97
+      "evRangeMi": 97,
+      "chargeKw": 6
     },
     {
       "id": "bmw-i3s-with-range-extender-2021",
@@ -762,7 +837,8 @@
       "mpg": 31,
       "miPerKwh": 3.13,
       "batteryKwh": 40.3,
-      "evRangeMi": 126
+      "evRangeMi": 126,
+      "chargeKw": 5.8
     },
     {
       "id": "bmw-i3s-with-range-extender-2020",
@@ -772,7 +848,8 @@
       "mpg": 31,
       "miPerKwh": 3.13,
       "batteryKwh": 40.3,
-      "evRangeMi": 126
+      "evRangeMi": 126,
+      "chargeKw": 5.8
     },
     {
       "id": "bmw-i3s-with-range-extender-2019",
@@ -782,7 +859,8 @@
       "mpg": 31,
       "miPerKwh": 3.13,
       "batteryKwh": 40.3,
-      "evRangeMi": 126
+      "evRangeMi": 126,
+      "chargeKw": 5.8
     },
     {
       "id": "bmw-i8-2017",
@@ -792,7 +870,8 @@
       "mpg": 28,
       "miPerKwh": 2.33,
       "batteryKwh": 6.5,
-      "evRangeMi": 15
+      "evRangeMi": 15,
+      "chargeKw": 3.3
     },
     {
       "id": "bmw-i8-2016",
@@ -802,7 +881,8 @@
       "mpg": 28,
       "miPerKwh": 2.33,
       "batteryKwh": 6.5,
-      "evRangeMi": 15
+      "evRangeMi": 15,
+      "chargeKw": 3.3
     },
     {
       "id": "bmw-i8-2015",
@@ -812,7 +892,8 @@
       "mpg": 28,
       "miPerKwh": 2.33,
       "batteryKwh": 6.5,
-      "evRangeMi": 15
+      "evRangeMi": 15,
+      "chargeKw": 3.3
     },
     {
       "id": "bmw-i8-2014",
@@ -822,7 +903,8 @@
       "mpg": 28,
       "miPerKwh": 2.33,
       "batteryKwh": 6.5,
-      "evRangeMi": 15
+      "evRangeMi": 15,
+      "chargeKw": 3.3
     },
     {
       "id": "bmw-i8-coupe-2020",
@@ -832,7 +914,8 @@
       "mpg": 27,
       "miPerKwh": 2.04,
       "batteryKwh": 8.8,
-      "evRangeMi": 18
+      "evRangeMi": 18,
+      "chargeKw": 2.9
     },
     {
       "id": "bmw-i8-coupe-2019",
@@ -842,7 +925,8 @@
       "mpg": 27,
       "miPerKwh": 2.04,
       "batteryKwh": 8.8,
-      "evRangeMi": 18
+      "evRangeMi": 18,
+      "chargeKw": 2.9
     },
     {
       "id": "bmw-i8-roadster-2020",
@@ -852,7 +936,8 @@
       "mpg": 27,
       "miPerKwh": 2.04,
       "batteryKwh": 8.8,
-      "evRangeMi": 18
+      "evRangeMi": 18,
+      "chargeKw": 2.9
     },
     {
       "id": "bmw-i8-roadster-2019",
@@ -862,7 +947,8 @@
       "mpg": 27,
       "miPerKwh": 2.04,
       "batteryKwh": 8.8,
-      "evRangeMi": 18
+      "evRangeMi": 18,
+      "chargeKw": 2.9
     },
     {
       "id": "bmw-m5-sedan-2026",
@@ -872,7 +958,8 @@
       "mpg": 14,
       "miPerKwh": 1.82,
       "batteryKwh": 16,
-      "evRangeMi": 29
+      "evRangeMi": 29,
+      "chargeKw": 8
     },
     {
       "id": "bmw-m5-sedan-2025",
@@ -882,7 +969,8 @@
       "mpg": 14,
       "miPerKwh": 1.69,
       "batteryKwh": 15.9,
-      "evRangeMi": 27
+      "evRangeMi": 27,
+      "chargeKw": 4
     },
     {
       "id": "bmw-m5-touring-2026",
@@ -892,7 +980,8 @@
       "mpg": 13,
       "miPerKwh": 1.61,
       "batteryKwh": 15.5,
-      "evRangeMi": 25
+      "evRangeMi": 25,
+      "chargeKw": 7.8
     },
     {
       "id": "bmw-m5-touring-2025",
@@ -902,7 +991,8 @@
       "mpg": 13,
       "miPerKwh": 1.61,
       "batteryKwh": 15.5,
-      "evRangeMi": 25
+      "evRangeMi": 25,
+      "chargeKw": 3.9
     },
     {
       "id": "bmw-x3-xdrive30e-2021",
@@ -912,7 +1002,8 @@
       "mpg": 24,
       "miPerKwh": 1.79,
       "batteryKwh": 10.1,
-      "evRangeMi": 18
+      "evRangeMi": 18,
+      "chargeKw": 3.4
     },
     {
       "id": "bmw-x3-xdrive30e-2020",
@@ -922,7 +1013,8 @@
       "mpg": 24,
       "miPerKwh": 1.79,
       "batteryKwh": 10.1,
-      "evRangeMi": 18
+      "evRangeMi": 18,
+      "chargeKw": 3.4
     },
     {
       "id": "bmw-x5-xdrive40e-2018",
@@ -932,7 +1024,8 @@
       "mpg": 24,
       "miPerKwh": 1.69,
       "batteryKwh": 8.3,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 2.8
     },
     {
       "id": "bmw-x5-xdrive40e-2017",
@@ -942,7 +1035,8 @@
       "mpg": 24,
       "miPerKwh": 1.69,
       "batteryKwh": 8.3,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 2.8
     },
     {
       "id": "bmw-x5-xdrive40e-2016",
@@ -952,7 +1046,8 @@
       "mpg": 24,
       "miPerKwh": 1.69,
       "batteryKwh": 8.3,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 2.8
     },
     {
       "id": "bmw-x5-xdrive45e-2023",
@@ -962,7 +1057,8 @@
       "mpg": 20,
       "miPerKwh": 1.59,
       "batteryKwh": 19.5,
-      "evRangeMi": 31
+      "evRangeMi": 31,
+      "chargeKw": 3.9
     },
     {
       "id": "bmw-x5-xdrive45e-2022",
@@ -972,7 +1068,8 @@
       "mpg": 20,
       "miPerKwh": 1.59,
       "batteryKwh": 19.5,
-      "evRangeMi": 31
+      "evRangeMi": 31,
+      "chargeKw": 3.9
     },
     {
       "id": "bmw-x5-xdrive45e-2021",
@@ -982,7 +1079,8 @@
       "mpg": 20,
       "miPerKwh": 1.59,
       "batteryKwh": 19.5,
-      "evRangeMi": 31
+      "evRangeMi": 31,
+      "chargeKw": 3.9
     },
     {
       "id": "bmw-x5-xdrive50e-2026",
@@ -992,7 +1090,8 @@
       "mpg": 22,
       "miPerKwh": 1.79,
       "batteryKwh": 22.4,
-      "evRangeMi": 40
+      "evRangeMi": 40,
+      "chargeKw": 11.2
     },
     {
       "id": "bmw-x5-xdrive50e-2025",
@@ -1002,7 +1101,8 @@
       "mpg": 22,
       "miPerKwh": 1.72,
       "batteryKwh": 22.6,
-      "evRangeMi": 39
+      "evRangeMi": 39,
+      "chargeKw": 4.5
     },
     {
       "id": "bmw-xm-2025",
@@ -1012,7 +1112,8 @@
       "mpg": 14,
       "miPerKwh": 1.37,
       "batteryKwh": 22.6,
-      "evRangeMi": 31
+      "evRangeMi": 31,
+      "chargeKw": 4.5
     },
     {
       "id": "bmw-xm-2024",
@@ -1022,7 +1123,8 @@
       "mpg": 14,
       "miPerKwh": 1.37,
       "batteryKwh": 22.6,
-      "evRangeMi": 31
+      "evRangeMi": 31,
+      "chargeKw": 3.2
     },
     {
       "id": "bmw-xm-2023",
@@ -1032,7 +1134,8 @@
       "mpg": 14,
       "miPerKwh": 1.37,
       "batteryKwh": 22.6,
-      "evRangeMi": 31
+      "evRangeMi": 31,
+      "chargeKw": 3.2
     },
     {
       "id": "bmw-xm-label-2026",
@@ -1042,7 +1145,8 @@
       "mpg": 14,
       "miPerKwh": 1.39,
       "batteryKwh": 21.6,
-      "evRangeMi": 30
+      "evRangeMi": 30,
+      "chargeKw": 10.8
     },
     {
       "id": "bmw-xm-label-2025",
@@ -1052,7 +1156,8 @@
       "mpg": 14,
       "miPerKwh": 1.37,
       "batteryKwh": 22.6,
-      "evRangeMi": 31
+      "evRangeMi": 31,
+      "chargeKw": 4.5
     },
     {
       "id": "cadillac-ct6-plug-in-2018",
@@ -1062,7 +1167,8 @@
       "mpg": 25,
       "miPerKwh": 1.85,
       "batteryKwh": 16.7,
-      "evRangeMi": 31
+      "evRangeMi": 31,
+      "chargeKw": 3.7
     },
     {
       "id": "cadillac-ct6-plug-in-2017",
@@ -1072,7 +1178,8 @@
       "mpg": 26,
       "miPerKwh": 1.85,
       "batteryKwh": 16.7,
-      "evRangeMi": 31
+      "evRangeMi": 31,
+      "chargeKw": 3.7
     },
     {
       "id": "cadillac-elr-2016",
@@ -1082,7 +1189,8 @@
       "mpg": 32,
       "miPerKwh": 2.56,
       "batteryKwh": 15.6,
-      "evRangeMi": 40
+      "evRangeMi": 40,
+      "chargeKw": 3.1
     },
     {
       "id": "cadillac-elr-2015",
@@ -1092,7 +1200,8 @@
       "mpg": 33,
       "miPerKwh": 2.44,
       "batteryKwh": 15.2,
-      "evRangeMi": 37
+      "evRangeMi": 37,
+      "chargeKw": 3
     },
     {
       "id": "cadillac-elr-2014",
@@ -1102,7 +1211,8 @@
       "mpg": 33,
       "miPerKwh": 2.44,
       "batteryKwh": 15.2,
-      "evRangeMi": 37
+      "evRangeMi": 37,
+      "chargeKw": 3
     },
     {
       "id": "cadillac-elr-sport-2016",
@@ -1112,7 +1222,8 @@
       "mpg": 30,
       "miPerKwh": 2.33,
       "batteryKwh": 15.5,
-      "evRangeMi": 36
+      "evRangeMi": 36,
+      "chargeKw": 3.1
     },
     {
       "id": "chevrolet-volt-2019",
@@ -1122,7 +1233,8 @@
       "mpg": 42,
       "miPerKwh": 3.23,
       "batteryKwh": 16.4,
-      "evRangeMi": 53
+      "evRangeMi": 53,
+      "chargeKw": 3.6
     },
     {
       "id": "chevrolet-volt-2018",
@@ -1132,7 +1244,8 @@
       "mpg": 42,
       "miPerKwh": 3.23,
       "batteryKwh": 16.4,
-      "evRangeMi": 53
+      "evRangeMi": 53,
+      "chargeKw": 3.6
     },
     {
       "id": "chevrolet-volt-2017",
@@ -1142,7 +1255,8 @@
       "mpg": 42,
       "miPerKwh": 3.23,
       "batteryKwh": 16.4,
-      "evRangeMi": 53
+      "evRangeMi": 53,
+      "chargeKw": 3.6
     },
     {
       "id": "chevrolet-volt-2016",
@@ -1152,7 +1266,8 @@
       "mpg": 42,
       "miPerKwh": 3.23,
       "batteryKwh": 16.4,
-      "evRangeMi": 53
+      "evRangeMi": 53,
+      "chargeKw": 3.6
     },
     {
       "id": "chevrolet-volt-2015",
@@ -1162,7 +1277,8 @@
       "mpg": 37,
       "miPerKwh": 2.86,
       "batteryKwh": 13.3,
-      "evRangeMi": 38
+      "evRangeMi": 38,
+      "chargeKw": 3.3
     },
     {
       "id": "chevrolet-volt-2014",
@@ -1172,7 +1288,8 @@
       "mpg": 37,
       "miPerKwh": 2.86,
       "batteryKwh": 13.3,
-      "evRangeMi": 38
+      "evRangeMi": 38,
+      "chargeKw": 3.3
     },
     {
       "id": "chevrolet-volt-2013",
@@ -1182,7 +1299,8 @@
       "mpg": 37,
       "miPerKwh": 2.86,
       "batteryKwh": 13.3,
-      "evRangeMi": 38
+      "evRangeMi": 38,
+      "chargeKw": 3.3
     },
     {
       "id": "chevrolet-volt-2012",
@@ -1192,7 +1310,8 @@
       "mpg": 37,
       "miPerKwh": 2.78,
       "batteryKwh": 13,
-      "evRangeMi": 36
+      "evRangeMi": 36,
+      "chargeKw": 3.3
     },
     {
       "id": "chrysler-pacifica-hybrid-2026",
@@ -1202,7 +1321,8 @@
       "mpg": 30,
       "miPerKwh": 2.44,
       "batteryKwh": 13.1,
-      "evRangeMi": 32
+      "evRangeMi": 32,
+      "chargeKw": 6.6
     },
     {
       "id": "chrysler-pacifica-hybrid-2025",
@@ -1212,7 +1332,8 @@
       "mpg": 30,
       "miPerKwh": 2.44,
       "batteryKwh": 13.1,
-      "evRangeMi": 32
+      "evRangeMi": 32,
+      "chargeKw": 6.6
     },
     {
       "id": "chrysler-pacifica-hybrid-2024",
@@ -1222,7 +1343,8 @@
       "mpg": 30,
       "miPerKwh": 2.44,
       "batteryKwh": 13.1,
-      "evRangeMi": 32
+      "evRangeMi": 32,
+      "chargeKw": 6.6
     },
     {
       "id": "chrysler-pacifica-hybrid-2023",
@@ -1232,7 +1354,8 @@
       "mpg": 30,
       "miPerKwh": 2.44,
       "batteryKwh": 13.1,
-      "evRangeMi": 32
+      "evRangeMi": 32,
+      "chargeKw": 6.6
     },
     {
       "id": "chrysler-pacifica-hybrid-2022",
@@ -1242,7 +1365,8 @@
       "mpg": 30,
       "miPerKwh": 2.44,
       "batteryKwh": 13.1,
-      "evRangeMi": 32
+      "evRangeMi": 32,
+      "chargeKw": 6.6
     },
     {
       "id": "chrysler-pacifica-hybrid-2021",
@@ -1252,7 +1376,8 @@
       "mpg": 30,
       "miPerKwh": 2.44,
       "batteryKwh": 13.1,
-      "evRangeMi": 32
+      "evRangeMi": 32,
+      "chargeKw": 6.6
     },
     {
       "id": "chrysler-pacifica-hybrid-2020",
@@ -1262,7 +1387,8 @@
       "mpg": 30,
       "miPerKwh": 2.44,
       "batteryKwh": 13.1,
-      "evRangeMi": 32
+      "evRangeMi": 32,
+      "chargeKw": 6.6
     },
     {
       "id": "chrysler-pacifica-hybrid-2019",
@@ -1272,7 +1398,8 @@
       "mpg": 30,
       "miPerKwh": 2.44,
       "batteryKwh": 13.1,
-      "evRangeMi": 32
+      "evRangeMi": 32,
+      "chargeKw": 6.6
     },
     {
       "id": "chrysler-pacifica-hybrid-2018",
@@ -1282,7 +1409,8 @@
       "mpg": 32,
       "miPerKwh": 2.5,
       "batteryKwh": 13.2,
-      "evRangeMi": 33
+      "evRangeMi": 33,
+      "chargeKw": 6.6
     },
     {
       "id": "chrysler-pacifica-hybrid-2017",
@@ -1292,7 +1420,8 @@
       "mpg": 32,
       "miPerKwh": 2.5,
       "batteryKwh": 13.2,
-      "evRangeMi": 33
+      "evRangeMi": 33,
+      "chargeKw": 6.6
     },
     {
       "id": "dodge-hornet-phev-awd-2025",
@@ -1302,7 +1431,8 @@
       "mpg": 29,
       "miPerKwh": 2.27,
       "batteryKwh": 14.5,
-      "evRangeMi": 33
+      "evRangeMi": 33,
+      "chargeKw": 3.6
     },
     {
       "id": "dodge-hornet-phev-awd-2024",
@@ -1312,7 +1442,8 @@
       "mpg": 29,
       "miPerKwh": 2.27,
       "batteryKwh": 14.5,
-      "evRangeMi": 33
+      "evRangeMi": 33,
+      "chargeKw": 3.6
     },
     {
       "id": "ferrari-296-gtb-2026",
@@ -1322,7 +1453,8 @@
       "mpg": 18,
       "miPerKwh": 1.39,
       "batteryKwh": 5.8,
-      "evRangeMi": 8
+      "evRangeMi": 8,
+      "chargeKw": 2.3
     },
     {
       "id": "ferrari-296-gtb-2025",
@@ -1332,7 +1464,8 @@
       "mpg": 18,
       "miPerKwh": 1.39,
       "batteryKwh": 5.8,
-      "evRangeMi": 8
+      "evRangeMi": 8,
+      "chargeKw": 2.3
     },
     {
       "id": "ferrari-296-gtb-2022",
@@ -1342,7 +1475,8 @@
       "mpg": 18,
       "miPerKwh": 1.39,
       "batteryKwh": 5.8,
-      "evRangeMi": 8
+      "evRangeMi": 8,
+      "chargeKw": 2.3
     },
     {
       "id": "ferrari-296-gtb-spider-2023",
@@ -1352,7 +1486,8 @@
       "mpg": 18,
       "miPerKwh": 1.41,
       "batteryKwh": 5.7,
-      "evRangeMi": 8
+      "evRangeMi": 8,
+      "chargeKw": 2.3
     },
     {
       "id": "ferrari-296-gts-2026",
@@ -1362,7 +1497,8 @@
       "mpg": 18,
       "miPerKwh": 1.41,
       "batteryKwh": 5.7,
-      "evRangeMi": 8
+      "evRangeMi": 8,
+      "chargeKw": 2.3
     },
     {
       "id": "ferrari-296-gts-2025",
@@ -1372,7 +1508,8 @@
       "mpg": 18,
       "miPerKwh": 1.41,
       "batteryKwh": 5.7,
-      "evRangeMi": 8
+      "evRangeMi": 8,
+      "chargeKw": 2.3
     },
     {
       "id": "ferrari-296-speciale-2026",
@@ -1382,7 +1519,8 @@
       "mpg": 18,
       "miPerKwh": 1.33,
       "batteryKwh": 6,
-      "evRangeMi": 8
+      "evRangeMi": 8,
+      "chargeKw": 2.4
     },
     {
       "id": "ferrari-296-speciale-a-2026",
@@ -1392,7 +1530,8 @@
       "mpg": 18,
       "miPerKwh": 1.33,
       "batteryKwh": 6,
-      "evRangeMi": 8
+      "evRangeMi": 8,
+      "chargeKw": 2.4
     },
     {
       "id": "ferrari-sf90-spider-2025",
@@ -1402,7 +1541,8 @@
       "mpg": 17,
       "miPerKwh": 1.3,
       "batteryKwh": 6.2,
-      "evRangeMi": 8
+      "evRangeMi": 8,
+      "chargeKw": 2.5
     },
     {
       "id": "ferrari-sf90-spider-2024",
@@ -1412,7 +1552,8 @@
       "mpg": 17,
       "miPerKwh": 1.3,
       "batteryKwh": 6.2,
-      "evRangeMi": 8
+      "evRangeMi": 8,
+      "chargeKw": 2.5
     },
     {
       "id": "ferrari-sf90-spider-2023",
@@ -1422,7 +1563,8 @@
       "mpg": 17,
       "miPerKwh": 1.3,
       "batteryKwh": 6.2,
-      "evRangeMi": 8
+      "evRangeMi": 8,
+      "chargeKw": 2.5
     },
     {
       "id": "ferrari-sf90-spider-2022",
@@ -1432,7 +1574,8 @@
       "mpg": 17,
       "miPerKwh": 1.3,
       "batteryKwh": 6.2,
-      "evRangeMi": 8
+      "evRangeMi": 8,
+      "chargeKw": 2.5
     },
     {
       "id": "ferrari-sf90-stradale-2024",
@@ -1442,7 +1585,8 @@
       "mpg": 18,
       "miPerKwh": 1.52,
       "batteryKwh": 5.9,
-      "evRangeMi": 9
+      "evRangeMi": 9,
+      "chargeKw": 2.4
     },
     {
       "id": "ferrari-sf90-stradale-2023",
@@ -1452,7 +1596,8 @@
       "mpg": 18,
       "miPerKwh": 1.52,
       "batteryKwh": 5.9,
-      "evRangeMi": 9
+      "evRangeMi": 9,
+      "chargeKw": 2.4
     },
     {
       "id": "ferrari-sf90-stradale-2022",
@@ -1462,7 +1607,8 @@
       "mpg": 18,
       "miPerKwh": 1.52,
       "batteryKwh": 5.9,
-      "evRangeMi": 9
+      "evRangeMi": 9,
+      "chargeKw": 2.4
     },
     {
       "id": "ferrari-sf90-stradale-coupe-2021",
@@ -1472,7 +1618,8 @@
       "mpg": 18,
       "miPerKwh": 1.52,
       "batteryKwh": 5.9,
-      "evRangeMi": 9
+      "evRangeMi": 9,
+      "chargeKw": 2.4
     },
     {
       "id": "ferrari-sf90-xx-spider-2025",
@@ -1482,7 +1629,8 @@
       "mpg": 17,
       "miPerKwh": 1.32,
       "batteryKwh": 6.8,
-      "evRangeMi": 9
+      "evRangeMi": 9,
+      "chargeKw": 2.7
     },
     {
       "id": "ferrari-sf90-xx-stradale-2025",
@@ -1492,7 +1640,8 @@
       "mpg": 17,
       "miPerKwh": 1.32,
       "batteryKwh": 6.8,
-      "evRangeMi": 9
+      "evRangeMi": 9,
+      "chargeKw": 2.7
     },
     {
       "id": "fisker-karma-2012",
@@ -1502,7 +1651,8 @@
       "mpg": 20,
       "miPerKwh": 1.61,
       "batteryKwh": 20.5,
-      "evRangeMi": 33
+      "evRangeMi": 33,
+      "chargeKw": 3.4
     },
     {
       "id": "ford-c-max-energi-plug-in-hybrid-2016",
@@ -1512,7 +1662,8 @@
       "mpg": 38,
       "miPerKwh": 2.7,
       "batteryKwh": 7.4,
-      "evRangeMi": 20
+      "evRangeMi": 20,
+      "chargeKw": 3
     },
     {
       "id": "ford-c-max-energi-plug-in-hybrid-2015",
@@ -1522,7 +1673,8 @@
       "mpg": 38,
       "miPerKwh": 2.7,
       "batteryKwh": 7.4,
-      "evRangeMi": 20
+      "evRangeMi": 20,
+      "chargeKw": 3
     },
     {
       "id": "ford-c-max-energi-plug-in-hybrid-2014",
@@ -1532,7 +1684,8 @@
       "mpg": 38,
       "miPerKwh": 2.7,
       "batteryKwh": 7.4,
-      "evRangeMi": 20
+      "evRangeMi": 20,
+      "chargeKw": 3
     },
     {
       "id": "ford-c-max-energi-plug-in-hybrid-2013",
@@ -1542,7 +1695,8 @@
       "mpg": 38,
       "miPerKwh": 2.7,
       "batteryKwh": 7.4,
-      "evRangeMi": 20
+      "evRangeMi": 20,
+      "chargeKw": 3
     },
     {
       "id": "ford-c-max-energi-plug-in-hybrid-2017",
@@ -1552,7 +1706,8 @@
       "mpg": 39,
       "miPerKwh": 2.86,
       "batteryKwh": 7,
-      "evRangeMi": 20
+      "evRangeMi": 20,
+      "chargeKw": 2.8
     },
     {
       "id": "ford-escape-fwd-phev-2026",
@@ -1562,7 +1717,8 @@
       "mpg": 40,
       "miPerKwh": 3.03,
       "batteryKwh": 12.2,
-      "evRangeMi": 37
+      "evRangeMi": 37,
+      "chargeKw": 3.8
     },
     {
       "id": "ford-escape-fwd-phev-2025",
@@ -1572,7 +1728,8 @@
       "mpg": 40,
       "miPerKwh": 3.03,
       "batteryKwh": 12.2,
-      "evRangeMi": 37
+      "evRangeMi": 37,
+      "chargeKw": 3.6
     },
     {
       "id": "ford-escape-fwd-phev-2023",
@@ -1582,7 +1739,8 @@
       "mpg": 40,
       "miPerKwh": 3.03,
       "batteryKwh": 12.2,
-      "evRangeMi": 37
+      "evRangeMi": 37,
+      "chargeKw": 3.6
     },
     {
       "id": "ford-escape-fwd-phev-2022",
@@ -1592,7 +1750,8 @@
       "mpg": 40,
       "miPerKwh": 3.13,
       "batteryKwh": 11.8,
-      "evRangeMi": 37
+      "evRangeMi": 37,
+      "chargeKw": 3.6
     },
     {
       "id": "ford-escape-fwd-phev-2021",
@@ -1602,7 +1761,8 @@
       "mpg": 40,
       "miPerKwh": 3.13,
       "batteryKwh": 11.8,
-      "evRangeMi": 37
+      "evRangeMi": 37,
+      "chargeKw": 3.6
     },
     {
       "id": "ford-escape-fwd-phev-2020",
@@ -1612,7 +1772,8 @@
       "mpg": 41,
       "miPerKwh": 3.03,
       "batteryKwh": 12.2,
-      "evRangeMi": 37
+      "evRangeMi": 37,
+      "chargeKw": 3.7
     },
     {
       "id": "ford-fusion-energi-plug-in-hybrid-2020",
@@ -1622,7 +1783,8 @@
       "mpg": 42,
       "miPerKwh": 3.03,
       "batteryKwh": 8.6,
-      "evRangeMi": 26
+      "evRangeMi": 26,
+      "chargeKw": 3.3
     },
     {
       "id": "ford-fusion-energi-plug-in-hybrid-2019",
@@ -1632,7 +1794,8 @@
       "mpg": 42,
       "miPerKwh": 3.03,
       "batteryKwh": 8.6,
-      "evRangeMi": 26
+      "evRangeMi": 26,
+      "chargeKw": 3.3
     },
     {
       "id": "ford-fusion-energi-plug-in-hybrid-2018",
@@ -1642,7 +1805,8 @@
       "mpg": 42,
       "miPerKwh": 2.86,
       "batteryKwh": 7.4,
-      "evRangeMi": 21
+      "evRangeMi": 21,
+      "chargeKw": 3
     },
     {
       "id": "ford-fusion-energi-plug-in-hybrid-2017",
@@ -1652,7 +1816,8 @@
       "mpg": 42,
       "miPerKwh": 2.86,
       "batteryKwh": 7.7,
-      "evRangeMi": 22
+      "evRangeMi": 22,
+      "chargeKw": 3.1
     },
     {
       "id": "ford-fusion-energi-plug-in-hybrid-2016",
@@ -1662,7 +1827,8 @@
       "mpg": 38,
       "miPerKwh": 2.7,
       "batteryKwh": 7.4,
-      "evRangeMi": 20
+      "evRangeMi": 20,
+      "chargeKw": 3
     },
     {
       "id": "ford-fusion-energi-plug-in-hybrid-2015",
@@ -1672,7 +1838,8 @@
       "mpg": 38,
       "miPerKwh": 2.7,
       "batteryKwh": 7.4,
-      "evRangeMi": 20
+      "evRangeMi": 20,
+      "chargeKw": 3
     },
     {
       "id": "ford-fusion-energi-plug-in-hybrid-2014",
@@ -1682,7 +1849,8 @@
       "mpg": 38,
       "miPerKwh": 2.7,
       "batteryKwh": 7.4,
-      "evRangeMi": 20
+      "evRangeMi": 20,
+      "chargeKw": 3
     },
     {
       "id": "ford-fusion-energi-plug-in-hybrid-2013",
@@ -1692,7 +1860,8 @@
       "mpg": 38,
       "miPerKwh": 2.7,
       "batteryKwh": 7.4,
-      "evRangeMi": 20
+      "evRangeMi": 20,
+      "chargeKw": 3
     },
     {
       "id": "ford-fusion-special-service-phev-2020",
@@ -1702,7 +1871,8 @@
       "mpg": 42,
       "miPerKwh": 3.03,
       "batteryKwh": 8.6,
-      "evRangeMi": 26
+      "evRangeMi": 26,
+      "chargeKw": 3.3
     },
     {
       "id": "ford-fusion-special-service-vehicle-phev-2019",
@@ -1712,7 +1882,8 @@
       "mpg": 42,
       "miPerKwh": 3.03,
       "batteryKwh": 8.6,
-      "evRangeMi": 26
+      "evRangeMi": 26,
+      "chargeKw": 3.3
     },
     {
       "id": "honda-accord-plug-in-hybrid-2014",
@@ -1722,7 +1893,8 @@
       "mpg": 46,
       "miPerKwh": 3.45,
       "batteryKwh": 3.8,
-      "evRangeMi": 13
+      "evRangeMi": 13,
+      "chargeKw": 5.7
     },
     {
       "id": "honda-clarity-plug-in-hybrid-2021",
@@ -1732,7 +1904,8 @@
       "mpg": 42,
       "miPerKwh": 3.23,
       "batteryKwh": 14.9,
-      "evRangeMi": 48
+      "evRangeMi": 48,
+      "chargeKw": 6.8
     },
     {
       "id": "honda-clarity-plug-in-hybrid-2020",
@@ -1742,7 +1915,8 @@
       "mpg": 42,
       "miPerKwh": 3.23,
       "batteryKwh": 14.9,
-      "evRangeMi": 48
+      "evRangeMi": 48,
+      "chargeKw": 6.8
     },
     {
       "id": "honda-clarity-plug-in-hybrid-2019",
@@ -1752,7 +1926,8 @@
       "mpg": 42,
       "miPerKwh": 3.23,
       "batteryKwh": 14.9,
-      "evRangeMi": 48
+      "evRangeMi": 48,
+      "chargeKw": 6.8
     },
     {
       "id": "honda-clarity-plug-in-hybrid-2018",
@@ -1762,7 +1937,8 @@
       "mpg": 42,
       "miPerKwh": 3.23,
       "batteryKwh": 14.9,
-      "evRangeMi": 48
+      "evRangeMi": 48,
+      "chargeKw": 6.8
     },
     {
       "id": "hyundai-ioniq-plug-in-hybrid-2022",
@@ -1772,7 +1948,8 @@
       "mpg": 52,
       "miPerKwh": 3.57,
       "batteryKwh": 8.1,
-      "evRangeMi": 29
+      "evRangeMi": 29,
+      "chargeKw": 3.6
     },
     {
       "id": "hyundai-ioniq-plug-in-hybrid-2021",
@@ -1782,7 +1959,8 @@
       "mpg": 52,
       "miPerKwh": 3.57,
       "batteryKwh": 8.1,
-      "evRangeMi": 29
+      "evRangeMi": 29,
+      "chargeKw": 3.6
     },
     {
       "id": "hyundai-ioniq-plug-in-hybrid-2020",
@@ -1792,7 +1970,8 @@
       "mpg": 52,
       "miPerKwh": 3.57,
       "batteryKwh": 8.1,
-      "evRangeMi": 29
+      "evRangeMi": 29,
+      "chargeKw": 3.5
     },
     {
       "id": "hyundai-ioniq-plug-in-hybrid-2019",
@@ -1802,7 +1981,8 @@
       "mpg": 52,
       "miPerKwh": 3.57,
       "batteryKwh": 8.1,
-      "evRangeMi": 29
+      "evRangeMi": 29,
+      "chargeKw": 3.5
     },
     {
       "id": "hyundai-ioniq-plug-in-hybrid-2018",
@@ -1812,7 +1992,8 @@
       "mpg": 52,
       "miPerKwh": 3.57,
       "batteryKwh": 8.1,
-      "evRangeMi": 29
+      "evRangeMi": 29,
+      "chargeKw": 3.5
     },
     {
       "id": "hyundai-santa-fe-plug-in-hybrid-2023",
@@ -1822,7 +2003,8 @@
       "mpg": 33,
       "miPerKwh": 2.27,
       "batteryKwh": 13.6,
-      "evRangeMi": 31
+      "evRangeMi": 31,
+      "chargeKw": 4
     },
     {
       "id": "hyundai-santa-fe-plug-in-hybrid-2022",
@@ -1832,7 +2014,8 @@
       "mpg": 33,
       "miPerKwh": 2.27,
       "batteryKwh": 13.6,
-      "evRangeMi": 31
+      "evRangeMi": 31,
+      "chargeKw": 4
     },
     {
       "id": "hyundai-sonata-plug-in-hybrid-2019",
@@ -1842,7 +2025,8 @@
       "mpg": 39,
       "miPerKwh": 2.94,
       "batteryKwh": 9.5,
-      "evRangeMi": 28
+      "evRangeMi": 28,
+      "chargeKw": 3.5
     },
     {
       "id": "hyundai-sonata-plug-in-hybrid-2018",
@@ -1852,7 +2036,8 @@
       "mpg": 39,
       "miPerKwh": 2.94,
       "batteryKwh": 9.5,
-      "evRangeMi": 28
+      "evRangeMi": 28,
+      "chargeKw": 3.5
     },
     {
       "id": "hyundai-sonata-plug-in-hybrid-2017",
@@ -1862,7 +2047,8 @@
       "mpg": 39,
       "miPerKwh": 2.94,
       "batteryKwh": 9.2,
-      "evRangeMi": 27
+      "evRangeMi": 27,
+      "chargeKw": 3.4
     },
     {
       "id": "hyundai-sonata-plug-in-hybrid-2016",
@@ -1872,7 +2058,8 @@
       "mpg": 40,
       "miPerKwh": 2.94,
       "batteryKwh": 9.2,
-      "evRangeMi": 27
+      "evRangeMi": 27,
+      "chargeKw": 3.4
     },
     {
       "id": "hyundai-tucson-plug-in-hybrid-2026",
@@ -1882,7 +2069,8 @@
       "mpg": 35,
       "miPerKwh": 2.27,
       "batteryKwh": 14.1,
-      "evRangeMi": 32
+      "evRangeMi": 32,
+      "chargeKw": 7.1
     },
     {
       "id": "hyundai-tucson-plug-in-hybrid-2025",
@@ -1892,7 +2080,8 @@
       "mpg": 35,
       "miPerKwh": 2.27,
       "batteryKwh": 13.6,
-      "evRangeMi": 31
+      "evRangeMi": 31,
+      "chargeKw": 6.8
     },
     {
       "id": "hyundai-tucson-plug-in-hybrid-2024",
@@ -1902,7 +2091,8 @@
       "mpg": 35,
       "miPerKwh": 2.38,
       "batteryKwh": 13.9,
-      "evRangeMi": 33
+      "evRangeMi": 33,
+      "chargeKw": 8.2
     },
     {
       "id": "hyundai-tucson-plug-in-hybrid-2023",
@@ -1912,7 +2102,8 @@
       "mpg": 35,
       "miPerKwh": 2.38,
       "batteryKwh": 13.9,
-      "evRangeMi": 33
+      "evRangeMi": 33,
+      "chargeKw": 8.2
     },
     {
       "id": "hyundai-tucson-plug-in-hybrid-2022",
@@ -1922,7 +2113,8 @@
       "mpg": 35,
       "miPerKwh": 2.38,
       "batteryKwh": 13.9,
-      "evRangeMi": 33
+      "evRangeMi": 33,
+      "chargeKw": 8.2
     },
     {
       "id": "jeep-grand-cherokee-4xe-2026",
@@ -1932,7 +2124,8 @@
       "mpg": 23,
       "miPerKwh": 1.72,
       "batteryKwh": 15.1,
-      "evRangeMi": 26
+      "evRangeMi": 26,
+      "chargeKw": 4.4
     },
     {
       "id": "jeep-grand-cherokee-4xe-2025",
@@ -1942,7 +2135,8 @@
       "mpg": 23,
       "miPerKwh": 1.72,
       "batteryKwh": 15.1,
-      "evRangeMi": 26
+      "evRangeMi": 26,
+      "chargeKw": 4.4
     },
     {
       "id": "jeep-grand-cherokee-4xe-2024",
@@ -1952,7 +2146,8 @@
       "mpg": 23,
       "miPerKwh": 1.72,
       "batteryKwh": 15.1,
-      "evRangeMi": 26
+      "evRangeMi": 26,
+      "chargeKw": 4.4
     },
     {
       "id": "jeep-grand-cherokee-4xe-2023",
@@ -1962,7 +2157,8 @@
       "mpg": 23,
       "miPerKwh": 1.72,
       "batteryKwh": 15.1,
-      "evRangeMi": 26
+      "evRangeMi": 26,
+      "chargeKw": 4.4
     },
     {
       "id": "jeep-grand-cherokee-4xe-2022",
@@ -1972,7 +2168,8 @@
       "mpg": 23,
       "miPerKwh": 1.72,
       "batteryKwh": 15.1,
-      "evRangeMi": 26
+      "evRangeMi": 26,
+      "chargeKw": 4.4
     },
     {
       "id": "jeep-wrangler-4dr-4xe-2026",
@@ -1982,7 +2179,8 @@
       "mpg": 20,
       "miPerKwh": 1.47,
       "batteryKwh": 15,
-      "evRangeMi": 22
+      "evRangeMi": 22,
+      "chargeKw": 6.3
     },
     {
       "id": "jeep-wrangler-4dr-4xe-2025",
@@ -1992,7 +2190,8 @@
       "mpg": 20,
       "miPerKwh": 1.47,
       "batteryKwh": 15,
-      "evRangeMi": 22
+      "evRangeMi": 22,
+      "chargeKw": 6.3
     },
     {
       "id": "jeep-wrangler-4dr-4xe-2024",
@@ -2002,7 +2201,8 @@
       "mpg": 20,
       "miPerKwh": 1.47,
       "batteryKwh": 15,
-      "evRangeMi": 22
+      "evRangeMi": 22,
+      "chargeKw": 6.3
     },
     {
       "id": "jeep-wrangler-4dr-4xe-2023",
@@ -2012,7 +2212,8 @@
       "mpg": 20,
       "miPerKwh": 1.47,
       "batteryKwh": 15,
-      "evRangeMi": 22
+      "evRangeMi": 22,
+      "chargeKw": 6.3
     },
     {
       "id": "jeep-wrangler-4dr-4xe-2022",
@@ -2022,7 +2223,8 @@
       "mpg": 20,
       "miPerKwh": 1.47,
       "batteryKwh": 15,
-      "evRangeMi": 22
+      "evRangeMi": 22,
+      "chargeKw": 6.3
     },
     {
       "id": "jeep-wrangler-4dr-4xe-2021",
@@ -2032,7 +2234,8 @@
       "mpg": 20,
       "miPerKwh": 1.47,
       "batteryKwh": 15,
-      "evRangeMi": 22
+      "evRangeMi": 22,
+      "chargeKw": 6.3
     },
     {
       "id": "karma-gs-6-21-inch-wheels-2021",
@@ -2042,7 +2245,8 @@
       "mpg": 26,
       "miPerKwh": 2.08,
       "batteryKwh": 29.3,
-      "evRangeMi": 61
+      "evRangeMi": 61,
+      "chargeKw": 4.7
     },
     {
       "id": "karma-gs-6-22-inch-wheels-2021",
@@ -2052,7 +2256,8 @@
       "mpg": 22,
       "miPerKwh": 1.85,
       "batteryKwh": 29.2,
-      "evRangeMi": 54
+      "evRangeMi": 54,
+      "chargeKw": 4.7
     },
     {
       "id": "karma-revero-2019",
@@ -2062,7 +2267,8 @@
       "mpg": 20,
       "miPerKwh": 1.79,
       "batteryKwh": 20.7,
-      "evRangeMi": 37
+      "evRangeMi": 37,
+      "chargeKw": 5.5
     },
     {
       "id": "karma-revero-2018",
@@ -2072,7 +2278,8 @@
       "mpg": 20,
       "miPerKwh": 1.79,
       "batteryKwh": 20.7,
-      "evRangeMi": 37
+      "evRangeMi": 37,
+      "chargeKw": 5.5
     },
     {
       "id": "karma-revero-gt-21-inch-wheels-2020",
@@ -2082,7 +2289,8 @@
       "mpg": 26,
       "miPerKwh": 2.08,
       "batteryKwh": 29.3,
-      "evRangeMi": 61
+      "evRangeMi": 61,
+      "chargeKw": 4.7
     },
     {
       "id": "kia-niro-plug-in-hybrid-2026",
@@ -2092,7 +2300,8 @@
       "mpg": 48,
       "miPerKwh": 3.23,
       "batteryKwh": 10.5,
-      "evRangeMi": 34
+      "evRangeMi": 34,
+      "chargeKw": 3.8
     },
     {
       "id": "kia-niro-plug-in-hybrid-2025",
@@ -2102,7 +2311,8 @@
       "mpg": 48,
       "miPerKwh": 3.23,
       "batteryKwh": 10.5,
-      "evRangeMi": 34
+      "evRangeMi": 34,
+      "chargeKw": 3.8
     },
     {
       "id": "kia-niro-plug-in-hybrid-2023",
@@ -2112,7 +2322,8 @@
       "mpg": 48,
       "miPerKwh": 3.23,
       "batteryKwh": 10.5,
-      "evRangeMi": 34
+      "evRangeMi": 34,
+      "chargeKw": 3.8
     },
     {
       "id": "kia-niro-plug-in-hybrid-2022",
@@ -2122,7 +2333,8 @@
       "mpg": 46,
       "miPerKwh": 3.13,
       "batteryKwh": 8.3,
-      "evRangeMi": 26
+      "evRangeMi": 26,
+      "chargeKw": 3.7
     },
     {
       "id": "kia-niro-plug-in-hybrid-2021",
@@ -2132,7 +2344,8 @@
       "mpg": 46,
       "miPerKwh": 3.13,
       "batteryKwh": 8.3,
-      "evRangeMi": 26
+      "evRangeMi": 26,
+      "chargeKw": 3.7
     },
     {
       "id": "kia-niro-plug-in-hybrid-2020",
@@ -2142,7 +2355,8 @@
       "mpg": 46,
       "miPerKwh": 3.13,
       "batteryKwh": 8.3,
-      "evRangeMi": 26
+      "evRangeMi": 26,
+      "chargeKw": 3.7
     },
     {
       "id": "kia-niro-plug-in-hybrid-2019",
@@ -2152,7 +2366,8 @@
       "mpg": 46,
       "miPerKwh": 3.13,
       "batteryKwh": 8.3,
-      "evRangeMi": 26
+      "evRangeMi": 26,
+      "chargeKw": 3.7
     },
     {
       "id": "kia-niro-plug-in-hybrid-2018",
@@ -2162,7 +2377,8 @@
       "mpg": 46,
       "miPerKwh": 3.13,
       "batteryKwh": 8.3,
-      "evRangeMi": 26
+      "evRangeMi": 26,
+      "chargeKw": 3.7
     },
     {
       "id": "kia-optima-plug-in-hybrid-2020",
@@ -2172,7 +2388,8 @@
       "mpg": 41,
       "miPerKwh": 3.03,
       "batteryKwh": 9.2,
-      "evRangeMi": 28
+      "evRangeMi": 28,
+      "chargeKw": 3.4
     },
     {
       "id": "kia-optima-plug-in-hybrid-2019",
@@ -2182,7 +2399,8 @@
       "mpg": 40,
       "miPerKwh": 3.03,
       "batteryKwh": 9.6,
-      "evRangeMi": 29
+      "evRangeMi": 29,
+      "chargeKw": 3.6
     },
     {
       "id": "kia-optima-plug-in-hybrid-2018",
@@ -2192,7 +2410,8 @@
       "mpg": 40,
       "miPerKwh": 3.03,
       "batteryKwh": 9.6,
-      "evRangeMi": 29
+      "evRangeMi": 29,
+      "chargeKw": 3.6
     },
     {
       "id": "kia-optima-plug-in-hybrid-2017",
@@ -2202,7 +2421,8 @@
       "mpg": 40,
       "miPerKwh": 3.03,
       "batteryKwh": 9.6,
-      "evRangeMi": 29
+      "evRangeMi": 29,
+      "chargeKw": 3.6
     },
     {
       "id": "kia-sorento-plug-in-hybrid-2026",
@@ -2212,7 +2432,8 @@
       "mpg": 33,
       "miPerKwh": 2.22,
       "batteryKwh": 13.5,
-      "evRangeMi": 30
+      "evRangeMi": 30,
+      "chargeKw": 4
     },
     {
       "id": "kia-sorento-plug-in-hybrid-2025",
@@ -2222,7 +2443,8 @@
       "mpg": 33,
       "miPerKwh": 2.22,
       "batteryKwh": 13.5,
-      "evRangeMi": 30
+      "evRangeMi": 30,
+      "chargeKw": 4
     },
     {
       "id": "kia-sorento-plug-in-hybrid-2024",
@@ -2232,7 +2454,8 @@
       "mpg": 34,
       "miPerKwh": 2.33,
       "batteryKwh": 13.8,
-      "evRangeMi": 32
+      "evRangeMi": 32,
+      "chargeKw": 4.1
     },
     {
       "id": "kia-sorento-plug-in-hybrid-2023",
@@ -2242,7 +2465,8 @@
       "mpg": 34,
       "miPerKwh": 2.33,
       "batteryKwh": 13.8,
-      "evRangeMi": 32
+      "evRangeMi": 32,
+      "chargeKw": 4.1
     },
     {
       "id": "kia-sorento-plug-in-hybrid-2022",
@@ -2252,7 +2476,8 @@
       "mpg": 34,
       "miPerKwh": 2.33,
       "batteryKwh": 13.8,
-      "evRangeMi": 32
+      "evRangeMi": 32,
+      "chargeKw": 4.1
     },
     {
       "id": "kia-sportage-plug-in-hybrid-2026",
@@ -2262,7 +2487,8 @@
       "mpg": 36,
       "miPerKwh": 2.33,
       "batteryKwh": 14.2,
-      "evRangeMi": 33
+      "evRangeMi": 33,
+      "chargeKw": 7.1
     },
     {
       "id": "kia-sportage-plug-in-hybrid-2025",
@@ -2272,7 +2498,8 @@
       "mpg": 35,
       "miPerKwh": 2.5,
       "batteryKwh": 13.6,
-      "evRangeMi": 34
+      "evRangeMi": 34,
+      "chargeKw": 6.8
     },
     {
       "id": "kia-sportage-plug-in-hybrid-2024",
@@ -2282,7 +2509,8 @@
       "mpg": 35,
       "miPerKwh": 2.5,
       "batteryKwh": 13.6,
-      "evRangeMi": 34
+      "evRangeMi": 34,
+      "chargeKw": 6.8
     },
     {
       "id": "kia-sportage-plug-in-hybrid-2023",
@@ -2292,7 +2520,8 @@
       "mpg": 35,
       "miPerKwh": 2.5,
       "batteryKwh": 13.6,
-      "evRangeMi": 34
+      "evRangeMi": 34,
+      "chargeKw": 6.8
     },
     {
       "id": "lamborghini-urus-se-2026",
@@ -2302,7 +2531,8 @@
       "mpg": 20,
       "miPerKwh": 1.43,
       "batteryKwh": 24.5,
-      "evRangeMi": 35
+      "evRangeMi": 35,
+      "chargeKw": 6.1
     },
     {
       "id": "lamborghini-urus-se-2025",
@@ -2312,7 +2542,8 @@
       "mpg": 20,
       "miPerKwh": 1.43,
       "batteryKwh": 24.5,
-      "evRangeMi": 35
+      "evRangeMi": 35,
+      "chargeKw": 6.1
     },
     {
       "id": "land-rover-new-range-rover-p440-phev-2023",
@@ -2322,7 +2553,8 @@
       "mpg": 21,
       "miPerKwh": 1.54,
       "batteryKwh": 33.8,
-      "evRangeMi": 52
+      "evRangeMi": 52,
+      "chargeKw": 8.5
     },
     {
       "id": "land-rover-new-range-rover-sport-p440-phev-2023",
@@ -2332,7 +2564,8 @@
       "mpg": 21,
       "miPerKwh": 1.54,
       "batteryKwh": 33.8,
-      "evRangeMi": 52
+      "evRangeMi": 52,
+      "chargeKw": 8.5
     },
     {
       "id": "land-rover-range-rover-p550-phev-2025",
@@ -2342,7 +2575,8 @@
       "mpg": 21,
       "miPerKwh": 1.59,
       "batteryKwh": 33.4,
-      "evRangeMi": 53
+      "evRangeMi": 53,
+      "chargeKw": 8.4
     },
     {
       "id": "land-rover-range-rover-phev-2021",
@@ -2352,7 +2586,8 @@
       "mpg": 19,
       "miPerKwh": 1.25,
       "batteryKwh": 15.2,
-      "evRangeMi": 19
+      "evRangeMi": 19,
+      "chargeKw": 5.1
     },
     {
       "id": "land-rover-range-rover-phev-2020",
@@ -2362,7 +2597,8 @@
       "mpg": 19,
       "miPerKwh": 1.25,
       "batteryKwh": 15.2,
-      "evRangeMi": 19
+      "evRangeMi": 19,
+      "chargeKw": 5.1
     },
     {
       "id": "land-rover-range-rover-phev-2019",
@@ -2372,7 +2608,8 @@
       "mpg": 19,
       "miPerKwh": 1.25,
       "batteryKwh": 15.2,
-      "evRangeMi": 19
+      "evRangeMi": 19,
+      "chargeKw": 5.1
     },
     {
       "id": "land-rover-range-rover-sport-p460-phev-2025",
@@ -2382,7 +2619,8 @@
       "mpg": 21,
       "miPerKwh": 1.59,
       "batteryKwh": 33.4,
-      "evRangeMi": 53
+      "evRangeMi": 53,
+      "chargeKw": 8.4
     },
     {
       "id": "land-rover-range-rover-sport-phev-2022",
@@ -2392,7 +2630,8 @@
       "mpg": 19,
       "miPerKwh": 1.25,
       "batteryKwh": 15.2,
-      "evRangeMi": 19
+      "evRangeMi": 19,
+      "chargeKw": 5.1
     },
     {
       "id": "land-rover-range-rover-sport-phev-2021",
@@ -2402,7 +2641,8 @@
       "mpg": 19,
       "miPerKwh": 1.25,
       "batteryKwh": 15.2,
-      "evRangeMi": 19
+      "evRangeMi": 19,
+      "chargeKw": 5.1
     },
     {
       "id": "land-rover-range-rover-sport-phev-2020",
@@ -2412,7 +2652,8 @@
       "mpg": 19,
       "miPerKwh": 1.25,
       "batteryKwh": 15.2,
-      "evRangeMi": 19
+      "evRangeMi": 19,
+      "chargeKw": 5.1
     },
     {
       "id": "land-rover-range-rover-sport-phev-2019",
@@ -2422,7 +2663,8 @@
       "mpg": 19,
       "miPerKwh": 1.25,
       "batteryKwh": 15.2,
-      "evRangeMi": 19
+      "evRangeMi": 19,
+      "chargeKw": 5.1
     },
     {
       "id": "lexus-nx-450h-plus-awd-2025",
@@ -2432,7 +2674,8 @@
       "mpg": 36,
       "miPerKwh": 2.5,
       "batteryKwh": 14.8,
-      "evRangeMi": 37
+      "evRangeMi": 37,
+      "chargeKw": 3.3
     },
     {
       "id": "lexus-nx-450h-plus-awd-2024",
@@ -2442,7 +2685,8 @@
       "mpg": 36,
       "miPerKwh": 2.5,
       "batteryKwh": 14.8,
-      "evRangeMi": 37
+      "evRangeMi": 37,
+      "chargeKw": 3.3
     },
     {
       "id": "lexus-nx-450h-plus-awd-2023",
@@ -2452,7 +2696,8 @@
       "mpg": 36,
       "miPerKwh": 2.5,
       "batteryKwh": 14.8,
-      "evRangeMi": 37
+      "evRangeMi": 37,
+      "chargeKw": 3.3
     },
     {
       "id": "lexus-nx-450h-plus-awd-2022",
@@ -2462,7 +2707,8 @@
       "mpg": 36,
       "miPerKwh": 2.5,
       "batteryKwh": 14.8,
-      "evRangeMi": 37
+      "evRangeMi": 37,
+      "chargeKw": 3.3
     },
     {
       "id": "lexus-rx-450h-plus-awd-2025",
@@ -2472,7 +2718,8 @@
       "mpg": 35,
       "miPerKwh": 2.5,
       "batteryKwh": 14.8,
-      "evRangeMi": 37
+      "evRangeMi": 37,
+      "chargeKw": 5.9
     },
     {
       "id": "lexus-tx-550h-plus-awd-2025",
@@ -2482,7 +2729,8 @@
       "mpg": 29,
       "miPerKwh": 2.22,
       "batteryKwh": 14.9,
-      "evRangeMi": 33
+      "evRangeMi": 33,
+      "chargeKw": 5
     },
     {
       "id": "lincoln-aviator-phev-awd-2023",
@@ -2492,7 +2740,8 @@
       "mpg": 23,
       "miPerKwh": 1.67,
       "batteryKwh": 12.6,
-      "evRangeMi": 21
+      "evRangeMi": 21,
+      "chargeKw": 3.6
     },
     {
       "id": "lincoln-aviator-phev-awd-2022",
@@ -2502,7 +2751,8 @@
       "mpg": 23,
       "miPerKwh": 1.67,
       "batteryKwh": 12.6,
-      "evRangeMi": 21
+      "evRangeMi": 21,
+      "chargeKw": 3.6
     },
     {
       "id": "lincoln-aviator-phev-awd-2021",
@@ -2512,7 +2762,8 @@
       "mpg": 23,
       "miPerKwh": 1.67,
       "batteryKwh": 12.6,
-      "evRangeMi": 21
+      "evRangeMi": 21,
+      "chargeKw": 3.6
     },
     {
       "id": "lincoln-aviator-phev-awd-2020",
@@ -2522,7 +2773,8 @@
       "mpg": 23,
       "miPerKwh": 1.67,
       "batteryKwh": 12.6,
-      "evRangeMi": 21
+      "evRangeMi": 21,
+      "chargeKw": 3.6
     },
     {
       "id": "lincoln-corsair-awd-phev-2026",
@@ -2532,7 +2784,8 @@
       "mpg": 33,
       "miPerKwh": 2.27,
       "batteryKwh": 11.9,
-      "evRangeMi": 27
+      "evRangeMi": 27,
+      "chargeKw": 3.7
     },
     {
       "id": "lincoln-corsair-awd-phev-2025",
@@ -2542,7 +2795,8 @@
       "mpg": 33,
       "miPerKwh": 2.27,
       "batteryKwh": 11.9,
-      "evRangeMi": 27
+      "evRangeMi": 27,
+      "chargeKw": 3.7
     },
     {
       "id": "lincoln-corsair-awd-phev-2023",
@@ -2552,7 +2806,8 @@
       "mpg": 33,
       "miPerKwh": 2.27,
       "batteryKwh": 11.9,
-      "evRangeMi": 27
+      "evRangeMi": 27,
+      "chargeKw": 3.7
     },
     {
       "id": "lincoln-corsair-awd-phev-2022",
@@ -2562,7 +2817,8 @@
       "mpg": 33,
       "miPerKwh": 2.33,
       "batteryKwh": 12,
-      "evRangeMi": 28
+      "evRangeMi": 28,
+      "chargeKw": 3.4
     },
     {
       "id": "lincoln-corsair-awd-phev-2021",
@@ -2572,7 +2828,8 @@
       "mpg": 33,
       "miPerKwh": 2.33,
       "batteryKwh": 12,
-      "evRangeMi": 28
+      "evRangeMi": 28,
+      "chargeKw": 3.5
     },
     {
       "id": "mazda-cx-70-4wd-phev-2025",
@@ -2582,7 +2839,8 @@
       "mpg": 25,
       "miPerKwh": 1.72,
       "batteryKwh": 14.5,
-      "evRangeMi": 25
+      "evRangeMi": 25,
+      "chargeKw": 6.9
     },
     {
       "id": "mazda-cx-70-sc-4wd-2026",
@@ -2592,7 +2850,8 @@
       "mpg": 26,
       "miPerKwh": 1.85,
       "batteryKwh": 17.8,
-      "evRangeMi": 33
+      "evRangeMi": 33,
+      "chargeKw": 8.9
     },
     {
       "id": "mazda-cx-90-4wd-2026",
@@ -2602,7 +2861,8 @@
       "mpg": 26,
       "miPerKwh": 1.79,
       "batteryKwh": 15.1,
-      "evRangeMi": 27
+      "evRangeMi": 27,
+      "chargeKw": 7.6
     },
     {
       "id": "mazda-cx-90-4wd-2024",
@@ -2612,7 +2872,8 @@
       "mpg": 25,
       "miPerKwh": 1.72,
       "batteryKwh": 15.1,
-      "evRangeMi": 26
+      "evRangeMi": 26,
+      "chargeKw": 7.2
     },
     {
       "id": "mazda-cx-90-4wd-phev-2025",
@@ -2622,7 +2883,8 @@
       "mpg": 25,
       "miPerKwh": 1.72,
       "batteryKwh": 14.5,
-      "evRangeMi": 25
+      "evRangeMi": 25,
+      "chargeKw": 6.9
     },
     {
       "id": "mclaren-automotive-artura-2023",
@@ -2632,7 +2894,8 @@
       "mpg": 18,
       "miPerKwh": 1.16,
       "batteryKwh": 9.5,
-      "evRangeMi": 11
+      "evRangeMi": 11,
+      "chargeKw": 2.7
     },
     {
       "id": "mclaren-automotive-p1-2015",
@@ -2642,7 +2905,8 @@
       "mpg": 17,
       "miPerKwh": 4,
       "batteryKwh": 4.8,
-      "evRangeMi": 19
+      "evRangeMi": 19,
+      "chargeKw": 1.6
     },
     {
       "id": "mclaren-automotive-p1-2014",
@@ -2652,7 +2916,8 @@
       "mpg": 17,
       "miPerKwh": 4,
       "batteryKwh": 4.8,
-      "evRangeMi": 19
+      "evRangeMi": 19,
+      "chargeKw": 1.6
     },
     {
       "id": "mercedes-benz-amg-c63-s-e-performance-2025",
@@ -2662,7 +2927,8 @@
       "mpg": 20,
       "miPerKwh": 1.75,
       "batteryKwh": 4.6,
-      "evRangeMi": 8
+      "evRangeMi": 8,
+      "chargeKw": 3.8
     },
     {
       "id": "mercedes-benz-amg-e53-hybrid-4matic-plus-2026",
@@ -2672,7 +2938,8 @@
       "mpg": 24,
       "miPerKwh": 1.79,
       "batteryKwh": 24.6,
-      "evRangeMi": 44
+      "evRangeMi": 44,
+      "chargeKw": 8.9
     },
     {
       "id": "mercedes-benz-amg-e53-hybrid-4matic-plus-2025",
@@ -2682,7 +2949,8 @@
       "mpg": 23,
       "miPerKwh": 1.75,
       "batteryKwh": 24.5,
-      "evRangeMi": 43
+      "evRangeMi": 43,
+      "chargeKw": 8.9
     },
     {
       "id": "mercedes-benz-amg-e53-hybrid-4matic-plus-station-wagon-2026",
@@ -2692,7 +2960,8 @@
       "mpg": 22,
       "miPerKwh": 1.69,
       "batteryKwh": 24.2,
-      "evRangeMi": 41
+      "evRangeMi": 41,
+      "chargeKw": 8.8
     },
     {
       "id": "mercedes-benz-amg-glc63-s-e-performance-2025",
@@ -2702,7 +2971,8 @@
       "mpg": 20,
       "miPerKwh": 1.96,
       "batteryKwh": 4.6,
-      "evRangeMi": 9
+      "evRangeMi": 9,
+      "chargeKw": 4.2
     },
     {
       "id": "mercedes-benz-amg-glc63-s-e-performance-coupe-2025",
@@ -2712,7 +2982,8 @@
       "mpg": 20,
       "miPerKwh": 1.96,
       "batteryKwh": 4.6,
-      "evRangeMi": 9
+      "evRangeMi": 9,
+      "chargeKw": 4.2
     },
     {
       "id": "mercedes-benz-amg-gt-63-s-e-performance-2025",
@@ -2722,7 +2993,8 @@
       "mpg": 18,
       "miPerKwh": 2.13,
       "batteryKwh": 4.7,
-      "evRangeMi": 10
+      "evRangeMi": 10,
+      "chargeKw": 3.1
     },
     {
       "id": "mercedes-benz-amg-gt-63-s-e-performance-coupe-2025",
@@ -2732,7 +3004,8 @@
       "mpg": 19,
       "miPerKwh": 2.38,
       "batteryKwh": 4.6,
-      "evRangeMi": 11
+      "evRangeMi": 11,
+      "chargeKw": 4
     },
     {
       "id": "mercedes-benz-amg-s63-e-performance-2025",
@@ -2742,7 +3015,8 @@
       "mpg": 18,
       "miPerKwh": 1.49,
       "batteryKwh": 10.7,
-      "evRangeMi": 16
+      "evRangeMi": 16,
+      "chargeKw": 3.8
     },
     {
       "id": "mercedes-benz-amg-sl63-s-e-performance-2025",
@@ -2752,7 +3026,8 @@
       "mpg": 18,
       "miPerKwh": 2.33,
       "batteryKwh": 3.9,
-      "evRangeMi": 9
+      "evRangeMi": 9,
+      "chargeKw": 3.5
     },
     {
       "id": "mercedes-benz-c350e-2018",
@@ -2762,7 +3037,8 @@
       "mpg": 30,
       "miPerKwh": 1.79,
       "batteryKwh": 5,
-      "evRangeMi": 9
+      "evRangeMi": 9,
+      "chargeKw": 3.3
     },
     {
       "id": "mercedes-benz-c350e-2017",
@@ -2772,7 +3048,8 @@
       "mpg": 30,
       "miPerKwh": 1.79,
       "batteryKwh": 5,
-      "evRangeMi": 9
+      "evRangeMi": 9,
+      "chargeKw": 3.3
     },
     {
       "id": "mercedes-benz-c350e-2016",
@@ -2782,7 +3059,8 @@
       "mpg": 30,
       "miPerKwh": 1.79,
       "batteryKwh": 6.2,
-      "evRangeMi": 11
+      "evRangeMi": 11,
+      "chargeKw": 4.1
     },
     {
       "id": "mercedes-benz-glc350e-4matic-2020",
@@ -2792,7 +3070,8 @@
       "mpg": 25,
       "miPerKwh": 2.04,
       "batteryKwh": 10.8,
-      "evRangeMi": 22
+      "evRangeMi": 22,
+      "chargeKw": 8.3
     },
     {
       "id": "mercedes-benz-glc350e-4matic-2019",
@@ -2802,7 +3081,8 @@
       "mpg": 25,
       "miPerKwh": 1.69,
       "batteryKwh": 5.9,
-      "evRangeMi": 10
+      "evRangeMi": 10,
+      "chargeKw": 3.1
     },
     {
       "id": "mercedes-benz-glc350e-4matic-2018",
@@ -2812,7 +3092,8 @@
       "mpg": 25,
       "miPerKwh": 1.69,
       "batteryKwh": 5.9,
-      "evRangeMi": 10
+      "evRangeMi": 10,
+      "chargeKw": 3.1
     },
     {
       "id": "mercedes-benz-glc350e-4matic-with-eq-hybrid-tech-2025",
@@ -2822,7 +3103,8 @@
       "mpg": 25,
       "miPerKwh": 1.92,
       "batteryKwh": 28.1,
-      "evRangeMi": 54
+      "evRangeMi": 54,
+      "chargeKw": 9.4
     },
     {
       "id": "mercedes-benz-gle450e-4matic-2025",
@@ -2832,7 +3114,8 @@
       "mpg": 23,
       "miPerKwh": 1.79,
       "batteryKwh": 28,
-      "evRangeMi": 50
+      "evRangeMi": 50,
+      "chargeKw": 9.3
     },
     {
       "id": "mercedes-benz-gle550e-4matic-2018",
@@ -2842,7 +3125,8 @@
       "mpg": 21,
       "miPerKwh": 1.45,
       "batteryKwh": 6.9,
-      "evRangeMi": 10
+      "evRangeMi": 10,
+      "chargeKw": 3.6
     },
     {
       "id": "mercedes-benz-gle550e-4matic-2017",
@@ -2852,7 +3136,8 @@
       "mpg": 21,
       "miPerKwh": 1.45,
       "batteryKwh": 8.3,
-      "evRangeMi": 12
+      "evRangeMi": 12,
+      "chargeKw": 4.4
     },
     {
       "id": "mercedes-benz-gle550e-4matic-2016",
@@ -2862,7 +3147,8 @@
       "mpg": 21,
       "miPerKwh": 1.47,
       "batteryKwh": 8.2,
-      "evRangeMi": 12
+      "evRangeMi": 12,
+      "chargeKw": 4.3
     },
     {
       "id": "mercedes-benz-s550e-2017",
@@ -2872,7 +3158,8 @@
       "mpg": 26,
       "miPerKwh": 1.69,
       "batteryKwh": 8.3,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 4.4
     },
     {
       "id": "mercedes-benz-s550e-2016",
@@ -2882,7 +3169,8 @@
       "mpg": 26,
       "miPerKwh": 1.69,
       "batteryKwh": 8.3,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 3
     },
     {
       "id": "mercedes-benz-s550e-2015",
@@ -2892,7 +3180,8 @@
       "mpg": 26,
       "miPerKwh": 1.69,
       "batteryKwh": 8.3,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 3
     },
     {
       "id": "mercedes-benz-s560e-2020",
@@ -2902,7 +3191,8 @@
       "mpg": 23,
       "miPerKwh": 1.89,
       "batteryKwh": 10.1,
-      "evRangeMi": 19
+      "evRangeMi": 19,
+      "chargeKw": 7.8
     },
     {
       "id": "mercedes-benz-s560e-2019",
@@ -2912,7 +3202,8 @@
       "mpg": 23,
       "miPerKwh": 1.89,
       "batteryKwh": 11.7,
-      "evRangeMi": 22
+      "evRangeMi": 22,
+      "chargeKw": 9
     },
     {
       "id": "mercedes-benz-s580e-4matic-2025",
@@ -2922,7 +3213,8 @@
       "mpg": 23,
       "miPerKwh": 1.89,
       "batteryKwh": 25.4,
-      "evRangeMi": 48
+      "evRangeMi": 48,
+      "chargeKw": 9.2
     },
     {
       "id": "mercedes-benz-s580e-4matic-2023",
@@ -2932,7 +3224,8 @@
       "mpg": 23,
       "miPerKwh": 1.96,
       "batteryKwh": 23.5,
-      "evRangeMi": 46
+      "evRangeMi": 46,
+      "chargeKw": 9.4
     },
     {
       "id": "mini-cooper-se-countryman-all4-2023",
@@ -2942,7 +3235,8 @@
       "mpg": 29,
       "miPerKwh": 2.17,
       "batteryKwh": 8.3,
-      "evRangeMi": 18
+      "evRangeMi": 18,
+      "chargeKw": 4.2
     },
     {
       "id": "mini-cooper-se-countryman-all4-2022",
@@ -2952,7 +3246,8 @@
       "mpg": 29,
       "miPerKwh": 2.17,
       "batteryKwh": 8.3,
-      "evRangeMi": 18
+      "evRangeMi": 18,
+      "chargeKw": 4.2
     },
     {
       "id": "mini-cooper-se-countryman-all4-2021",
@@ -2962,7 +3257,8 @@
       "mpg": 29,
       "miPerKwh": 2.17,
       "batteryKwh": 8.3,
-      "evRangeMi": 18
+      "evRangeMi": 18,
+      "chargeKw": 4.2
     },
     {
       "id": "mini-cooper-se-countryman-all4-2020",
@@ -2972,7 +3268,8 @@
       "mpg": 29,
       "miPerKwh": 2.17,
       "batteryKwh": 8.3,
-      "evRangeMi": 18
+      "evRangeMi": 18,
+      "chargeKw": 4.2
     },
     {
       "id": "mini-cooper-se-countryman-all4-2019",
@@ -2982,7 +3279,8 @@
       "mpg": 27,
       "miPerKwh": 1.96,
       "batteryKwh": 6.1,
-      "evRangeMi": 12
+      "evRangeMi": 12,
+      "chargeKw": 2
     },
     {
       "id": "mini-cooper-se-countryman-all4-2018",
@@ -2992,7 +3290,8 @@
       "mpg": 27,
       "miPerKwh": 1.96,
       "batteryKwh": 6.1,
-      "evRangeMi": 12
+      "evRangeMi": 12,
+      "chargeKw": 3.1
     },
     {
       "id": "mitsubishi-outlander-phev-2026",
@@ -3002,7 +3301,8 @@
       "mpg": 27,
       "miPerKwh": 2.13,
       "batteryKwh": 20.7,
-      "evRangeMi": 44
+      "evRangeMi": 44,
+      "chargeKw": 3.2
     },
     {
       "id": "mitsubishi-outlander-phev-2025",
@@ -3012,7 +3312,8 @@
       "mpg": 26,
       "miPerKwh": 1.92,
       "batteryKwh": 19.8,
-      "evRangeMi": 38
+      "evRangeMi": 38,
+      "chargeKw": 3
     },
     {
       "id": "mitsubishi-outlander-phev-2024",
@@ -3022,7 +3323,8 @@
       "mpg": 26,
       "miPerKwh": 1.92,
       "batteryKwh": 19.8,
-      "evRangeMi": 38
+      "evRangeMi": 38,
+      "chargeKw": 3
     },
     {
       "id": "mitsubishi-outlander-phev-2023",
@@ -3032,7 +3334,8 @@
       "mpg": 26,
       "miPerKwh": 1.92,
       "batteryKwh": 19.8,
-      "evRangeMi": 38
+      "evRangeMi": 38,
+      "chargeKw": 3
     },
     {
       "id": "mitsubishi-outlander-phev-2022",
@@ -3042,7 +3345,8 @@
       "mpg": 26,
       "miPerKwh": 2.22,
       "batteryKwh": 10.8,
-      "evRangeMi": 24
+      "evRangeMi": 24,
+      "chargeKw": 2.7
     },
     {
       "id": "mitsubishi-outlander-phev-2021",
@@ -3052,7 +3356,8 @@
       "mpg": 26,
       "miPerKwh": 2.22,
       "batteryKwh": 10.8,
-      "evRangeMi": 24
+      "evRangeMi": 24,
+      "chargeKw": 2.7
     },
     {
       "id": "mitsubishi-outlander-phev-2020",
@@ -3062,7 +3367,8 @@
       "mpg": 25,
       "miPerKwh": 2.22,
       "batteryKwh": 9.9,
-      "evRangeMi": 22
+      "evRangeMi": 22,
+      "chargeKw": 2.8
     },
     {
       "id": "mitsubishi-outlander-phev-2019",
@@ -3072,7 +3378,8 @@
       "mpg": 25,
       "miPerKwh": 2.22,
       "batteryKwh": 9.9,
-      "evRangeMi": 22
+      "evRangeMi": 22,
+      "chargeKw": 2.8
     },
     {
       "id": "mitsubishi-outlander-phev-2018",
@@ -3082,7 +3389,8 @@
       "mpg": 25,
       "miPerKwh": 2.22,
       "batteryKwh": 9.9,
-      "evRangeMi": 22
+      "evRangeMi": 22,
+      "chargeKw": 2.8
     },
     {
       "id": "polestar-1-2021",
@@ -3092,7 +3400,8 @@
       "mpg": 26,
       "miPerKwh": 1.75,
       "batteryKwh": 29.6,
-      "evRangeMi": 52
+      "evRangeMi": 52,
+      "chargeKw": 3.3
     },
     {
       "id": "polestar-1-2020",
@@ -3102,7 +3411,8 @@
       "mpg": 26,
       "miPerKwh": 1.75,
       "batteryKwh": 29.6,
-      "evRangeMi": 52
+      "evRangeMi": 52,
+      "chargeKw": 3.3
     },
     {
       "id": "porsche-918-spyder-2015",
@@ -3112,7 +3422,8 @@
       "mpg": 22,
       "miPerKwh": 2,
       "batteryKwh": 6,
-      "evRangeMi": 12
+      "evRangeMi": 12,
+      "chargeKw": 2
     },
     {
       "id": "porsche-cayenne-e-hybrid-2025",
@@ -3122,7 +3433,8 @@
       "mpg": 22,
       "miPerKwh": 1.59,
       "batteryKwh": 18.3,
-      "evRangeMi": 29
+      "evRangeMi": 29,
+      "chargeKw": 7.3
     },
     {
       "id": "porsche-cayenne-e-hybrid-2021",
@@ -3132,7 +3444,8 @@
       "mpg": 21,
       "miPerKwh": 1.39,
       "batteryKwh": 12.2,
-      "evRangeMi": 17
+      "evRangeMi": 17,
+      "chargeKw": 4.1
     },
     {
       "id": "porsche-cayenne-e-hybrid-2020",
@@ -3142,7 +3455,8 @@
       "mpg": 21,
       "miPerKwh": 1.41,
       "batteryKwh": 9.9,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 3.3
     },
     {
       "id": "porsche-cayenne-e-hybrid-2019",
@@ -3152,7 +3466,8 @@
       "mpg": 21,
       "miPerKwh": 1.39,
       "batteryKwh": 9.4,
-      "evRangeMi": 13
+      "evRangeMi": 13,
+      "chargeKw": 3.1
     },
     {
       "id": "porsche-cayenne-e-hybrid-coupe-2025",
@@ -3162,7 +3477,8 @@
       "mpg": 22,
       "miPerKwh": 1.59,
       "batteryKwh": 18.3,
-      "evRangeMi": 29
+      "evRangeMi": 29,
+      "chargeKw": 7.3
     },
     {
       "id": "porsche-cayenne-e-hybrid-coupe-2021",
@@ -3172,7 +3488,8 @@
       "mpg": 21,
       "miPerKwh": 1.39,
       "batteryKwh": 12.2,
-      "evRangeMi": 17
+      "evRangeMi": 17,
+      "chargeKw": 4.1
     },
     {
       "id": "porsche-cayenne-e-hybrid-coupe-2020",
@@ -3182,7 +3499,8 @@
       "mpg": 21,
       "miPerKwh": 1.41,
       "batteryKwh": 9.9,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 3.3
     },
     {
       "id": "porsche-cayenne-s-e-hybrid-2018",
@@ -3192,7 +3510,8 @@
       "mpg": 22,
       "miPerKwh": 1.43,
       "batteryKwh": 9.8,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 3.3
     },
     {
       "id": "porsche-cayenne-s-e-hybrid-2017",
@@ -3202,7 +3521,8 @@
       "mpg": 22,
       "miPerKwh": 1.41,
       "batteryKwh": 9.9,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 3.3
     },
     {
       "id": "porsche-cayenne-s-e-hybrid-2016",
@@ -3212,7 +3532,8 @@
       "mpg": 22,
       "miPerKwh": 1.45,
       "batteryKwh": 9.7,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 3.2
     },
     {
       "id": "porsche-cayenne-s-e-hybrid-2015",
@@ -3222,7 +3543,8 @@
       "mpg": 22,
       "miPerKwh": 1.45,
       "batteryKwh": 9.7,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 3.2
     },
     {
       "id": "porsche-cayenne-s-e-hybrid-2025",
@@ -3232,7 +3554,8 @@
       "mpg": 22,
       "miPerKwh": 1.54,
       "batteryKwh": 17.6,
-      "evRangeMi": 27
+      "evRangeMi": 27,
+      "chargeKw": 7
     },
     {
       "id": "porsche-cayenne-s-e-hybrid-coupe-2025",
@@ -3242,7 +3565,8 @@
       "mpg": 22,
       "miPerKwh": 1.54,
       "batteryKwh": 17.6,
-      "evRangeMi": 27
+      "evRangeMi": 27,
+      "chargeKw": 7
     },
     {
       "id": "porsche-cayenne-turbo-e-hybrid-2025",
@@ -3252,7 +3576,8 @@
       "mpg": 22,
       "miPerKwh": 1.39,
       "batteryKwh": 17.3,
-      "evRangeMi": 24
+      "evRangeMi": 24,
+      "chargeKw": 6.9
     },
     {
       "id": "porsche-cayenne-turbo-e-hybrid-coupe-2025",
@@ -3262,7 +3587,8 @@
       "mpg": 22,
       "miPerKwh": 1.39,
       "batteryKwh": 17.3,
-      "evRangeMi": 24
+      "evRangeMi": 24,
+      "chargeKw": 6.9
     },
     {
       "id": "porsche-cayenne-turbo-s-e-hybrid-2023",
@@ -3272,7 +3598,8 @@
       "mpg": 18,
       "miPerKwh": 1.22,
       "batteryKwh": 12.3,
-      "evRangeMi": 15
+      "evRangeMi": 15,
+      "chargeKw": 4.1
     },
     {
       "id": "porsche-cayenne-turbo-s-e-hybrid-2021",
@@ -3282,7 +3609,8 @@
       "mpg": 18,
       "miPerKwh": 1.22,
       "batteryKwh": 12.3,
-      "evRangeMi": 15
+      "evRangeMi": 15,
+      "chargeKw": 4.1
     },
     {
       "id": "porsche-cayenne-turbo-s-e-hybrid-2020",
@@ -3292,7 +3620,8 @@
       "mpg": 18,
       "miPerKwh": 1.32,
       "batteryKwh": 9.1,
-      "evRangeMi": 12
+      "evRangeMi": 12,
+      "chargeKw": 3
     },
     {
       "id": "porsche-cayenne-turbo-s-e-hybrid-coupe-2023",
@@ -3302,7 +3631,8 @@
       "mpg": 18,
       "miPerKwh": 1.22,
       "batteryKwh": 12.3,
-      "evRangeMi": 15
+      "evRangeMi": 15,
+      "chargeKw": 4.1
     },
     {
       "id": "porsche-cayenne-turbo-s-e-hybrid-coupe-2021",
@@ -3312,7 +3642,8 @@
       "mpg": 18,
       "miPerKwh": 1.22,
       "batteryKwh": 12.3,
-      "evRangeMi": 15
+      "evRangeMi": 15,
+      "chargeKw": 4.1
     },
     {
       "id": "porsche-cayenne-turbo-s-e-hybrid-coupe-2020",
@@ -3322,7 +3653,8 @@
       "mpg": 18,
       "miPerKwh": 1.32,
       "batteryKwh": 9.1,
-      "evRangeMi": 12
+      "evRangeMi": 12,
+      "chargeKw": 3
     },
     {
       "id": "porsche-cayenne-turbo-s-coupe-e-hybrid-2022",
@@ -3332,7 +3664,8 @@
       "mpg": 18,
       "miPerKwh": 1.22,
       "batteryKwh": 12.3,
-      "evRangeMi": 15
+      "evRangeMi": 15,
+      "chargeKw": 4.1
     },
     {
       "id": "porsche-cayenne-coupe-e-hybrid-2022",
@@ -3342,7 +3675,8 @@
       "mpg": 21,
       "miPerKwh": 1.39,
       "batteryKwh": 12.2,
-      "evRangeMi": 17
+      "evRangeMi": 17,
+      "chargeKw": 4.1
     },
     {
       "id": "porsche-panamera-4-e-hybrid-2025",
@@ -3352,7 +3686,8 @@
       "mpg": 21,
       "miPerKwh": 1.61,
       "batteryKwh": 17.4,
-      "evRangeMi": 28
+      "evRangeMi": 28,
+      "chargeKw": 7
     },
     {
       "id": "porsche-panamera-4-e-hybrid-2023",
@@ -3362,7 +3697,8 @@
       "mpg": 22,
       "miPerKwh": 1.56,
       "batteryKwh": 12.2,
-      "evRangeMi": 19
+      "evRangeMi": 19,
+      "chargeKw": 4.1
     },
     {
       "id": "porsche-panamera-4-e-hybrid-2021",
@@ -3372,7 +3708,8 @@
       "mpg": 22,
       "miPerKwh": 1.56,
       "batteryKwh": 12.2,
-      "evRangeMi": 19
+      "evRangeMi": 19,
+      "chargeKw": 4.1
     },
     {
       "id": "porsche-panamera-4-e-hybrid-2020",
@@ -3382,7 +3719,8 @@
       "mpg": 23,
       "miPerKwh": 1.54,
       "batteryKwh": 9.1,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 3
     },
     {
       "id": "porsche-panamera-4-e-hybrid-2019",
@@ -3392,7 +3730,8 @@
       "mpg": 23,
       "miPerKwh": 1.54,
       "batteryKwh": 9.1,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 3
     },
     {
       "id": "porsche-panamera-4-e-hybrid-2018",
@@ -3402,7 +3741,8 @@
       "mpg": 22,
       "miPerKwh": 1.69,
       "batteryKwh": 9.4,
-      "evRangeMi": 16
+      "evRangeMi": 16,
+      "chargeKw": 3.1
     },
     {
       "id": "porsche-panamera-4-e-hybrid-executive-2021",
@@ -3412,7 +3752,8 @@
       "mpg": 22,
       "miPerKwh": 1.56,
       "batteryKwh": 12.2,
-      "evRangeMi": 19
+      "evRangeMi": 19,
+      "chargeKw": 4.1
     },
     {
       "id": "porsche-panamera-4-e-hybrid-executive-2020",
@@ -3422,7 +3763,8 @@
       "mpg": 23,
       "miPerKwh": 1.54,
       "batteryKwh": 9.1,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 3
     },
     {
       "id": "porsche-panamera-4-e-hybrid-executive-2019",
@@ -3432,7 +3774,8 @@
       "mpg": 23,
       "miPerKwh": 1.54,
       "batteryKwh": 9.1,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 3
     },
     {
       "id": "porsche-panamera-4-e-hybrid-executive-2018",
@@ -3442,7 +3785,8 @@
       "mpg": 22,
       "miPerKwh": 1.69,
       "batteryKwh": 9.4,
-      "evRangeMi": 16
+      "evRangeMi": 16,
+      "chargeKw": 3.1
     },
     {
       "id": "porsche-panamera-4-e-hybrid-st-2021",
@@ -3452,7 +3796,8 @@
       "mpg": 22,
       "miPerKwh": 1.56,
       "batteryKwh": 12.2,
-      "evRangeMi": 19
+      "evRangeMi": 19,
+      "chargeKw": 4.1
     },
     {
       "id": "porsche-panamera-4-e-hybrid-st-2020",
@@ -3462,7 +3807,8 @@
       "mpg": 23,
       "miPerKwh": 1.54,
       "batteryKwh": 9.1,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 3
     },
     {
       "id": "porsche-panamera-4-e-hybrid-st-2019",
@@ -3472,7 +3818,8 @@
       "mpg": 23,
       "miPerKwh": 1.54,
       "batteryKwh": 9.1,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 3
     },
     {
       "id": "porsche-panamera-4-e-hybrid-st-2018",
@@ -3482,7 +3829,8 @@
       "mpg": 22,
       "miPerKwh": 1.69,
       "batteryKwh": 9.4,
-      "evRangeMi": 16
+      "evRangeMi": 16,
+      "chargeKw": 3.1
     },
     {
       "id": "porsche-panamera-4-e-hybrid-exec-st-2022",
@@ -3492,7 +3840,8 @@
       "mpg": 22,
       "miPerKwh": 1.56,
       "batteryKwh": 12.2,
-      "evRangeMi": 19
+      "evRangeMi": 19,
+      "chargeKw": 4.1
     },
     {
       "id": "porsche-panamera-4s-e-hybrid-2021",
@@ -3502,7 +3851,8 @@
       "mpg": 22,
       "miPerKwh": 1.52,
       "batteryKwh": 12.5,
-      "evRangeMi": 19
+      "evRangeMi": 19,
+      "chargeKw": 4.2
     },
     {
       "id": "porsche-panamera-4s-e-hybrid-2025",
@@ -3512,7 +3862,8 @@
       "mpg": 21,
       "miPerKwh": 1.59,
       "batteryKwh": 17.6,
-      "evRangeMi": 28
+      "evRangeMi": 28,
+      "chargeKw": 7
     },
     {
       "id": "porsche-panamera-4s-e-hybrid-2023",
@@ -3522,7 +3873,8 @@
       "mpg": 22,
       "miPerKwh": 1.52,
       "batteryKwh": 12.5,
-      "evRangeMi": 19
+      "evRangeMi": 19,
+      "chargeKw": 4.2
     },
     {
       "id": "porsche-panamera-4s-e-hybrid-executive-2021",
@@ -3532,7 +3884,8 @@
       "mpg": 22,
       "miPerKwh": 1.52,
       "batteryKwh": 12.5,
-      "evRangeMi": 19
+      "evRangeMi": 19,
+      "chargeKw": 4.2
     },
     {
       "id": "porsche-panamera-4s-e-hybrid-st-2021",
@@ -3542,7 +3895,8 @@
       "mpg": 22,
       "miPerKwh": 1.52,
       "batteryKwh": 12.5,
-      "evRangeMi": 19
+      "evRangeMi": 19,
+      "chargeKw": 4.2
     },
     {
       "id": "porsche-panamera-4s-e-hybrid-exec-st-2022",
@@ -3552,7 +3906,8 @@
       "mpg": 22,
       "miPerKwh": 1.52,
       "batteryKwh": 12.5,
-      "evRangeMi": 19
+      "evRangeMi": 19,
+      "chargeKw": 4.2
     },
     {
       "id": "porsche-panamera-s-e-hybrid-2016",
@@ -3562,7 +3917,8 @@
       "mpg": 25,
       "miPerKwh": 1.96,
       "batteryKwh": 8.2,
-      "evRangeMi": 16
+      "evRangeMi": 16,
+      "chargeKw": 2.7
     },
     {
       "id": "porsche-panamera-s-e-hybrid-2015",
@@ -3572,7 +3928,8 @@
       "mpg": 25,
       "miPerKwh": 1.92,
       "batteryKwh": 8.3,
-      "evRangeMi": 16
+      "evRangeMi": 16,
+      "chargeKw": 2.8
     },
     {
       "id": "porsche-panamera-s-e-hybrid-2014",
@@ -3582,7 +3939,8 @@
       "mpg": 25,
       "miPerKwh": 1.92,
       "batteryKwh": 8.3,
-      "evRangeMi": 16
+      "evRangeMi": 16,
+      "chargeKw": 2.8
     },
     {
       "id": "porsche-panamera-turbo-s-e-hybrid-2023",
@@ -3592,7 +3950,8 @@
       "mpg": 19,
       "miPerKwh": 1.43,
       "batteryKwh": 11.9,
-      "evRangeMi": 17
+      "evRangeMi": 17,
+      "chargeKw": 4
     },
     {
       "id": "porsche-panamera-turbo-s-e-hybrid-2021",
@@ -3602,7 +3961,8 @@
       "mpg": 19,
       "miPerKwh": 1.43,
       "batteryKwh": 11.9,
-      "evRangeMi": 17
+      "evRangeMi": 17,
+      "chargeKw": 4
     },
     {
       "id": "porsche-panamera-turbo-s-e-hybrid-2020",
@@ -3612,7 +3972,8 @@
       "mpg": 20,
       "miPerKwh": 1.52,
       "batteryKwh": 9.2,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 3.1
     },
     {
       "id": "porsche-panamera-turbo-s-e-hybrid-2019",
@@ -3622,7 +3983,8 @@
       "mpg": 20,
       "miPerKwh": 1.52,
       "batteryKwh": 9.2,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 3.1
     },
     {
       "id": "porsche-panamera-turbo-s-e-hybrid-2018",
@@ -3632,7 +3994,8 @@
       "mpg": 21,
       "miPerKwh": 1.49,
       "batteryKwh": 9.4,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 3.1
     },
     {
       "id": "porsche-panamera-turbo-s-e-hybrid-executive-2021",
@@ -3642,7 +4005,8 @@
       "mpg": 19,
       "miPerKwh": 1.43,
       "batteryKwh": 11.9,
-      "evRangeMi": 17
+      "evRangeMi": 17,
+      "chargeKw": 4
     },
     {
       "id": "porsche-panamera-turbo-s-e-hybrid-executive-2020",
@@ -3652,7 +4016,8 @@
       "mpg": 20,
       "miPerKwh": 1.52,
       "batteryKwh": 9.2,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 3.1
     },
     {
       "id": "porsche-panamera-turbo-s-e-hybrid-executive-2019",
@@ -3662,7 +4027,8 @@
       "mpg": 20,
       "miPerKwh": 1.52,
       "batteryKwh": 9.2,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 3.1
     },
     {
       "id": "porsche-panamera-turbo-s-e-hybrid-executive-2018",
@@ -3672,7 +4038,8 @@
       "mpg": 21,
       "miPerKwh": 1.49,
       "batteryKwh": 9.4,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 3.1
     },
     {
       "id": "porsche-panamera-turbo-s-e-hybrid-st-2021",
@@ -3682,7 +4049,8 @@
       "mpg": 19,
       "miPerKwh": 1.43,
       "batteryKwh": 11.9,
-      "evRangeMi": 17
+      "evRangeMi": 17,
+      "chargeKw": 4
     },
     {
       "id": "porsche-panamera-turbo-s-e-hybrid-st-2020",
@@ -3692,7 +4060,8 @@
       "mpg": 20,
       "miPerKwh": 1.52,
       "batteryKwh": 9.2,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 3.1
     },
     {
       "id": "porsche-panamera-turbo-s-e-hybrid-st-2019",
@@ -3702,7 +4071,8 @@
       "mpg": 20,
       "miPerKwh": 1.52,
       "batteryKwh": 9.2,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 3.1
     },
     {
       "id": "porsche-panamera-turbo-s-e-hybrid-st-2018",
@@ -3712,7 +4082,8 @@
       "mpg": 21,
       "miPerKwh": 1.49,
       "batteryKwh": 9.4,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 3.1
     },
     {
       "id": "porsche-panamera-turbo-s-e-hybrid-exec-st-2022",
@@ -3722,7 +4093,8 @@
       "mpg": 19,
       "miPerKwh": 1.43,
       "batteryKwh": 11.9,
-      "evRangeMi": 17
+      "evRangeMi": 17,
+      "chargeKw": 4
     },
     {
       "id": "subaru-crosstrek-hybrid-awd-2023",
@@ -3732,7 +4104,8 @@
       "mpg": 35,
       "miPerKwh": 2.63,
       "batteryKwh": 6.8,
-      "evRangeMi": 18
+      "evRangeMi": 18,
+      "chargeKw": 3.4
     },
     {
       "id": "subaru-crosstrek-hybrid-awd-2021",
@@ -3742,7 +4115,8 @@
       "mpg": 35,
       "miPerKwh": 2.63,
       "batteryKwh": 6.5,
-      "evRangeMi": 17
+      "evRangeMi": 17,
+      "chargeKw": 3.3
     },
     {
       "id": "subaru-crosstrek-hybrid-awd-2020",
@@ -3752,7 +4126,8 @@
       "mpg": 35,
       "miPerKwh": 2.63,
       "batteryKwh": 6.5,
-      "evRangeMi": 17
+      "evRangeMi": 17,
+      "chargeKw": 3.3
     },
     {
       "id": "subaru-crosstrek-hybrid-awd-2019",
@@ -3762,7 +4137,8 @@
       "mpg": 35,
       "miPerKwh": 2.63,
       "batteryKwh": 6.5,
-      "evRangeMi": 17
+      "evRangeMi": 17,
+      "chargeKw": 3.3
     },
     {
       "id": "toyota-prius-phev-2025",
@@ -3772,7 +4148,8 @@
       "mpg": 48,
       "miPerKwh": 3.45,
       "batteryKwh": 11.6,
-      "evRangeMi": 40
+      "evRangeMi": 40,
+      "chargeKw": 2.9
     },
     {
       "id": "toyota-prius-phev-se-2025",
@@ -3782,7 +4159,8 @@
       "mpg": 52,
       "miPerKwh": 3.85,
       "batteryKwh": 11.4,
-      "evRangeMi": 44
+      "evRangeMi": 44,
+      "chargeKw": 2.9
     },
     {
       "id": "toyota-prius-plug-in-hybrid-2015",
@@ -3792,7 +4170,8 @@
       "mpg": 50,
       "miPerKwh": 3.45,
       "batteryKwh": 3.2,
-      "evRangeMi": 11
+      "evRangeMi": 11,
+      "chargeKw": 2.1
     },
     {
       "id": "toyota-prius-plug-in-hybrid-2014",
@@ -3802,7 +4181,8 @@
       "mpg": 50,
       "miPerKwh": 3.45,
       "batteryKwh": 3.2,
-      "evRangeMi": 11
+      "evRangeMi": 11,
+      "chargeKw": 2.1
     },
     {
       "id": "toyota-prius-plug-in-hybrid-2013",
@@ -3812,7 +4192,8 @@
       "mpg": 50,
       "miPerKwh": 3.45,
       "batteryKwh": 3.2,
-      "evRangeMi": 11
+      "evRangeMi": 11,
+      "chargeKw": 2.1
     },
     {
       "id": "toyota-prius-plug-in-hybrid-2012",
@@ -3822,7 +4203,8 @@
       "mpg": 50,
       "miPerKwh": 3.45,
       "batteryKwh": 3.2,
-      "evRangeMi": 11
+      "evRangeMi": 11,
+      "chargeKw": 2.1
     },
     {
       "id": "toyota-prius-prime-2024",
@@ -3832,7 +4214,8 @@
       "mpg": 48,
       "miPerKwh": 3.45,
       "batteryKwh": 11.6,
-      "evRangeMi": 40
+      "evRangeMi": 40,
+      "chargeKw": 2.9
     },
     {
       "id": "toyota-prius-prime-2023",
@@ -3842,7 +4225,8 @@
       "mpg": 48,
       "miPerKwh": 3.45,
       "batteryKwh": 11.6,
-      "evRangeMi": 40
+      "evRangeMi": 40,
+      "chargeKw": 2.9
     },
     {
       "id": "toyota-prius-prime-2022",
@@ -3852,7 +4236,8 @@
       "mpg": 54,
       "miPerKwh": 4,
       "batteryKwh": 6.3,
-      "evRangeMi": 25
+      "evRangeMi": 25,
+      "chargeKw": 3.2
     },
     {
       "id": "toyota-prius-prime-2021",
@@ -3862,7 +4247,8 @@
       "mpg": 54,
       "miPerKwh": 4,
       "batteryKwh": 6.3,
-      "evRangeMi": 25
+      "evRangeMi": 25,
+      "chargeKw": 3.2
     },
     {
       "id": "toyota-prius-prime-2020",
@@ -3872,7 +4258,8 @@
       "mpg": 54,
       "miPerKwh": 4,
       "batteryKwh": 6.3,
-      "evRangeMi": 25
+      "evRangeMi": 25,
+      "chargeKw": 3.2
     },
     {
       "id": "toyota-prius-prime-2019",
@@ -3882,7 +4269,8 @@
       "mpg": 54,
       "miPerKwh": 4,
       "batteryKwh": 6.3,
-      "evRangeMi": 25
+      "evRangeMi": 25,
+      "chargeKw": 3.2
     },
     {
       "id": "toyota-prius-prime-2018",
@@ -3892,7 +4280,8 @@
       "mpg": 54,
       "miPerKwh": 4,
       "batteryKwh": 6.3,
-      "evRangeMi": 25
+      "evRangeMi": 25,
+      "chargeKw": 3.2
     },
     {
       "id": "toyota-prius-prime-2017",
@@ -3902,7 +4291,8 @@
       "mpg": 54,
       "miPerKwh": 4,
       "batteryKwh": 6.3,
-      "evRangeMi": 25
+      "evRangeMi": 25,
+      "chargeKw": 3.2
     },
     {
       "id": "toyota-prius-prime-se-2024",
@@ -3912,7 +4302,8 @@
       "mpg": 52,
       "miPerKwh": 3.85,
       "batteryKwh": 11.4,
-      "evRangeMi": 44
+      "evRangeMi": 44,
+      "chargeKw": 2.9
     },
     {
       "id": "toyota-prius-prime-se-2023",
@@ -3922,7 +4313,8 @@
       "mpg": 52,
       "miPerKwh": 3.85,
       "batteryKwh": 11.4,
-      "evRangeMi": 44
+      "evRangeMi": 44,
+      "chargeKw": 2.9
     },
     {
       "id": "toyota-rav4-phev-awd-2025",
@@ -3932,7 +4324,8 @@
       "mpg": 38,
       "miPerKwh": 2.78,
       "batteryKwh": 15.1,
-      "evRangeMi": 42
+      "evRangeMi": 42,
+      "chargeKw": 3.4
     },
     {
       "id": "toyota-rav4-prime-4wd-2024",
@@ -3942,7 +4335,8 @@
       "mpg": 38,
       "miPerKwh": 2.78,
       "batteryKwh": 15.1,
-      "evRangeMi": 42
+      "evRangeMi": 42,
+      "chargeKw": 3.4
     },
     {
       "id": "toyota-rav4-prime-4wd-2023",
@@ -3952,7 +4346,8 @@
       "mpg": 38,
       "miPerKwh": 2.78,
       "batteryKwh": 15.1,
-      "evRangeMi": 42
+      "evRangeMi": 42,
+      "chargeKw": 3.4
     },
     {
       "id": "toyota-rav4-prime-4wd-2022",
@@ -3962,7 +4357,8 @@
       "mpg": 38,
       "miPerKwh": 2.78,
       "batteryKwh": 15.1,
-      "evRangeMi": 42
+      "evRangeMi": 42,
+      "chargeKw": 3.4
     },
     {
       "id": "toyota-rav4-prime-4wd-2021",
@@ -3972,7 +4368,8 @@
       "mpg": 38,
       "miPerKwh": 2.78,
       "batteryKwh": 15.1,
-      "evRangeMi": 42
+      "evRangeMi": 42,
+      "chargeKw": 3.4
     },
     {
       "id": "volvo-s60-awd-phev-2021",
@@ -3982,7 +4379,8 @@
       "mpg": 30,
       "miPerKwh": 2.13,
       "batteryKwh": 10.3,
-      "evRangeMi": 22
+      "evRangeMi": 22,
+      "chargeKw": 3.4
     },
     {
       "id": "volvo-s60-awd-phev-2020",
@@ -3992,7 +4390,8 @@
       "mpg": 30,
       "miPerKwh": 2.13,
       "batteryKwh": 10.3,
-      "evRangeMi": 22
+      "evRangeMi": 22,
+      "chargeKw": 3.4
     },
     {
       "id": "volvo-s60-awd-phev-2019",
@@ -4002,7 +4401,8 @@
       "mpg": 31,
       "miPerKwh": 2.33,
       "batteryKwh": 9.5,
-      "evRangeMi": 22
+      "evRangeMi": 22,
+      "chargeKw": 3.2
     },
     {
       "id": "volvo-s60-t8-awd-2025",
@@ -4012,7 +4412,8 @@
       "mpg": 31,
       "miPerKwh": 2.27,
       "batteryKwh": 17.6,
-      "evRangeMi": 40
+      "evRangeMi": 40,
+      "chargeKw": 3.5
     },
     {
       "id": "volvo-s60-t8-awd-recharge-2024",
@@ -4022,7 +4423,8 @@
       "mpg": 31,
       "miPerKwh": 2.27,
       "batteryKwh": 17.6,
-      "evRangeMi": 40
+      "evRangeMi": 40,
+      "chargeKw": 3.5
     },
     {
       "id": "volvo-s60-t8-awd-recharge-2023",
@@ -4032,7 +4434,8 @@
       "mpg": 31,
       "miPerKwh": 2.27,
       "batteryKwh": 17.6,
-      "evRangeMi": 40
+      "evRangeMi": 40,
+      "chargeKw": 3.5
     },
     {
       "id": "volvo-s60-t8-awd-recharge-2022",
@@ -4042,7 +4445,8 @@
       "mpg": 30,
       "miPerKwh": 2.13,
       "batteryKwh": 10.3,
-      "evRangeMi": 22
+      "evRangeMi": 22,
+      "chargeKw": 3.4
     },
     {
       "id": "volvo-s60-t8-awd-recharge-ext-range-2022",
@@ -4052,7 +4456,8 @@
       "mpg": 31,
       "miPerKwh": 2.27,
       "batteryKwh": 17.6,
-      "evRangeMi": 40
+      "evRangeMi": 40,
+      "chargeKw": 3.5
     },
     {
       "id": "volvo-s90-awd-phev-2021",
@@ -4062,7 +4467,8 @@
       "mpg": 30,
       "miPerKwh": 2,
       "batteryKwh": 10.5,
-      "evRangeMi": 21
+      "evRangeMi": 21,
+      "chargeKw": 3.5
     },
     {
       "id": "volvo-s90-awd-phev-2020",
@@ -4072,7 +4478,8 @@
       "mpg": 30,
       "miPerKwh": 2,
       "batteryKwh": 10.5,
-      "evRangeMi": 21
+      "evRangeMi": 21,
+      "chargeKw": 3.5
     },
     {
       "id": "volvo-s90-awd-phev-2019",
@@ -4082,7 +4489,8 @@
       "mpg": 29,
       "miPerKwh": 2.22,
       "batteryKwh": 9.5,
-      "evRangeMi": 21
+      "evRangeMi": 21,
+      "chargeKw": 3.2
     },
     {
       "id": "volvo-s90-awd-phev-2018",
@@ -4092,7 +4500,8 @@
       "mpg": 29,
       "miPerKwh": 2.22,
       "batteryKwh": 9.5,
-      "evRangeMi": 21
+      "evRangeMi": 21,
+      "chargeKw": 3.2
     },
     {
       "id": "volvo-s90-t8-awd-2025",
@@ -4102,7 +4511,8 @@
       "mpg": 29,
       "miPerKwh": 2.08,
       "batteryKwh": 18.2,
-      "evRangeMi": 38
+      "evRangeMi": 38,
+      "chargeKw": 3.6
     },
     {
       "id": "volvo-s90-t8-awd-recharge-2022",
@@ -4112,7 +4522,8 @@
       "mpg": 30,
       "miPerKwh": 1.96,
       "batteryKwh": 10.7,
-      "evRangeMi": 21
+      "evRangeMi": 21,
+      "chargeKw": 3.6
     },
     {
       "id": "volvo-s90-t8-awd-recharge-ext-range-2023",
@@ -4122,7 +4533,8 @@
       "mpg": 30,
       "miPerKwh": 2.08,
       "batteryKwh": 18.2,
-      "evRangeMi": 38
+      "evRangeMi": 38,
+      "chargeKw": 3.6
     },
     {
       "id": "volvo-s90-t8-awd-recharge-ext-range-2022",
@@ -4132,7 +4544,8 @@
       "mpg": 29,
       "miPerKwh": 2.08,
       "batteryKwh": 18.2,
-      "evRangeMi": 38
+      "evRangeMi": 38,
+      "chargeKw": 3.6
     },
     {
       "id": "volvo-v60-awd-phev-2021",
@@ -4142,7 +4555,8 @@
       "mpg": 30,
       "miPerKwh": 2.13,
       "batteryKwh": 10.3,
-      "evRangeMi": 22
+      "evRangeMi": 22,
+      "chargeKw": 3.4
     },
     {
       "id": "volvo-v60-awd-phev-2020",
@@ -4152,7 +4566,8 @@
       "mpg": 30,
       "miPerKwh": 2.13,
       "batteryKwh": 10.3,
-      "evRangeMi": 22
+      "evRangeMi": 22,
+      "chargeKw": 3.4
     },
     {
       "id": "volvo-v60-t8-awd-2025",
@@ -4162,7 +4577,8 @@
       "mpg": 31,
       "miPerKwh": 2.27,
       "batteryKwh": 17.6,
-      "evRangeMi": 40
+      "evRangeMi": 40,
+      "chargeKw": 3.5
     },
     {
       "id": "volvo-v60-t8-awd-recharge-2022",
@@ -4172,7 +4588,8 @@
       "mpg": 30,
       "miPerKwh": 2.13,
       "batteryKwh": 10.3,
-      "evRangeMi": 22
+      "evRangeMi": 22,
+      "chargeKw": 3.4
     },
     {
       "id": "volvo-v60-t8-awd-recharge-ext-range-2023",
@@ -4182,7 +4599,8 @@
       "mpg": 31,
       "miPerKwh": 2.27,
       "batteryKwh": 17.6,
-      "evRangeMi": 40
+      "evRangeMi": 40,
+      "chargeKw": 3.5
     },
     {
       "id": "volvo-v60-t8-awd-recharge-ext-range-2022",
@@ -4192,7 +4610,8 @@
       "mpg": 31,
       "miPerKwh": 2.27,
       "batteryKwh": 17.6,
-      "evRangeMi": 40
+      "evRangeMi": 40,
+      "chargeKw": 3.5
     },
     {
       "id": "volvo-xc60-awd-phev-2021",
@@ -4202,7 +4621,8 @@
       "mpg": 27,
       "miPerKwh": 1.75,
       "batteryKwh": 14.3,
-      "evRangeMi": 25
+      "evRangeMi": 25,
+      "chargeKw": 4.8
     },
     {
       "id": "volvo-xc60-awd-phev-2020",
@@ -4212,7 +4632,8 @@
       "mpg": 27,
       "miPerKwh": 1.75,
       "batteryKwh": 14.3,
-      "evRangeMi": 25
+      "evRangeMi": 25,
+      "chargeKw": 4.8
     },
     {
       "id": "volvo-xc60-awd-phev-2019",
@@ -4222,7 +4643,8 @@
       "mpg": 26,
       "miPerKwh": 1.82,
       "batteryKwh": 9.4,
-      "evRangeMi": 17
+      "evRangeMi": 17,
+      "chargeKw": 3.1
     },
     {
       "id": "volvo-xc60-awd-phev-2018",
@@ -4232,7 +4654,8 @@
       "mpg": 26,
       "miPerKwh": 1.89,
       "batteryKwh": 9.5,
-      "evRangeMi": 18
+      "evRangeMi": 18,
+      "chargeKw": 3.2
     },
     {
       "id": "volvo-xc60-t8-awd-2026",
@@ -4242,7 +4665,8 @@
       "mpg": 28,
       "miPerKwh": 2,
       "batteryKwh": 18,
-      "evRangeMi": 36
+      "evRangeMi": 36,
+      "chargeKw": 3.6
     },
     {
       "id": "volvo-xc60-t8-awd-2025",
@@ -4252,7 +4676,8 @@
       "mpg": 28,
       "miPerKwh": 2,
       "batteryKwh": 17.5,
-      "evRangeMi": 35
+      "evRangeMi": 35,
+      "chargeKw": 3.5
     },
     {
       "id": "volvo-xc60-t8-awd-recharge-2024",
@@ -4262,7 +4687,8 @@
       "mpg": 28,
       "miPerKwh": 2,
       "batteryKwh": 17.5,
-      "evRangeMi": 35
+      "evRangeMi": 35,
+      "chargeKw": 3.5
     },
     {
       "id": "volvo-xc60-t8-awd-recharge-2023",
@@ -4272,7 +4698,8 @@
       "mpg": 28,
       "miPerKwh": 2,
       "batteryKwh": 17.5,
-      "evRangeMi": 35
+      "evRangeMi": 35,
+      "chargeKw": 3.5
     },
     {
       "id": "volvo-xc60-t8-awd-recharge-2022",
@@ -4282,7 +4709,8 @@
       "mpg": 25,
       "miPerKwh": 1.79,
       "batteryKwh": 10.6,
-      "evRangeMi": 19
+      "evRangeMi": 19,
+      "chargeKw": 3.5
     },
     {
       "id": "volvo-xc60-t8-awd-recharge-ext-range-2022",
@@ -4292,7 +4720,8 @@
       "mpg": 28,
       "miPerKwh": 2,
       "batteryKwh": 18,
-      "evRangeMi": 36
+      "evRangeMi": 36,
+      "chargeKw": 3.6
     },
     {
       "id": "volvo-xc90-awd-phev-2021",
@@ -4302,7 +4731,8 @@
       "mpg": 27,
       "miPerKwh": 1.72,
       "batteryKwh": 10.4,
-      "evRangeMi": 18
+      "evRangeMi": 18,
+      "chargeKw": 3.5
     },
     {
       "id": "volvo-xc90-awd-phev-2020",
@@ -4312,7 +4742,8 @@
       "mpg": 27,
       "miPerKwh": 1.72,
       "batteryKwh": 14.5,
-      "evRangeMi": 25
+      "evRangeMi": 25,
+      "chargeKw": 4.8
     },
     {
       "id": "volvo-xc90-awd-phev-2019",
@@ -4322,7 +4753,8 @@
       "mpg": 25,
       "miPerKwh": 1.82,
       "batteryKwh": 9.4,
-      "evRangeMi": 17
+      "evRangeMi": 17,
+      "chargeKw": 3.1
     },
     {
       "id": "volvo-xc90-awd-phev-2018",
@@ -4332,7 +4764,8 @@
       "mpg": 27,
       "miPerKwh": 2,
       "batteryKwh": 9.5,
-      "evRangeMi": 19
+      "evRangeMi": 19,
+      "chargeKw": 3.2
     },
     {
       "id": "volvo-xc90-awd-phev-2017",
@@ -4342,7 +4775,8 @@
       "mpg": 25,
       "miPerKwh": 1.67,
       "batteryKwh": 8.4,
-      "evRangeMi": 14
+      "evRangeMi": 14,
+      "chargeKw": 2.8
     },
     {
       "id": "volvo-xc90-awd-phev-2016",
@@ -4352,7 +4786,8 @@
       "mpg": 25,
       "miPerKwh": 1.72,
       "batteryKwh": 7.5,
-      "evRangeMi": 13
+      "evRangeMi": 13,
+      "chargeKw": 2.5
     },
     {
       "id": "volvo-xc90-t8-awd-2026",
@@ -4362,7 +4797,8 @@
       "mpg": 27,
       "miPerKwh": 1.82,
       "batteryKwh": 18.2,
-      "evRangeMi": 33
+      "evRangeMi": 33,
+      "chargeKw": 3.6
     },
     {
       "id": "volvo-xc90-t8-awd-2025",
@@ -4372,7 +4808,8 @@
       "mpg": 27,
       "miPerKwh": 1.82,
       "batteryKwh": 17.6,
-      "evRangeMi": 32
+      "evRangeMi": 32,
+      "chargeKw": 3.5
     },
     {
       "id": "volvo-xc90-t8-awd-recharge-2024",
@@ -4382,7 +4819,8 @@
       "mpg": 27,
       "miPerKwh": 1.82,
       "batteryKwh": 17.6,
-      "evRangeMi": 32
+      "evRangeMi": 32,
+      "chargeKw": 3.5
     },
     {
       "id": "volvo-xc90-t8-awd-recharge-2023",
@@ -4392,7 +4830,8 @@
       "mpg": 27,
       "miPerKwh": 1.82,
       "batteryKwh": 17.6,
-      "evRangeMi": 32
+      "evRangeMi": 32,
+      "chargeKw": 3.5
     },
     {
       "id": "volvo-xc90-t8-awd-recharge-2022",
@@ -4402,7 +4841,8 @@
       "mpg": 27,
       "miPerKwh": 1.72,
       "batteryKwh": 10.4,
-      "evRangeMi": 18
+      "evRangeMi": 18,
+      "chargeKw": 3.5
     },
     {
       "id": "volvo-xc90-t8-awd-recharge-ext-range-2022",
@@ -4412,7 +4852,8 @@
       "mpg": 26,
       "miPerKwh": 2.04,
       "batteryKwh": 17.6,
-      "evRangeMi": 36
+      "evRangeMi": 36,
+      "chargeKw": 3.5
     }
   ]
 }
