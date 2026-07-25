@@ -875,6 +875,65 @@ output { font-weight: 800; color: var(--text); }
 .btn--primary { background: var(--accent); color: #fff; border-color: var(--accent); }
 .btn:active { transform: scale(0.98); }
 
+/* Update toast - a small, dismissable "new version available" prompt pinned to
+   the bottom. It never reloads on its own; the user taps Refresh when ready. */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100% - 24px);
+  padding: 6px 8px 6px 16px;
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+  font-size: 14px;
+  font-weight: 500;
+  animation: toast-in 0.2s ease-out;
+}
+.toast__text { white-space: nowrap; }
+.toast__action {
+  border: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--accent);
+  background: color-mix(in srgb, var(--accent) 96%, var(--card));
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+.toast__action:active { transform: scale(0.97); }
+.toast__dismiss {
+  border: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+  padding: 8px;
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, 12px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
+  .toast { animation: none; }
 }

@@ -24,5 +24,10 @@ scripts/.vehicles.cache.csv
 # Local design notes (not part of the shipped app)
 DESIGN.md
 
-# Vendored AI design skill (ui-ux-pro-max) + Copilot prompt wrapper; local tooling, not shipped
-.github/
+# Vendored AI design skill (ui-ux-pro-max) + Copilot prompt wrapper; local tooling, not shipped.
+# Ignore everything under .github/ EXCEPT the Pages deploy workflow, which must
+# be tracked so it runs on GitHub.
+.github/*
+!.github/workflows/
+.github/workflows/*
+!.github/workflows/deploy.yml

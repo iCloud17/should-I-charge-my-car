@@ -1138,6 +1138,129 @@ function boot() {
   render();
 }
 
+// --- PWA update watch -------------------------------------------------------
+// Detect when a newer deploy is live and offer a non-disruptive "refresh"
+// toast. We never reload on our own - the user taps Refresh when they're ready,
+// so an update can never interrupt them mid-calculation.
+//
+// How we know a new version shipped:
+//   1. version.json - stamped with the commit SHA by the deploy workflow. This
+//      catches EVERY change (including internal JS that never appears in
+//      index.html) with a single tiny request per check.
+//   2. Fallback (no CI yet): fingerprint the core assets by hashing their
+//      contents, so an internal-only change is still caught. Costs a few small
+//      requests, so it's only used when version.json is absent.
+//
+// Every request appends ?__vcheck=1 so the service worker passes it straight to
+// the network (see service-worker.js) - never cached, never stale.
+const UPDATE_CHECK_INTERVAL_MS = 15 * 60 * 1000; // re-check every 15 min while open
+const UPDATE_FINGERPRINT_ASSETS = [
+  "./index.html", "./css/styles.css",
+  "./js/main.js", "./js/calc.js", "./js/units.js", "./js/storage.js",
+  "./js/cars.js", "./js/ui.js", "./js/theme.js", "./js/analytics.js",
+  "./data/phevs.json",
+];
+
+function hashText(text) {
+  // djb2 - a compact, dependency-free fingerprint. Not cryptographic; we only
+  // need "did the bytes change", not security.
+  let h = 5381;
+  for (let i = 0; i < text.length; i++) h = ((h << 5) + h + text.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+
+async function fetchVersionSignature() {
+  // Prefer the CI-stamped commit SHA: one request, catches every change.
+  try {
+    const res = await fetch("./version.json?__vcheck=1", { cache: "no-store" });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && typeof data.commit === "string" && data.commit && data.commit !== "dev") {
+        return `v:${data.commit}`;
+      }
+    }
+  } catch { /* fall through to the asset fingerprint */ }
+
+  // Fallback: hash the core assets so internal-only changes still register.
+  // If ANY asset can't be fetched (e.g. offline), we can't form a reliable
+  // fingerprint, so return null and let the caller skip this round. (Never
+  // hash partial/empty responses - that would fabricate a "new version".)
+  try {
+    const texts = await Promise.all(UPDATE_FINGERPRINT_ASSETS.map((u) =>
+      fetch(`${u}?__vcheck=1`, { cache: "no-store" }).then((r) => {
+        if (!r.ok) throw new Error("asset unavailable");
+        return r.text();
+      })
+    ));
+    return `h:${hashText(texts.join("\u0000"))}`;
+  } catch {
+    return null;
+  }
+}
+
+function setupUpdateWatch() {
+  let baseline = null;      // signature of the build this tab is running
+  let toastVisible = false; // a refresh toast is currently on screen
+  let dismissed = false;    // user dismissed - stay quiet for the rest of the session
+  let lastCheck = 0;
+
+  function showUpdateToast() {
+    if (toastVisible) return;
+    toastVisible = true;
+
+    const toast = document.createElement("div");
+    toast.className = "toast";
+    toast.setAttribute("role", "status");
+    toast.setAttribute("aria-live", "polite");
+
+    const text = document.createElement("span");
+    text.className = "toast__text";
+    text.textContent = "A new version is available.";
+
+    const refresh = document.createElement("button");
+    refresh.type = "button";
+    refresh.className = "toast__action";
+    refresh.textContent = "Refresh";
+    refresh.addEventListener("click", () => window.location.reload());
+
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "toast__dismiss";
+    close.setAttribute("aria-label", "Dismiss");
+    close.textContent = "\u2715";
+    close.addEventListener("click", () => {
+      dismissed = true;
+      toastVisible = false;
+      toast.remove();
+    });
+
+    toast.append(text, refresh, close);
+    document.body.appendChild(toast);
+  }
+
+  async function check() {
+    // Never stack toasts or nag: at most one toast until the user acts, and
+    // once dismissed we stay quiet. This is what keeps 20 pushes in a day from
+    // becoming 20 toasts - the tab shows one, then it's silent until refreshed.
+    if (dismissed || toastVisible) return;
+    if (navigator.onLine === false) return; // offline: nothing to check, try again later
+    const now = Date.now();
+    if (now - lastCheck < 60 * 1000) return; // debounce focus/interval bursts
+    lastCheck = now;
+
+    const sig = await fetchVersionSignature();
+    if (!sig) return; // no reliable answer (e.g. dropped offline mid-check) - skip, keep baseline
+    if (baseline === null) { baseline = sig; return; } // first read = the build we booted with
+    if (sig !== baseline) showUpdateToast();           // anything newer -> offer refresh
+  }
+
+  check(); // establish the baseline for this session
+  setInterval(check, UPDATE_CHECK_INTERVAL_MS);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") check(); // catch updates on resume
+  });
+}
+
 async function init() {
   await loadCars();
   attachEvents();
@@ -1160,6 +1283,7 @@ async function init() {
       if (self.caches) caches.keys().then((ks) => ks.forEach((k) => caches.delete(k))).catch(() => {});
     } else {
       navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+      setupUpdateWatch();
     }
   }
 }

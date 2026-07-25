@@ -1,0 +1,52 @@
+# Deploys the app to GitHub Pages and stamps version.json with the commit SHA
+# on every push to main. The running app polls version.json to notice a new
+# deploy and offer a dismissable "refresh" toast (see setupUpdateWatch in
+# js/main.js). No manual version bumps required.
+#
+# One-time setup: in the repo, go to Settings > Pages > Build and deployment >
+# Source, and choose "GitHub Actions". (This replaces deploy-from-a-branch.)
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Least-privilege: only what Pages deployment needs.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a newer deploy cancel an in-flight one, but never interrupt a live run
+# half-way.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Stamp version.json with the commit SHA
+        run: |
+          printf '{ "commit": "%s", "built": "%s" }\n' \
+            "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > version.json
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
