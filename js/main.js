@@ -6,35 +6,12 @@ import { loadPrefs, savePrefs, clearPrefs, DEFAULT_PREFS } from "./storage.js";
 import { loadCars, getCar, getCars, carLabel, maxLabelLength } from "./cars.js";
 import { $, parseNum, money, formatDuration, escapeHtml } from "./ui.js";
 import { applyTheme, nextThemeMode, themeLabel } from "./theme.js";
+import { track, trackWhenReady } from "./analytics.js";
 
 let prefs = loadPrefs();
 let rateMode = "flat"; // "flat" | "tod" | "dur" (volatile - never persisted)
 let chargeCapMin = null; // "charge for" slider value in minutes (volatile)
 let capTouched = false;  // has the user dragged the "charge for" slider?
-
-// --- Analytics: privacy-safe, categorical GoatCounter events. Sends only which
-// features/outcomes were used, never the user's numbers. Each path fires at most
-// once per session and no-ops when GoatCounter isn't available (localhost,
-// blocked, or not yet loaded - in which case it retries on the next render).
-const sentEvents = new Set();
-function track(path) {
-  if (sentEvents.has(path)) return true;
-  try {
-    const gc = window.goatcounter;
-    if (!gc || typeof gc.count !== "function") return false; // not loaded yet
-    gc.count({ path: `e-${path}`, title: path, event: true });
-    sentEvents.add(path);
-    return true;
-  } catch (_) { return true; } // analytics must never break the app; don't retry
-}
-
-// GoatCounter loads async, so an event known at boot (e.g. "launched as an
-// installed PWA") can't rely on a later render to retry. Poll briefly until it's
-// ready, then fire once - independent of whether the user interacts.
-function trackWhenReady(path, tries = 30) {
-  if (track(path) || tries <= 0) return;
-  setTimeout(() => trackWhenReady(path, tries - 1), 300);
-}
 
 // --- Read canonical model values from the DOM (converting from display units) ---
 function readInputs() {
