@@ -25,13 +25,17 @@
 <body>
   <main class="app">
     <header class="app__head">
+      <div class="app__head-actions">
+        <div class="control-cluster">
+          <button id="themeToggle" class="pill pill--icon" type="button" aria-label="Theme: auto. Tap to change.">🌗</button>
+          <button id="currencyBtn" class="pill" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Currency">$</button>
+          <button id="unitToggle" class="pill" type="button" aria-label="Toggle units">Imperial</button>
+        </div>
+        <ul id="currencyMenu" class="combo__results currency-menu" role="listbox" aria-label="Currency" hidden></ul>
+      </div>
       <div class="app__head-text">
         <h1 class="app__title">Should I Charge My Car?</h1>
         <p class="app__tagline">See if charging your plug-in hybrid is cheaper than filling up on gas.</p>
-      </div>
-      <div class="app__head-actions">
-        <button id="themeToggle" class="pill pill--icon" type="button" aria-label="Theme: auto. Tap to change.">🌗</button>
-        <button id="unitToggle" class="pill" type="button" aria-label="Toggle units">Imperial</button>
       </div>
     </header>
 

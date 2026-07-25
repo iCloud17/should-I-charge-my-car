@@ -129,16 +129,55 @@ body {
 
 .app__head {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  flex-direction: column;
   gap: 12px;
   padding: 6px 4px 0;
 }
 .app__head-text { min-width: 0; }
-.app__head-actions { display: flex; align-items: center; gap: 8px; flex: none; }
+/* One cohesive control cluster instead of three loose pills, sitting as tidy
+   chrome above the hero so the title/tagline reads as a clean block. The wrapper
+   is a positioning context (position: relative) so the currency menu can anchor
+   under the cluster; the border/overflow/segment styling lives on the inner
+   .control-cluster element. Keeping the menu outside .control-cluster matters
+   because it uses overflow: hidden to clip its rounded corners, which would
+   otherwise clip an absolutely-positioned dropdown. */
+.app__head-actions {
+  align-self: flex-end;
+  position: relative;
+}
+.control-cluster {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+/* Secondary chrome: sized down a touch so the cluster reads as options rather
+   than a headline feature. Still comfortably above the WCAG AA 24px target. */
+.control-cluster > .pill {
+  min-height: 36px;
+  padding: 5px 12px;
+  font-size: 12px;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: none;
+}
+.control-cluster > .pill + .pill { border-left: 1px solid var(--line); }
+.control-cluster > .pill:active {
+  transform: none;
+  background-color: color-mix(in srgb, var(--text) 8%, transparent);
+}
+.control-cluster > .pill:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+/* Theme icon and currency trigger: centered glyphs, sized to match the row. */
+.control-cluster > #themeToggle { min-width: 36px; padding: 5px 10px; font-size: 13px; }
+#currencyBtn { min-width: 36px; font-size: 14px; }
 
 .app__title {
-  font-size: 20px;
+  font-size: 24px;
+  line-height: 1.2;
   font-weight: 800;
   letter-spacing: -0.02em;
   margin: 0;
@@ -296,6 +335,33 @@ body {
 .combo__item:hover { background: var(--field); }
 .combo__item--custom { color: var(--accent); }
 .combo__none { padding: 12px; font-size: 13px; color: var(--muted); }
+
+/* Currency picker menu: reuses .combo__results / .combo__item, but anchors to
+   the right-aligned cluster and lays each row out as an aligned symbol column
+   plus a name so the ragged symbols line up. min-width keeps it off the left
+   viewport edge; right: 0 keeps it under the right-aligned trigger. */
+.currency-menu {
+  right: 0;
+  left: auto;
+  min-width: 180px;
+}
+.currency-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  box-sizing: border-box;
+}
+.currency-item__sym {
+  flex: 0 0 auto;
+  width: 28px;
+  text-align: center;
+  font-weight: 700;
+}
+.currency-item__name { color: var(--muted); font-weight: 600; }
+.currency-item[aria-selected="true"] { background: var(--field); color: var(--accent); }
+.currency-item[aria-selected="true"] .currency-item__name { color: var(--accent); }
+.currency-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 /* "Adjust numbers" mini-disclosure inside the car tile */
 .tweak { margin-top: 6px; }

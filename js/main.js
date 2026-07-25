@@ -404,6 +404,8 @@ function writeDisplayValues() {
   $("targetPctOut").textContent = `${$("targetPct").value}%`;
   $("carNickname").value = prefs.customName || "";
   for (const id of ["curSym1", "curSym2", "curSym3"]) $(id).textContent = prefs.currency;
+  $("currencyBtn").textContent = prefs.currency;
+  renderCurrencyMenu();
 }
 
 function round(n, d) {
@@ -450,10 +452,10 @@ function addTouRow(time = "00:00", rate = "") {
   const row = document.createElement("div");
   row.className = "tou-row";
   row.innerHTML =
-    `<input type="time" class="tou-time" value="${time}" />` +
+    `<input type="time" class="tou-time" value="${escapeHtml(time)}" />` +
     `<div class="input-money tou-rate-wrap">` +
     `<span class="input-money__sym">${escapeHtml(prefs.currency)}</span>` +
-    `<input type="text" min="0" step="any" inputmode="decimal" class="tou-rate" placeholder="0.30" value="${rate}" />` +
+    `<input type="text" min="0" step="any" inputmode="decimal" class="tou-rate" placeholder="0.30" value="${escapeHtml(rate)}" />` +
     `</div>` +
     `<button type="button" class="tou-del" aria-label="Remove period">\u00d7</button>`;
   $("touRows").appendChild(row);
@@ -475,10 +477,10 @@ function addDurRow(min = 0, rate = "") {
   const row = document.createElement("div");
   row.className = "tou-row dur-row";
   row.innerHTML =
-    `<div class="dur-after">after <input type="text" min="0" step="any" inputmode="numeric" class="dur-min" value="${min}" /> min</div>` +
+    `<div class="dur-after">after <input type="text" min="0" step="any" inputmode="numeric" class="dur-min" value="${escapeHtml(min)}" /> min</div>` +
     `<div class="input-money tou-rate-wrap">` +
     `<span class="input-money__sym">${escapeHtml(prefs.currency)}</span>` +
-    `<input type="text" min="0" step="any" inputmode="decimal" class="dur-rate" placeholder="0.30" value="${rate}" />` +
+    `<input type="text" min="0" step="any" inputmode="decimal" class="dur-rate" placeholder="0.30" value="${escapeHtml(rate)}" />` +
     `</div>` +
     `<button type="button" class="tou-del" aria-label="Remove tier">\u00d7</button>`;
   $("durRows").appendChild(row);
@@ -504,14 +506,14 @@ function addTimeFeeRow(start = 0, perHour = "", unit = "hr") {
   const row = document.createElement("div");
   row.className = "tou-row tf-row";
   row.innerHTML =
-    `<div class="dur-after">after <input type="text" min="0" step="any" inputmode="decimal" class="dur-min tf-start" value="${start}" />` +
+    `<div class="dur-after">after <input type="text" min="0" step="any" inputmode="decimal" class="dur-min tf-start" value="${escapeHtml(start)}" />` +
     `<select class="tf-start-unit" aria-label="Tier start unit">` +
     `<option value="hr"${unit === "hr" ? " selected" : ""}>hr</option>` +
     `<option value="min"${unit === "min" ? " selected" : ""}>min</option>` +
     `</select></div>` +
     `<div class="input-money tou-rate-wrap">` +
     `<span class="input-money__sym">${escapeHtml(prefs.currency)}</span>` +
-    `<input type="text" min="0" step="any" inputmode="decimal" class="tf-rate" placeholder="3" value="${perHour}" />` +
+    `<input type="text" min="0" step="any" inputmode="decimal" class="tf-rate" placeholder="3" value="${escapeHtml(perHour)}" />` +
     `</div>` +
     `<span class="tf-unit">/hr</span>` +
     `<button type="button" class="tou-del" aria-label="Remove tier">\u00d7</button>`;
@@ -576,6 +578,83 @@ function toggleUnits() {
   applyUnitLabels();
   writeDisplayValues();
   render();
+}
+
+// Currency is display-only (both prices are entered in the user's own currency),
+// so switching it just relabels and re-renders without touching any values.
+function setCurrency(sym) {
+  const m = readInputs();
+  persistFrom(m); // keep any in-progress edits before re-rendering
+  prefs.currency = sym;
+  savePrefs(prefs);
+  applyUnitLabels();
+  writeDisplayValues();
+  render();
+}
+
+// Currency picker options: `sym` is the symbol shown app-wide (and stored in
+// prefs.currency); `name` labels the open menu row. The closed trigger shows
+// only the symbol; the open menu shows aligned symbol + name rows, because the
+// native OS select menu can't be styled to line those up.
+const CURRENCIES = [
+  { sym: "$", name: "US Dollar" },
+  { sym: "\u20AC", name: "Euro" },
+  { sym: "\u00A3", name: "Pound" },
+  { sym: "\u00A5", name: "Yen" },
+  { sym: "\u20B9", name: "Rupee" },
+  { sym: "\u20A9", name: "Won" },
+  { sym: "Fr", name: "Franc" },
+  { sym: "kr", name: "Krona" },
+  { sym: "R$", name: "Real" },
+  { sym: "A$", name: "Australian $" },
+  { sym: "C$", name: "Canadian $" },
+  { sym: "\u20BD", name: "Ruble" },
+];
+
+// Build the currency menu rows, marking the active currency (aria-selected) so
+// users can see which one is set. Rebuilt whenever the selection changes.
+function renderCurrencyMenu() {
+  const ul = $("currencyMenu");
+  if (!ul) return;
+  ul.innerHTML = "";
+  for (const { sym, name } of CURRENCIES) {
+    const li = document.createElement("li");
+    li.className = "combo__item currency-item";
+    li.dataset.sym = sym;
+    li.setAttribute("role", "option");
+    li.setAttribute("tabindex", "-1");
+    li.setAttribute("aria-selected", sym === prefs.currency ? "true" : "false");
+    const symEl = document.createElement("span");
+    symEl.className = "currency-item__sym";
+    symEl.textContent = sym;
+    const nameEl = document.createElement("span");
+    nameEl.className = "currency-item__name";
+    nameEl.textContent = name;
+    li.append(symEl, nameEl);
+    ul.appendChild(li);
+  }
+}
+
+function openCurrencyMenu() {
+  renderCurrencyMenu();
+  $("currencyMenu").hidden = false;
+  $("currencyBtn").setAttribute("aria-expanded", "true");
+  const active =
+    $("currencyMenu").querySelector('[aria-selected="true"]') ||
+    $("currencyMenu").querySelector(".currency-item");
+  if (active) active.focus();
+}
+
+function closeCurrencyMenu() {
+  $("currencyMenu").hidden = true;
+  $("currencyBtn").setAttribute("aria-expanded", "false");
+}
+
+// Commit a currency choice from the menu: relabel the trigger, apply, and close.
+function chooseCurrency(sym) {
+  setCurrency(sym);
+  $("currencyBtn").textContent = sym;
+  closeCurrencyMenu();
 }
 
 // --- Car selection ---
@@ -775,6 +854,46 @@ function attachEvents() {
   });
 
   $("unitToggle").addEventListener("click", toggleUnits);
+  // Currency picker: a custom dropdown (the native select menu is unstylable).
+  $("currencyBtn").addEventListener("click", () => {
+    if ($("currencyBtn").getAttribute("aria-expanded") === "true") closeCurrencyMenu();
+    else openCurrencyMenu();
+  });
+  // mousedown + preventDefault selects before any focus/blur race can close us.
+  $("currencyMenu").addEventListener("mousedown", (e) => {
+    const li = e.target.closest(".currency-item");
+    if (!li) return;
+    e.preventDefault();
+    chooseCurrency(li.dataset.sym);
+    $("currencyBtn").focus();
+  });
+  // Outside click closes the menu.
+  document.addEventListener("click", (e) => {
+    if ($("currencyMenu").hidden) return;
+    if (e.target.closest("#currencyMenu") || e.target.closest("#currencyBtn")) return;
+    closeCurrencyMenu();
+  });
+  // Keyboard: Escape closes (focus returns to trigger); arrows move; Enter picks.
+  document.addEventListener("keydown", (e) => {
+    if ($("currencyMenu").hidden) return;
+    const items = Array.from($("currencyMenu").querySelectorAll(".currency-item"));
+    if (!items.length) return;
+    const idx = items.indexOf(document.activeElement);
+    if (e.key === "Escape") {
+      closeCurrencyMenu();
+      $("currencyBtn").focus();
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      (items[idx + 1] || items[0]).focus();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      (items[idx - 1] || items[items.length - 1]).focus();
+    } else if ((e.key === "Enter" || e.key === " ") && idx >= 0) {
+      e.preventDefault();
+      chooseCurrency(items[idx].dataset.sym);
+      $("currencyBtn").focus();
+    }
+  });
   $("themeToggle").addEventListener("click", cycleTheme);
   // Re-resolve auto theme when the user returns (day may have turned to night).
   document.addEventListener("visibilitychange", () => {

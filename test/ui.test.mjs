@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseNum } from "../js/ui.js";
+import { parseNum, money } from "../js/ui.js";
 
 test("parseNum reads a plain dot decimal", () => {
   assert.equal(parseNum("3.89"), 3.89);
@@ -38,4 +38,17 @@ test("parseNum tolerates a leading currency symbol and surrounding spaces", () =
   assert.equal(parseNum("$3.89"), 3.89);
   assert.equal(parseNum("3."), 3);   // trailing dot mid-typing
   assert.equal(parseNum(".5"), 0.5); // leading dot
+});
+
+test("money renders the chosen currency symbol (single- and multi-char)", () => {
+  assert.equal(money(3.5, "€"), "€3.50");
+  assert.equal(money(0.3, "£"), "£0.30");
+  assert.equal(money(12, "Fr"), "Fr12.00");
+  assert.equal(money(1.2, "R$"), "R$1.20");
+  assert.equal(money(1.2), "$1.20"); // defaults to $
+});
+
+test("money returns a dash for non-finite values regardless of symbol", () => {
+  assert.equal(money(NaN, "€"), "-");
+  assert.equal(money(Infinity, "£"), "-");
 });
