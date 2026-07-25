@@ -18,13 +18,22 @@ let capTouched = false;  // has the user dragged the "charge for" slider?
 // blocked, or not yet loaded - in which case it retries on the next render).
 const sentEvents = new Set();
 function track(path) {
-  if (sentEvents.has(path)) return;
+  if (sentEvents.has(path)) return true;
   try {
     const gc = window.goatcounter;
-    if (!gc || typeof gc.count !== "function") return;
+    if (!gc || typeof gc.count !== "function") return false; // not loaded yet
     gc.count({ path: `e-${path}`, title: path, event: true });
     sentEvents.add(path);
-  } catch (_) { /* analytics must never break the app */ }
+    return true;
+  } catch (_) { return true; } // analytics must never break the app; don't retry
+}
+
+// GoatCounter loads async, so an event known at boot (e.g. "launched as an
+// installed PWA") can't rely on a later render to retry. Poll briefly until it's
+// ready, then fire once - independent of whether the user interacts.
+function trackWhenReady(path, tries = 30) {
+  if (track(path) || tries <= 0) return;
+  setTimeout(() => trackWhenReady(path, tries - 1), 300);
 }
 
 // --- Read canonical model values from the DOM (converting from display units) ---
@@ -902,6 +911,14 @@ async function init() {
   await loadCars();
   attachEvents();
   boot();
+
+  // PWA signals. "standalone" = launched from an installed copy (fires on every
+  // such session); "installed" = the one-time install event (not fired by iOS
+  // Safari, which has no appinstalled event - those show up as standalone).
+  if (window.matchMedia?.("(display-mode: standalone)").matches || navigator.standalone) {
+    trackWhenReady("pwa-standalone");
+  }
+  window.addEventListener("appinstalled", () => trackWhenReady("pwa-installed"));
 
   if ("serviceWorker" in navigator) {
     const isLocal = ["localhost", "127.0.0.1", "[::1]", ""].includes(location.hostname);
