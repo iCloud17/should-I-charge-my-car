@@ -437,7 +437,7 @@ function addTouRow(time = "00:00", rate = "") {
     `<input type="time" class="tou-time" value="${time}" />` +
     `<div class="input-money tou-rate-wrap">` +
     `<span class="input-money__sym">${escapeHtml(prefs.currency)}</span>` +
-    `<input type="number" min="0" step="any" inputmode="decimal" class="tou-rate" placeholder="0.30" value="${rate}" />` +
+    `<input type="text" min="0" step="any" inputmode="decimal" class="tou-rate" placeholder="0.30" value="${rate}" />` +
     `</div>` +
     `<button type="button" class="tou-del" aria-label="Remove period">\u00d7</button>`;
   $("touRows").appendChild(row);
@@ -459,10 +459,10 @@ function addDurRow(min = 0, rate = "") {
   const row = document.createElement("div");
   row.className = "tou-row dur-row";
   row.innerHTML =
-    `<div class="dur-after">after <input type="number" min="0" step="any" inputmode="numeric" class="dur-min" value="${min}" /> min</div>` +
+    `<div class="dur-after">after <input type="text" min="0" step="any" inputmode="numeric" class="dur-min" value="${min}" /> min</div>` +
     `<div class="input-money tou-rate-wrap">` +
     `<span class="input-money__sym">${escapeHtml(prefs.currency)}</span>` +
-    `<input type="number" min="0" step="any" inputmode="decimal" class="dur-rate" placeholder="0.30" value="${rate}" />` +
+    `<input type="text" min="0" step="any" inputmode="decimal" class="dur-rate" placeholder="0.30" value="${rate}" />` +
     `</div>` +
     `<button type="button" class="tou-del" aria-label="Remove tier">\u00d7</button>`;
   $("durRows").appendChild(row);
@@ -488,14 +488,14 @@ function addTimeFeeRow(start = 0, perHour = "", unit = "hr") {
   const row = document.createElement("div");
   row.className = "tou-row tf-row";
   row.innerHTML =
-    `<div class="dur-after">after <input type="number" min="0" step="any" inputmode="decimal" class="dur-min tf-start" value="${start}" />` +
+    `<div class="dur-after">after <input type="text" min="0" step="any" inputmode="decimal" class="dur-min tf-start" value="${start}" />` +
     `<select class="tf-start-unit" aria-label="Tier start unit">` +
     `<option value="hr"${unit === "hr" ? " selected" : ""}>hr</option>` +
     `<option value="min"${unit === "min" ? " selected" : ""}>min</option>` +
     `</select></div>` +
     `<div class="input-money tou-rate-wrap">` +
     `<span class="input-money__sym">${escapeHtml(prefs.currency)}</span>` +
-    `<input type="number" min="0" step="any" inputmode="decimal" class="tf-rate" placeholder="3" value="${perHour}" />` +
+    `<input type="text" min="0" step="any" inputmode="decimal" class="tf-rate" placeholder="3" value="${perHour}" />` +
     `</div>` +
     `<span class="tf-unit">/hr</span>` +
     `<button type="button" class="tou-del" aria-label="Remove tier">\u00d7</button>`;
@@ -681,34 +681,52 @@ function attachEvents() {
     });
   }
 
-  // Focusing a number field selects its contents ONLY while it still holds its
-  // untouched default (e.g. the "0" in a new station-time-rate row), so one
-  // keystroke replaces the default. Once you've typed your own value, focusing
-  // leaves it alone so you can edit/append instead of wiping it.
+  // These fields are text inputs (so decimal-comma locales can type a comma)
+  // with an inputmode for the numeric keypad; identify them by inputmode, not
+  // type. Focusing selects the contents ONLY while a field still holds its
+  // untouched default, so one keystroke replaces it; once you've typed your own
+  // value, focusing leaves it alone so you can edit/append.
+  const isNumField = (el) => el && el.tagName === "INPUT" &&
+    (el.inputMode === "decimal" || el.inputMode === "numeric");
   const touchedFields = new WeakSet();
   document.addEventListener("input", (e) => {
+    if (isNumField(e.target)) touchedFields.add(e.target);
+  });
+  // Block typing a character that isn't a digit or decimal separator, so unwanted
+  // input (letters, a currency symbol, %, spaces) never appears. Using beforeinput
+  // lets the browser keep the caret naturally; deletions and navigation pass
+  // through, and pasted junk is normalized/cleared on blur.
+  document.addEventListener("beforeinput", (e) => {
     const el = e.target;
-    if (el && el.tagName === "INPUT" && el.type === "number") touchedFields.add(el);
+    if (!isNumField(el)) return;
+    if (e.inputType === "insertText" && e.data && /[^\d.,]/.test(e.data)) {
+      e.preventDefault();
+    }
   });
   document.addEventListener("focusin", (e) => {
     const el = e.target;
-    if (el && el.tagName === "INPUT" && el.type === "number" && !touchedFields.has(el)) {
+    if (isNumField(el) && !touchedFields.has(el)) {
       requestAnimationFrame(() => { try { el.select(); } catch (_) { /* ignore */ } });
     }
   });
 
-  // Numbers never need more than 2 decimals: round on commit (blur/Enter).
+  // Numbers never need more than 2 decimals: round on commit (blur/Enter). This
+  // also normalizes a decimal comma to a dot so the displayed value is canonical.
   document.addEventListener("change", (e) => {
     const el = e.target;
-    if (el && el.tagName === "INPUT" && el.type === "number" && el.value.trim() !== "") {
-      const n = parseFloat(el.value);
-      if (Number.isFinite(n)) {
-        const rounded = Math.round(n * 100) / 100;
-        if (String(rounded) !== el.value) {
-          el.value = String(rounded);
-          el.dispatchEvent(new Event("input", { bubbles: true }));
-        }
+    if (!isNumField(el) || el.value.trim() === "") return;
+    const n = parseNum(el.value);
+    if (Number.isFinite(n)) {
+      const rounded = Math.round(n * 100) / 100;
+      if (String(rounded) !== el.value) {
+        el.value = String(rounded);
+        el.dispatchEvent(new Event("input", { bubbles: true }));
       }
+    } else {
+      // No usable number (e.g. "abc") - clear it so the field never keeps junk
+      // once you leave it. (Mobile keypads block letters; this covers desktop.)
+      el.value = "";
+      el.dispatchEvent(new Event("input", { bubbles: true }));
     }
   });
 
