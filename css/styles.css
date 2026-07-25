@@ -363,6 +363,21 @@ body {
 .currency-item[aria-selected="true"] .currency-item__name { color: var(--accent); }
 .currency-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
+/* Units picker menu: same right-anchored dropdown pattern as the currency menu
+   (sibling of .control-cluster so it isn't clipped by its overflow: hidden), but
+   each row is a single named label (e.g. "US (mpg, gallon)"). min-width keeps it
+   off the left viewport edge on narrow screens. */
+.unit-menu { min-width: 190px; }
+.unit-item {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  box-sizing: border-box;
+  font-size: 14px;
+}
+.unit-item[aria-selected="true"] { background: var(--field); color: var(--accent); }
+.unit-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
 /* "Adjust numbers" mini-disclosure inside the car tile */
 .tweak { margin-top: 6px; }
 .tweak > summary {

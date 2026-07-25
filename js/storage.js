@@ -20,7 +20,7 @@ export const DEFAULT_PREFS = {
   yourRate: null, // currency per kWh at the charger (volatile - NOT persisted)
   customName: "", // user's nickname for a custom car
   carOverrides: {}, // per-car edited numbers: { [carId]: { mpg, miPerKwh, batteryKwh, powerKw } }
-  units: "imperial", // "imperial" | "metric"
+  units: "imperial", // "imperial" (US) | "uk" | "metric" | "kmL"
   currency: "$",
   themeMode: "auto", // "auto" (follows local time) | "light" | "dark"
   // Advanced - charger fees & session (volatile - NOT persisted).
@@ -37,6 +37,7 @@ export function loadPrefs() {
     const parsed = JSON.parse(raw);
     const prefs = { ...DEFAULT_PREFS, ...parsed };
     prefs.currency = safeCurrency(prefs.currency);
+    prefs.units = ["imperial", "uk", "metric", "kmL"].includes(prefs.units) ? prefs.units : "imperial";
     prefs.carOverrides = safeOverrides(prefs.carOverrides);
     return prefs;
   } catch {

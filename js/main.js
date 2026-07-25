@@ -194,7 +194,7 @@ function render() {
     const elecPerMile = effective / m.miPerKwh;
     const equivGas = (effective * m.mpg) / m.miPerKwh; // canonical $/gallon
     const equivDisp = U.gasPriceForDisplay(equivGas, prefs.units);
-    const gasUnit = prefs.units === "metric" ? "/L" : "/gal";
+    const gasUnit = prefs.units === "imperial" ? "/gal" : "/L";
     const pct = gasPerMile > 0 ? Math.round((Math.abs(gasPerMile - elecPerMile) / gasPerMile) * 100) : 0;
     // "Pricier" as a percentage reads as confusing once it hits 100% (2x),
     // so at/above 100% we switch to a rounded multiplier ("~2x", "~2.5x",
@@ -317,14 +317,14 @@ function durSweetSpot(tiers, breakeven, curveArgs, m, cur) {
   const epm = eff / m.miPerKwh;
   const pct = gpm > 0 ? Math.round(((gpm - epm) / gpm) * 100) : 0;
   const distMiles = m.miPerKwh * best.kwhIntoBattery; // canonical miles added
-  const distDisp = prefs.units === "metric" ? U.kmFromMiles(distMiles) : distMiles;
+  const distDisp = (prefs.units === "metric" || prefs.units === "kmL") ? U.kmFromMiles(distMiles) : distMiles;
   return {
     min: stopMin,
     soc: Math.round(best.soc),
     range: Math.round(distDisp),
     rangeUnit: U.labels(prefs.units).distance,
     equiv: money(equivDisp, cur),
-    unit: prefs.units === "metric" ? "/L" : "/gal",
+    unit: prefs.units === "imperial" ? "/gal" : "/L",
     pct,
   };
 }
@@ -356,7 +356,7 @@ function renderAdvanced(m, be, cur, session, effective, timeFee) {
     const kwhStr = `${kwhIn.toFixed(1)} kWh`;
     if (Number.isFinite(m.miPerKwh) && m.miPerKwh > 0) {
       const dist = m.miPerKwh * kwhIn; // canonical miles
-      const distDisp = prefs.units === "metric" ? U.kmFromMiles(dist) : dist;
+      const distDisp = (prefs.units === "metric" || prefs.units === "kmL") ? U.kmFromMiles(dist) : dist;
       $("advKwh").textContent = `${Math.round(distDisp)} ${U.labels(prefs.units).distance} \u00b7 ${kwhStr}`;
     } else {
       $("advKwh").textContent = kwhStr;
@@ -374,11 +374,27 @@ function renderAdvanced(m, be, cur, session, effective, timeFee) {
   }
 }
 
-// --- Units toggle ---
+// --- Units picker ---
+// Each system's compact trigger label plus the clearer open-menu row. "Metric"
+// alone is ambiguous now (two metric systems), so the two metric triggers show
+// their economy unit (L/100km vs km/L).
+const UNIT_SYSTEMS = [
+  { system: "imperial", trigger: "US", menu: "US (mpg, gallon)" },
+  { system: "uk", trigger: "UK", menu: "UK (mpg, litre)" },
+  { system: "metric", trigger: "L/100km", menu: "Metric (L/100km)" },
+  { system: "kmL", trigger: "km/L", menu: "Metric (km/L)" },
+];
+
+function unitTriggerLabel(system) {
+  const u = UNIT_SYSTEMS.find((x) => x.system === system);
+  return u ? u.trigger : "US";
+}
+
 function applyUnitLabels() {
   const L = U.labels(prefs.units);
   const cur = prefs.currency;
-  $("unitToggle").textContent = prefs.units === "metric" ? "Metric" : "Imperial";
+  $("unitBtn").textContent = unitTriggerLabel(prefs.units);
+  renderUnitMenu();
   $("gasPriceLabel").textContent = `Gas price (${cur}/${L.gasVolume})`;
   $("yourRateLabel").textContent = `Energy rate (${cur}/kWh)`;
   $("mpgLabel").textContent = `Gas ${L.fuelEconomy}`;
@@ -568,16 +584,52 @@ function cycleTheme() {
   updateThemeToggle();
 }
 
-// --- Units toggle ---
-function toggleUnits() {
-  // Values in `prefs` are canonical, so we just flip the flag and re-render fields.
+// --- Units picker (a dropdown mirroring the currency picker) ---
+// Switch to an explicit unit system. Values in `prefs` are canonical, so we
+// capture any in-progress edits first, flip the flag, then relabel/re-render.
+function chooseUnit(system) {
   const m = readInputs();
-  persistFrom(m); // capture any edits in current units first
-  prefs.units = prefs.units === "metric" ? "imperial" : "metric";
+  persistFrom(m); // capture any edits in the current units first
+  prefs.units = system;
   savePrefs(prefs);
   applyUnitLabels();
   writeDisplayValues();
   render();
+  $("unitBtn").textContent = unitTriggerLabel(system);
+  closeUnitMenu();
+}
+
+// Build the units menu rows, marking the active system (aria-selected).
+function renderUnitMenu() {
+  const ul = $("unitMenu");
+  if (!ul) return;
+  ul.innerHTML = "";
+  for (const { system, menu } of UNIT_SYSTEMS) {
+    const li = document.createElement("li");
+    li.className = "combo__item unit-item";
+    li.dataset.system = system;
+    li.setAttribute("role", "option");
+    li.setAttribute("tabindex", "-1");
+    li.setAttribute("aria-selected", system === prefs.units ? "true" : "false");
+    li.textContent = menu;
+    ul.appendChild(li);
+  }
+}
+
+function openUnitMenu() {
+  closeCurrencyMenu(); // never leave both menus open at once
+  renderUnitMenu();
+  $("unitMenu").hidden = false;
+  $("unitBtn").setAttribute("aria-expanded", "true");
+  const active =
+    $("unitMenu").querySelector('[aria-selected="true"]') ||
+    $("unitMenu").querySelector(".unit-item");
+  if (active) active.focus();
+}
+
+function closeUnitMenu() {
+  $("unitMenu").hidden = true;
+  $("unitBtn").setAttribute("aria-expanded", "false");
 }
 
 // Currency is display-only (both prices are entered in the user's own currency),
@@ -636,6 +688,7 @@ function renderCurrencyMenu() {
 }
 
 function openCurrencyMenu() {
+  closeUnitMenu(); // never leave both menus open at once
   renderCurrencyMenu();
   $("currencyMenu").hidden = false;
   $("currencyBtn").setAttribute("aria-expanded", "true");
@@ -853,7 +906,18 @@ function attachEvents() {
     render();
   });
 
-  $("unitToggle").addEventListener("click", toggleUnits);
+  $("unitBtn").addEventListener("click", () => {
+    if ($("unitBtn").getAttribute("aria-expanded") === "true") closeUnitMenu();
+    else openUnitMenu();
+  });
+  // mousedown + preventDefault selects before any focus/blur race can close us.
+  $("unitMenu").addEventListener("mousedown", (e) => {
+    const li = e.target.closest(".unit-item");
+    if (!li) return;
+    e.preventDefault();
+    chooseUnit(li.dataset.system);
+    $("unitBtn").focus();
+  });
   // Currency picker: a custom dropdown (the native select menu is unstylable).
   $("currencyBtn").addEventListener("click", () => {
     if ($("currencyBtn").getAttribute("aria-expanded") === "true") closeCurrencyMenu();
@@ -867,31 +931,55 @@ function attachEvents() {
     chooseCurrency(li.dataset.sym);
     $("currencyBtn").focus();
   });
-  // Outside click closes the menu.
+  // Outside click closes either menu.
   document.addEventListener("click", (e) => {
-    if ($("currencyMenu").hidden) return;
-    if (e.target.closest("#currencyMenu") || e.target.closest("#currencyBtn")) return;
-    closeCurrencyMenu();
+    if (!$("currencyMenu").hidden &&
+        !e.target.closest("#currencyMenu") && !e.target.closest("#currencyBtn")) {
+      closeCurrencyMenu();
+    }
+    if (!$("unitMenu").hidden &&
+        !e.target.closest("#unitMenu") && !e.target.closest("#unitBtn")) {
+      closeUnitMenu();
+    }
   });
   // Keyboard: Escape closes (focus returns to trigger); arrows move; Enter picks.
   document.addEventListener("keydown", (e) => {
-    if ($("currencyMenu").hidden) return;
-    const items = Array.from($("currencyMenu").querySelectorAll(".currency-item"));
-    if (!items.length) return;
-    const idx = items.indexOf(document.activeElement);
-    if (e.key === "Escape") {
-      closeCurrencyMenu();
-      $("currencyBtn").focus();
-    } else if (e.key === "ArrowDown") {
-      e.preventDefault();
-      (items[idx + 1] || items[0]).focus();
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      (items[idx - 1] || items[items.length - 1]).focus();
-    } else if ((e.key === "Enter" || e.key === " ") && idx >= 0) {
-      e.preventDefault();
-      chooseCurrency(items[idx].dataset.sym);
-      $("currencyBtn").focus();
+    if (!$("currencyMenu").hidden) {
+      const items = Array.from($("currencyMenu").querySelectorAll(".currency-item"));
+      if (!items.length) return;
+      const idx = items.indexOf(document.activeElement);
+      if (e.key === "Escape") {
+        closeCurrencyMenu();
+        $("currencyBtn").focus();
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        (items[idx + 1] || items[0]).focus();
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        (items[idx - 1] || items[items.length - 1]).focus();
+      } else if ((e.key === "Enter" || e.key === " ") && idx >= 0) {
+        e.preventDefault();
+        chooseCurrency(items[idx].dataset.sym);
+        $("currencyBtn").focus();
+      }
+    } else if (!$("unitMenu").hidden) {
+      const items = Array.from($("unitMenu").querySelectorAll(".unit-item"));
+      if (!items.length) return;
+      const idx = items.indexOf(document.activeElement);
+      if (e.key === "Escape") {
+        closeUnitMenu();
+        $("unitBtn").focus();
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        (items[idx + 1] || items[0]).focus();
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        (items[idx - 1] || items[items.length - 1]).focus();
+      } else if ((e.key === "Enter" || e.key === " ") && idx >= 0) {
+        e.preventDefault();
+        chooseUnit(items[idx].dataset.system);
+        $("unitBtn").focus();
+      }
     }
   });
   $("themeToggle").addEventListener("click", cycleTheme);
