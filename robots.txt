@@ -1,0 +1,16 @@
+# Search engines: full access. This is a free public tool; we want it found.
+User-agent: *
+Allow: /
+
+# AI retrieval crawlers: explicitly allowed so the tool can be surfaced and
+# cited in ChatGPT, Perplexity, and Claude answers (a growing discovery channel).
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+Sitemap: https://icloud17.github.io/should-I-charge-my-car/sitemap.xml

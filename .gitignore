@@ -17,6 +17,8 @@ npm-debug.log*
 # Local browser-testing artifacts (screenshots, Playwright output)
 .playwright-mcp/
 /*.png
+# ...except the social-preview image, which is a shipped asset.
+!/og-image.png
 
 # Seed script cache (large bulk CSV from fueleconomy.gov)
 scripts/.vehicles.cache.csv

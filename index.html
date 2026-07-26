@@ -6,6 +6,59 @@
   <meta name="theme-color" content="#15803d" />
   <meta name="description" content="Find the max price per kWh you can pay to charge your plug-in hybrid before gas becomes cheaper." />
   <title>Should I Charge My Car?</title>
+
+  <!-- SEO + social link previews. Absolute URLs point at the current GitHub
+       Pages address; when a custom domain is added, swapping this one base is
+       enough. Open Graph drives the preview card on Reddit, iMessage, WhatsApp,
+       Slack, Facebook, etc. None of this changes the app UI or the tab title. -->
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://icloud17.github.io/should-I-charge-my-car/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Should I Charge My Car?" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:title" content="Should I Charge My Car? PHEV Charge-vs-Gas Calculator" />
+  <meta property="og:description" content="A dead-simple calculator that tells plug-in hybrid owners if charging is actually cheaper than gas right now, break-even price and all." />
+  <meta property="og:url" content="https://icloud17.github.io/should-I-charge-my-car/" />
+  <meta property="og:image" content="https://icloud17.github.io/should-I-charge-my-car/og-image.png" />
+  <meta property="og:image:width" content="1380" />
+  <meta property="og:image:height" content="724" />
+  <meta property="og:image:alt" content="Should I Charge My Car? A calculator that shows if charging a plug-in hybrid is cheaper than gas right now." />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://icloud17.github.io/should-I-charge-my-car/og-image.png" />
+  <meta name="twitter:image:alt" content="Should I Charge My Car? A calculator that shows if charging a plug-in hybrid is cheaper than gas right now." />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Should I Charge My Car?",
+    "url": "https://icloud17.github.io/should-I-charge-my-car/",
+    "description": "A free calculator that tells plug-in hybrid (PHEV) owners whether charging is cheaper than gasoline right now, including the break-even price per kWh and real charger fees.",
+    "applicationCategory": "UtilitiesApplication",
+    "operatingSystem": "Any (web-based, installable PWA)",
+    "browserRequirements": "Requires JavaScript",
+    "inLanguage": "en",
+    "isAccessibleForFree": true,
+    "dateModified": "2026-07-26",
+    "sameAs": "https://github.com/iCloud17/should-I-charge-my-car",
+    "publisher": {
+      "@type": "Organization",
+      "name": "Should I Charge My Car?",
+      "url": "https://icloud17.github.io/should-I-charge-my-car/"
+    },
+    "image": "https://icloud17.github.io/should-I-charge-my-car/og-image.png",
+    "screenshot": "https://icloud17.github.io/should-I-charge-my-car/og-image.png",
+    "featureList": [
+      "Charge-vs-gas verdict from your car, gas price, and charger rate",
+      "Break-even price per kWh",
+      "Real charger fees: time-of-day, by-duration, session and per-hour fees, taxes",
+      "Charge-time and range estimate",
+      "441 plug-in hybrids from EPA data",
+      "Works offline, installable PWA, no login"
+    ],
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+  }
+  </script>
+
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
   <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="css/styles.css" />
@@ -24,6 +77,12 @@
 </head>
 <body>
   <main class="app">
+    <!-- Crawl/AI fallback: only shown when JavaScript is off, so normal users
+         never see it. Gives non-JS crawlers (and AI retrieval bots that don't
+         render JS) a plain-text description of what the tool does. -->
+    <noscript>
+      <p>Should I Charge My Car? is a free calculator for plug-in hybrid (PHEV) owners. Enter your car, the local gas price, and the charger&rsquo;s price per kWh to see whether charging is cheaper than gas right now, including the break-even price per kWh and real charger fees. Please enable JavaScript to use the calculator.</p>
+    </noscript>
     <header class="app__head">
       <div class="app__head-actions">
         <div class="control-cluster">
