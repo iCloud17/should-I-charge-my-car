@@ -70,6 +70,8 @@ function render() {
   // time; flat is a single rate. The by-the-hour time fee is layered on top.
   const timeTiers = readTimeFee();
   const hasTimeTiers = timeTiers.length > 0;
+  const taxRate = readTaxRate();
+  const hasTax = taxRate > 0;
   let rateOf = null, schedule = null, hasRate = false, startClockMin = 0, durTiers = null;
   if (rateMode === "tod") {
     schedule = readSchedule();
@@ -84,7 +86,7 @@ function render() {
     rateOf = () => (hasRate ? m.yourRate : 0);
   }
 
-  const curveArgs = { batteryKwh: m.batteryKwh, startPct: m.startPct, targetPct: m.targetPct, powerKw: m.powerKw, rateOf, sessionFee: m.sessionFee, timeTiers, breakeven: be, startClockMin };
+  const curveArgs = { batteryKwh: m.batteryKwh, startPct: m.startPct, targetPct: m.targetPct, powerKw: m.powerKw, rateOf, sessionFee: m.sessionFee, timeTiers, taxRate, breakeven: be, startClockMin };
 
   // Full charge first: its duration is the far end of the "charge for" slider.
   const full = chargeCurve({ ...curveArgs, capMinutes: Infinity });
@@ -104,11 +106,15 @@ function render() {
   const kwh = session.kwhFromCharger;
   const timeFee = session.timeFee;
   const hasTimeFee = timeFee > 0;
-  const hasFees = m.sessionFee > 0 || hasTimeFee;
+  const hasFees = m.sessionFee > 0 || hasTimeFee || hasTax;
 
   let effective = NaN;
   if (hasRate) {
-    effective = kwh > 0 ? session.effectivePerKwh : m.yourRate;
+    // With a real charge we use the all-in average (energy + fees + tax). Before
+    // a battery size is known there's no kWh to amortize per-session/per-hour
+    // fees over, so we fall back to the entered rate - but tax is a plain
+    // per-kWh multiplier that applies regardless, so keep it in the fallback.
+    effective = kwh > 0 ? session.effectivePerKwh : m.yourRate * (1 + taxRate);
   }
   const showEffective = rateMode !== "flat" || hasFees;
 
@@ -123,6 +129,7 @@ function render() {
   }
   if (m.sessionFee > 0) track("fees-session");
   if (hasTimeTiers) track("fees-time");
+  if (hasTax) track("fees-tax");
 
   // The longest you can charge here while still beating gas (accurate crossover).
   // Applies whenever charging longer worsens the effective price: a time fee or
@@ -534,6 +541,31 @@ function addTimeFeeRow(start = 0, perHour = "", unit = "hr") {
     `<span class="tf-unit">/hr</span>` +
     `<button type="button" class="tou-del" aria-label="Remove tier">\u00d7</button>`;
   $("timeFeeRows").appendChild(row);
+}
+
+// Sum every tax row into a single fraction (e.g. 6.25% + 1% + 1% -> 0.0825).
+// Applied to the whole bill in chargeCurve, matching how chargers add sales tax
+// on top of the listed rate and fees.
+function readTaxRate() {
+  let pct = 0;
+  for (const r of document.querySelectorAll("#taxRows .tax-row")) {
+    const v = parseNum(r.querySelector(".tax-pct").value);
+    if (Number.isFinite(v) && v > 0) pct += v;
+  }
+  return pct / 100;
+}
+
+function addTaxRow(label = "", pct = "") {
+  const row = document.createElement("div");
+  row.className = "tou-row tax-row";
+  row.innerHTML =
+    `<input type="text" class="tax-label" placeholder="Tax name (optional)" value="${escapeHtml(label)}" />` +
+    `<div class="input-money has-suffix tax-pct-wrap">` +
+    `<input type="text" min="0" step="any" inputmode="decimal" class="tax-pct" placeholder="6.25" value="${escapeHtml(pct)}" />` +
+    `<span class="input-money__suffix">%</span>` +
+    `</div>` +
+    `<button type="button" class="tou-del" aria-label="Remove tax">\u00d7</button>`;
+  $("taxRows").appendChild(row);
 }
 
 // Reflect the selected pricing mode: show the right editor, and disable the flat
@@ -1044,7 +1076,21 @@ function attachEvents() {
     }
   });
 
-  // Info notes: show on hover/focus (desktop), tap to pin open (touch).
+  $("taxAdd").addEventListener("click", () => {
+    addTaxRow();
+    render();
+  });
+  $("taxRows").addEventListener("input", render);
+  $("taxRows").addEventListener("click", (e) => {
+    if (e.target.classList.contains("tou-del")) {
+      e.target.closest(".tou-row").remove();
+      render();
+    }
+  });
+
+  // Info notes: show on hover/focus (desktop), tap to pin open (touch). A pinned
+  // note dismisses on Escape or a pointer/focus event outside it - not only by
+  // tapping the (i) again.
   const wireInfo = (btnId, noteId) => {
     const infoBtn = $(btnId), infoNote = $(noteId);
     if (!infoBtn || !infoNote) return;
@@ -1053,14 +1099,32 @@ function attachEvents() {
       infoNote.hidden = !v;
       infoBtn.setAttribute("aria-expanded", String(v));
     };
-    infoBtn.addEventListener("mouseenter", () => show(true));
+    const outside = (e) => !infoBtn.contains(e.target) && !infoNote.contains(e.target);
+    const onDocDown = (e) => { if (outside(e)) setPinned(false); };
+    const onKey = (e) => { if (e.key === "Escape") { setPinned(false); infoBtn.blur(); } };
+    const setPinned = (v) => {
+      if (v === pinned) { show(v); return; }
+      pinned = v;
+      show(v);
+      // Capture-phase so we still catch clicks on elements that stop propagation.
+      if (v) {
+        document.addEventListener("pointerdown", onDocDown, true);
+        document.addEventListener("keydown", onKey, true);
+      } else {
+        document.removeEventListener("pointerdown", onDocDown, true);
+        document.removeEventListener("keydown", onKey, true);
+      }
+    };
+    infoBtn.addEventListener("mouseenter", () => { if (!pinned) show(true); });
     infoBtn.addEventListener("mouseleave", () => { if (!pinned) show(false); });
-    infoBtn.addEventListener("focus", () => show(true));
+    infoBtn.addEventListener("focus", () => { if (!pinned) show(true); });
     infoBtn.addEventListener("blur", () => { if (!pinned) show(false); });
-    infoBtn.addEventListener("click", () => { pinned = !pinned; show(pinned); });
+    infoBtn.addEventListener("click", (e) => { e.stopPropagation(); setPinned(!pinned); });
   };
   wireInfo("carInfoBtn", "carInfoNote");
   wireInfo("powerInfoBtn", "powerInfoNote");
+  wireInfo("timeFeeInfoBtn", "timeFeeInfoNote");
+  wireInfo("taxInfoBtn", "taxInfoNote");
 
   $("carSearch").addEventListener("focus", (e) => {
     track("car-search-focused"); // diagnostic: did they engage the first step at all?
@@ -1101,6 +1165,7 @@ function attachEvents() {
     $("touRows").innerHTML = "";
     $("durRows").innerHTML = "";
     $("timeFeeRows").innerHTML = "";
+    $("taxRows").innerHTML = "";
     $("carInfoNote").hidden = true;
     $("carInfoBtn").setAttribute("aria-expanded", "false");
     boot();

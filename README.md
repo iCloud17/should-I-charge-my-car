@@ -18,8 +18,7 @@ A PHEV runs on either electricity or gasoline, so every charge is a real choice,
 - Calculates the break-even charging price: the highest $/kWh at which charging still beats gas for your car.
 - Puts it in plain terms, e.g. "like $1.78/gal gas, 54% cheaper."
 - Estimates how long to charge to your target level, and the range you add.
-- Handles real charger pricing: flat, time-of-day (peak/off-peak), or by-duration tiers, plus one-time session fees and per-hour connected-time fees.
-- Finds the **sweet spot** when charging gets pricier the longer you go: how long to charge for the best deal, with a "Charge for" slider to price partial charges.
+- Handles real charger pricing: flat, time-of-day (peak/off-peak), or by-duration tiers, plus one-time session fees, per-hour connected-time fees, and percentage sales taxes.- Finds the **sweet spot** when charging gets pricier the longer you go: how long to charge for the best deal, with a "Charge for" slider to price partial charges.
 - Includes 441 plug-in hybrids from the US EPA (2012 to 2026), searchable, or enter your own numbers.
 - Supports Imperial or metric units and any currency.
 - Saves your car on your device and works offline (installable PWA).

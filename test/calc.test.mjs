@@ -100,6 +100,49 @@ test("chargeCurve: a session fee raises the effective price by fee/kWh", () => {
   assert.ok(near(c.effectivePerKwh, 0.30 + 2 / (10 / 0.88), 1e-6));
 });
 
+test("chargeCurve: tax scales the whole bill (energy + fees)", () => {
+  const args = {
+    batteryKwh: 10, startPct: 0, targetPct: 100, powerKw: 10,
+    rateOf: () => 0.30, sessionFee: 2, timeTiers: [{ start: 0, perHour: 1 }], breakeven: NaN,
+  };
+  const untaxed = chargeCurve({ ...args });
+  const taxed = chargeCurve({ ...args, taxRate: 0.0825 });
+  // Every dollar (energy, session fee, time fee) is multiplied by 1 + tax.
+  assert.ok(near(taxed.totalCost, untaxed.totalCost * 1.0825, 1e-9));
+  assert.ok(near(taxed.effectivePerKwh, untaxed.effectivePerKwh * 1.0825, 1e-9));
+  // The physical charge (energy, time, SoC) is unchanged by tax.
+  assert.ok(near(taxed.kwhFromCharger, untaxed.kwhFromCharger, 1e-9));
+  assert.ok(near(taxed.minutes, untaxed.minutes, 1e-9));
+});
+
+test("chargeCurve: taxRate <= 0 is a no-op", () => {
+  const args = {
+    batteryKwh: 10, startPct: 0, targetPct: 100, powerKw: 10,
+    rateOf: () => 0.30, sessionFee: 1, timeTiers: [], breakeven: NaN,
+  };
+  const base = chargeCurve({ ...args });
+  const zero = chargeCurve({ ...args, taxRate: 0 });
+  const neg = chargeCurve({ ...args, taxRate: -0.1 });
+  assert.ok(near(zero.effectivePerKwh, base.effectivePerKwh, 1e-12));
+  assert.ok(near(neg.effectivePerKwh, base.effectivePerKwh, 1e-12));
+});
+
+test("chargeCurve: tax pushes the worth-it limit earlier", () => {
+  const base = {
+    batteryKwh: 15, startPct: 0, targetPct: 100, powerKw: 6.6,
+    // Cheap for the first hour, then well above break-even: the running
+    // average crosses gas partway through, giving a finite worth limit.
+    rateOf: (_clock, elapsed) => (elapsed < 60 ? 0.10 : 0.50),
+    sessionFee: 0, timeTiers: [], breakeven: 0.30,
+  };
+  const untaxed = chargeCurve({ ...base });
+  const taxed = chargeCurve({ ...base, taxRate: 0.25 });
+  assert.ok(untaxed.everWorth);
+  assert.ok(taxed.everWorth);
+  // A higher all-in price crosses break-even sooner, so the worth limit shrinks.
+  assert.ok(taxed.worthLimitMin <= untaxed.worthLimitMin);
+});
+
 test("chargeCurve: capping the time gives a partial charge", () => {
   const args = {
     batteryKwh: 15, startPct: 0, targetPct: 100, powerKw: 6.6,

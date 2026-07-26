@@ -71,12 +71,12 @@
           <div class="field-label-row">
             <label for="carSearch">Your car</label>
             <button type="button" id="carInfoBtn" class="info-btn" aria-label="Why isn't my exact year listed?" aria-expanded="false">i</button>
+            <p class="hint info-note" id="carInfoNote" hidden>Don&rsquo;t see your exact year? Pick the closest one. A plug-in hybrid&rsquo;s MPG and efficiency rarely change within a generation, so the result comes out essentially the same. Not listed at all, or want exact figures? Pick &ldquo;My own car&rdquo; at the top of the list to enter your own MPG, efficiency, and battery.<br /><br />Car data: US EPA &amp; DOE (<a href="https://www.fueleconomy.gov" target="_blank" rel="noopener">fueleconomy.gov</a>).</p>
           </div>
           <div class="combo">
             <input id="carSearch" type="text" autocomplete="off" spellcheck="false" placeholder="Search make or model…" role="combobox" aria-expanded="false" aria-controls="carResults" aria-autocomplete="list" />
             <ul id="carResults" class="combo__results" role="listbox" hidden></ul>
           </div>
-          <p class="hint info-note" id="carInfoNote" hidden>Don&rsquo;t see your exact year? Pick the closest one. A plug-in hybrid&rsquo;s MPG and efficiency rarely change within a generation, so the result comes out essentially the same. Not listed at all, or want exact figures? Pick &ldquo;My own car&rdquo; at the top of the list to enter your own MPG, efficiency, and battery.<br /><br />Car data: US EPA &amp; DOE (<a href="https://www.fueleconomy.gov" target="_blank" rel="noopener">fueleconomy.gov</a>).</p>
         </div>
 
         <details class="tweak" id="tweak">
@@ -145,7 +145,7 @@
 
     <!-- Charger fees: optional extras, only if the charger lists them -->
     <details class="card disclosure" id="chargerFees">
-      <summary>Charger fees (service, time)</summary>
+      <summary>Charger fees (service, time, tax)</summary>
       <div class="disclosure__body">
         <p class="hint hint--lead">Add these only if the charger&rsquo;s screen lists them.</p>
         <div class="field">
@@ -157,10 +157,22 @@
           </div>
         </div>
         <div class="field">
-          <label>Station time rate while connected</label>
+          <div class="field-label-row">
+            <label>Station time rate while connected</label>
+            <button type="button" id="timeFeeInfoBtn" class="info-btn" aria-label="What is the station time rate?" aria-expanded="false">i</button>
+            <p class="hint info-note" id="timeFeeInfoNote" hidden>An hourly fee for staying plugged in, on top of the energy cost. Example: free for the first 4 hr, then $5/hr.</p>
+          </div>
           <div id="timeFeeRows" class="tou-rows"></div>
           <button type="button" id="timeFeeAdd" class="link tou-add">+ Add rate</button>
-          <p class="hint">An hourly fee for staying plugged in, on top of the energy cost. Example: free for the first 4 hr, then $5/hr.</p>
+        </div>
+        <div class="field">
+          <div class="field-label-row">
+            <label>Taxes</label>
+            <button type="button" id="taxInfoBtn" class="info-btn" aria-label="How are taxes applied?" aria-expanded="false">i</button>
+            <p class="hint info-note" id="taxInfoNote" hidden>A percentage added to the whole bill. Add one row per line on the charger&rsquo;s screen (e.g. state 6.25%, city 1%); we total them.</p>
+          </div>
+          <div id="taxRows" class="tou-rows"></div>
+          <button type="button" id="taxAdd" class="link tou-add">+ Add tax</button>
         </div>
       </div>
     </details>
@@ -184,6 +196,7 @@
             <div class="field-label-row">
               <label for="powerKw">Charge power (kW)</label>
               <button type="button" id="powerInfoBtn" class="info-btn" aria-label="How is the charge rate set?" aria-expanded="false">i</button>
+              <p class="hint info-note" id="powerInfoNote" hidden>This car&rsquo;s max AC charge rate is estimated from EPA charge-time data, so it&rsquo;s approximate. It affects the time estimate and the Level 2 cap, not the charge-or-gas verdict. Edit it if you know your car&rsquo;s exact rate.</p>
             </div>
             <input id="powerKw" type="text" min="0" step="any" inputmode="decimal" autocomplete="off" value="6.6" />
           </div>
@@ -192,7 +205,6 @@
             <input id="batteryKwh" type="text" min="0" step="any" inputmode="decimal" autocomplete="off" value="" />
           </div>
         </div>
-        <p class="hint info-note" id="powerInfoNote" hidden>This car&rsquo;s max AC charge rate is estimated from EPA charge-time data, so it&rsquo;s approximate. It affects the time estimate and the Level 2 cap, not the charge-or-gas verdict. Edit it if you know your car&rsquo;s exact rate.</p>
         <p class="hint">PHEVs charge on AC only, so speed is capped by the car&rsquo;s onboard charger. Power and battery affect the time estimate only.</p>
 
         <div class="field">

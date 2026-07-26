@@ -133,7 +133,9 @@ export function timeFeeCost(tiers, minutes) {
  * `rateOf(clockMin, elapsedMin)` returns the energy $/kWh at a point in the
  * session (constant for flat pricing). Fees included: a one-time `sessionFee`
  * and a by-the-hour `timeTiers` fee. Everything is billed against energy pulled
- * from the charger, so this matches breakevenKwhPrice.
+ * from the charger, so this matches breakevenKwhPrice. `taxRate` is a fraction
+ * (e.g. 0.0825 for 8.25%) applied to the whole bill - energy plus every fee -
+ * matching how chargers add sales tax on top of the listed prices.
  */
 export function chargeCurve({
   batteryKwh,
@@ -143,6 +145,7 @@ export function chargeCurve({
   rateOf = () => 0,
   sessionFee = 0,
   timeTiers = [],
+  taxRate = 0,
   breakeven = NaN,
   capMinutes = Infinity,
   startClockMin = 0,
@@ -150,11 +153,12 @@ export function chargeCurve({
   kneePct = 92.5,
   taperEndFactor = 0.25,
 }) {
+  const taxFactor = 1 + (taxRate > 0 ? taxRate : 0);
   const start = Math.max(0, Math.min(100, startPct));
   const target = Math.max(0, Math.min(100, targetPct));
   const empty = {
     kwhIntoBattery: 0, kwhFromCharger: 0, minutes: 0, soc: start,
-    energyCost: 0, timeFee: 0, totalCost: sessionFee, effectivePerKwh: NaN,
+    energyCost: 0, timeFee: 0, totalCost: sessionFee * taxFactor, effectivePerKwh: NaN,
     fullMinutes: 0, fullSoc: start, worthLimitMin: 0, worthLimitSoc: start, everWorth: false,
   };
   if (!(target > start) || !(batteryKwh > 0) || !(powerKw > 0)) return empty;
@@ -185,7 +189,7 @@ export function chargeCurve({
       const kwhIntoCap = kwhIntoBattery + battPerStep * frac * f2;
       const energyCap = energyCost + (Number.isFinite(rate) ? rate : 0) * chargerPerStep * frac * f2;
       const timeFeeCap = timeFeeCost(timeTiers, capHours * 60);
-      const totalCap = sessionFee + energyCap + timeFeeCap;
+      const totalCap = (sessionFee + energyCap + timeFeeCap) * taxFactor;
       snap = {
         kwhIntoBattery: kwhIntoCap, kwhFromCharger: kwhFromCap, minutes: capHours * 60,
         soc: socOf(kwhIntoCap), energyCost: energyCap, timeFee: timeFeeCap, totalCost: totalCap,
@@ -203,14 +207,14 @@ export function chargeCurve({
     // Track the last elapsed point that still beats gas.
     if (breakeven > 0 && kwhFromCharger > 0) {
       const connectedMin = hours * 60;
-      const eff = (sessionFee + energyCost + timeFeeCost(timeTiers, connectedMin)) / kwhFromCharger;
+      const eff = ((sessionFee + energyCost + timeFeeCost(timeTiers, connectedMin)) * taxFactor) / kwhFromCharger;
       if (eff <= breakeven) { everWorth = true; worthLimitMin = connectedMin; worthLimitSoc = socOf(kwhIntoBattery); }
     }
   }
 
   const fullMinutes = hours * 60;
   const fullTimeFee = timeFeeCost(timeTiers, fullMinutes);
-  const fullTotal = sessionFee + energyCost + fullTimeFee;
+  const fullTotal = (sessionFee + energyCost + fullTimeFee) * taxFactor;
   const full = {
     kwhIntoBattery, kwhFromCharger, minutes: fullMinutes, soc: target,
     energyCost, timeFee: fullTimeFee, totalCost: fullTotal,

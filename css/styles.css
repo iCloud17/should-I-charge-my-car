@@ -298,12 +298,29 @@ body {
 .info-btn:active { transform: scale(0.9); }
 /* Invisible 44x44 hit area so the tiny "i" stays tappable (WCAG target size). */
 .info-btn::after { content: ""; position: absolute; inset: -13px; }
+/* The note is a floating popover, not an in-flow block. On desktop the whole
+   app column is vertically centered (`align-items: safe center`), so an in-flow
+   note that grows the page height would shift the column up, slide the (i) out
+   from under the cursor, hide the note, and flicker forever. Positioning it
+   absolutely (anchored to the label row so it sits right under the title/(i))
+   keeps page height constant, so the trigger never moves. */
+.field-label-row:has(> .info-note) { position: relative; }
 .info-note {
-  margin-top: 8px;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin-top: 6px;
   padding: 10px 12px;
   background: var(--card-2);
+  border: 1px solid var(--line);
   border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
 }
+/* The charge-power label sits in a half-width column; break its note out to
+   span the full two-column row so the text isn't crammed. */
+#powerInfoNote { right: auto; width: calc(200% + 12px); }
 .info-note a { color: var(--accent); font-weight: 700; }
 
 /* Searchable car combobox */
@@ -562,6 +579,10 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
    `.field + .field` rhythm doesn't match `.field + .field-row`, leaving zero
    gap, which lets the info button's tap target overlap the presets above. */
 .field:has(.presets) + .field-row { margin-top: 14px; }
+/* A hint paragraph followed straight by a field (e.g. the AC-charging note
+   above "Battery now") otherwise butts right up against the slider label;
+   restore the normal field rhythm. Lead hints already carry their own gap. */
+#advanced .hint:not(.hint--lead) + .field { margin-top: 14px; }
 
 .hint {
   margin: 12px 0 0;
@@ -583,6 +604,11 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 }
 .check input { width: 20px; height: 20px; accent-color: var(--accent); flex: none; }
 .tou-rows { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 8px; }
+/* An empty editor (no rows added yet) shouldn't reserve vertical space; that
+   dead gap pushes the "+ Add" button away from its label and makes each fee
+   block look airy. Removing it from layout keeps the label right above the
+   add button; it reappears the moment a row is added. */
+.tou-rows:empty { display: none; }
 /* Wrap the multi-control schedule rows on very narrow widths so the rate
    field or delete button drops to a second line instead of spilling out of
    the card. */
@@ -614,6 +640,23 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 .tou-add { display: inline-block; margin-top: 2px; }
 .tf-unit { flex: 0 0 auto; font-size: 14px; font-weight: 600; color: var(--muted); }
 .result__tou { color: var(--text); }
+
+/* Charger fees: three distinct fee types (service / time / tax). A hairline
+   divider reads as separate sections without the tall whitespace that made
+   them feel like one long block. The label-row margin is dropped so the field's
+   own 6px gap sets the label→controls rhythm. */
+#chargerFees .field-label-row { margin-bottom: 0; }
+#chargerFees .disclosure__body .field + .field {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+/* Tax rows: an optional name plus a percentage, summed across rows. */
+.tax-label { flex: 1 1 120px; min-width: 0; font-size: 15px; padding: 11px 12px; }
+.tax-pct-wrap { flex: 0 0 96px; }
+.tax-pct-wrap.input-money input { padding-left: 12px; padding-right: 34px; }
+.tax-pct-wrap .input-money__suffix { font-size: 15px; }
 
 /* Exclusive pricing-mode selector */
 .segmented {
