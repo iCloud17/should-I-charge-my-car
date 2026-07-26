@@ -1063,6 +1063,7 @@ function attachEvents() {
   wireInfo("powerInfoBtn", "powerInfoNote");
 
   $("carSearch").addEventListener("focus", (e) => {
+    track("car-search-focused"); // diagnostic: did they engage the first step at all?
     e.target.select();
     renderCarResults(e.target.value === "My own car" ? "" : e.target.value);
   });
