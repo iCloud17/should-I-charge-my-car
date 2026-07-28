@@ -36,10 +36,15 @@ test("powerAtSoc: flat below the knee, tapers above it", () => {
   assert.ok(near(powerAtSoc(96.25, 6.6), 6.6 * 0.625)); // halfway through the CV taper
 });
 
-test("verdict buckets around break-even with an 8% band", () => {
-  assert.equal(verdict(0.20, 0.25), "worth"); // <= 0.23
-  assert.equal(verdict(0.30, 0.25), "gas");   // >= 0.27
+test("verdict buckets around break-even with a 5% band", () => {
+  assert.equal(verdict(0.20, 0.25), "worth"); // <= 0.2375
+  assert.equal(verdict(0.30, 0.25), "gas");   // >= 0.2625
   assert.equal(verdict(0.25, 0.25), "close"); // inside the band
+  // A gap that lands inside the old 8% band but clears the tighter 5% one.
+  assert.equal(verdict(0.237, 0.25), "worth");
+  assert.equal(verdict(0.263, 0.25), "gas");
+  // An explicit margin still overrides the default.
+  assert.equal(verdict(0.237, 0.25, 0.08), "close");
   assert.equal(verdict(0.25, NaN), "unknown");
   assert.equal(verdict(NaN, 0.25), "unknown");
 });
@@ -169,4 +174,43 @@ test("chargeCurve: time fee flips worth-it and sets a worth limit", () => {
   const freebie = chargeCurve({ ...base, sessionFee: 0, timeTiers: [{ start: 0, perHour: 0 }] });
   assert.equal(freebie.everWorth, true);
   assert.ok(near(freebie.worthLimitMin, freebie.fullMinutes, 1e-6));
+});
+
+test("chargeCurve: best-value stop maximises savings below 100% under a time fee", () => {
+  const be = 0.35;
+  const c = chargeCurve({
+    batteryKwh: 15, startPct: 0, targetPct: 100, powerKw: 6.6,
+    rateOf: () => 0, sessionFee: 0.25, timeTiers: [{ start: 0, perHour: 2 }], breakeven: be,
+  });
+  // Below the knee the marginal kWh (fee/power) beats gas, so savings keep
+  // rising; the taper then pushes the marginal past break-even before 100%, so
+  // the most-savings stop lands below full - and still beats gas.
+  assert.ok(c.bestMin > 0);
+  assert.ok(c.bestMin < c.fullMinutes);
+  assert.ok(c.bestSoc > 0 && c.bestSoc < 100);
+  assert.ok(c.bestEffectivePerKwh < be);
+});
+
+test("chargeCurve: with no per-hour fee the best-value stop is the full charge", () => {
+  const be = 0.35;
+  const c = chargeCurve({
+    batteryKwh: 10, startPct: 0, targetPct: 100, powerKw: 10,
+    rateOf: () => 0.20, sessionFee: 0.5, timeTiers: [], breakeven: be,
+  });
+  // A one-time fee plus a flat sub-gas rate that still nets a saving: every kWh
+  // keeps adding savings (marginal 0.20 < 0.35), so the peak is the full charge.
+  assert.ok(near(c.bestSoc, 100, 1e-6));
+  assert.ok(near(c.bestMin, c.fullMinutes, 1e-6));
+});
+
+test("chargeCurve: no best-value stop when charging never beats gas", () => {
+  const c = chargeCurve({
+    batteryKwh: 10, startPct: 0, targetPct: 100, powerKw: 10,
+    rateOf: () => 0.30, sessionFee: 2, timeTiers: [], breakeven: 0.35,
+  });
+  // The $2 session fee never amortizes at a 0.05/kWh margin, so no stop saves
+  // money: best-value fields stay at their honest defaults instead of garbage.
+  assert.equal(c.everWorth, false);
+  assert.equal(c.bestMin, 0);
+  assert.ok(Number.isNaN(c.bestEffectivePerKwh));
 });

@@ -13,6 +13,9 @@ let rateMode = "flat"; // "flat" | "tod" | "dur" (volatile - never persisted)
 let chargeCapMin = null; // "charge for" slider value in minutes (volatile)
 let capTouched = false;  // has the user dragged the "charge for" slider?
 
+// Above this, a stop-early recommendation reads as "partway", not "briefly".
+const BRIEF_MAX_MIN = 60;
+
 // --- Read canonical model values from the DOM (converting from display units) ---
 function readInputs() {
   const system = prefs.units;
@@ -97,8 +100,33 @@ function render() {
   // those modes the "Charge for" slider prices a partial charge; otherwise the
   // effective price is flat and stopping early changes nothing.
   const canStopEarly = hasTimeTiers || rateMode === "dur";
+
+  // The longest you can charge while still beating gas, and whether even a short
+  // charge loses - both only meaningful when charging longer can worsen the price.
+  const worthLimitMin = canStopEarly && full.everWorth ? full.worthLimitMin : null;
+  const fullNotWorth = canStopEarly && !full.everWorth;
+
+  // Best-value stop: the partial charge that saves the most vs gas. For rising
+  // by-duration tiers, stop where the rate crosses gas; for a per-hour time fee,
+  // chargeCurve's most-savings point. Only surface it when it's a confident win
+  // and meaningfully better than topping off (>= 3 points more savings).
+  const vFull = verdict(full.effectivePerKwh, be);
+  let tip = (rateMode === "dur" && worthLimitMin != null && worthLimitMin < fullChargeMin - 0.5)
+    ? durSweetSpot(durTiers, be, curveArgs, m, cur)
+    : null;
+  if (!tip && hasTimeTiers) {
+    const s = timeFeeSweetSpot(full, curveArgs, m, cur, be);
+    if (s && s.worth && s.improvesBy >= 3) tip = s;
+  }
+  // Steer to the partial charge ("charge briefly/partway") when topping off to
+  // the target isn't itself a confident win but the best-value stop is.
+  const showBriefly = !!(tip && vFull !== "worth");
+
+  // Display selection: the slider if the user set it, else the recommended
+  // partial charge when we're steering them to stop early, else the full charge.
   let cap = Infinity;
   if (canStopEarly && capTouched && Number.isFinite(chargeCapMin) && chargeCapMin < fullChargeMin - 0.5) cap = chargeCapMin;
+  else if (showBriefly && !capTouched) cap = tip.min;
   const session = cap === Infinity ? full : chargeCurve({ ...curveArgs, capMinutes: cap });
 
   updateChargeSlider(canStopEarly && fullChargeMin > 0, fullChargeMin, session.minutes, session.soc, hasTimeTiers);
@@ -130,12 +158,6 @@ function render() {
   if (m.sessionFee > 0) track("fees-session");
   if (hasTimeTiers) track("fees-time");
   if (hasTax) track("fees-tax");
-
-  // The longest you can charge here while still beating gas (accurate crossover).
-  // Applies whenever charging longer worsens the effective price: a time fee or
-  // rising by-duration tiers. chargeCurve already folds tier rates into it.
-  const worthLimitMin = canStopEarly && full.everWorth ? full.worthLimitMin : null;
-  const fullNotWorth = canStopEarly && !full.everWorth;
 
   if (!Number.isFinite(be)) {
     card.dataset.verdict = "close";
@@ -176,23 +198,13 @@ function render() {
   } else {
     const v = verdict(effective, be);
 
-    // Best-value recommendation: when a shorter charge is genuinely worth it
-    // (rising by-duration tiers) but the currently-selected charge isn't, the
-    // honest tone is amber "charge briefly," not a red "use gas." Gating on the
-    // live verdict (not on whether the slider was touched) means nudging the
-    // slider never snaps to a scary red - it stays amber until you actually
-    // land on a worth-it duration, then turns green.
-    const sweet = (rateMode === "dur" && worthLimitMin != null && worthLimitMin < fullChargeMin - 0.5)
-      ? durSweetSpot(durTiers, be, curveArgs, m, cur)
-      : null;
-    const showBriefly = sweet && v !== "worth";
-
     track("verdict-shown");
     track(showBriefly ? "verdict-charge-briefly" : v === "worth" ? "verdict-charge-it" : v === "gas" ? "verdict-use-gas" : "verdict-toss-up");
 
     card.dataset.verdict = showBriefly ? "close" : (v === "unknown" ? "close" : v);
+    // "Briefly" for a genuinely short stop, "partway" once it runs long.
     headline.textContent = showBriefly
-      ? "\u26A1 Charge briefly"
+      ? (tip.min <= BRIEF_MAX_MIN ? "\u26A1 Charge briefly" : "\u26A1 Charge partway")
       : v === "worth" ? "\u26A1 Charge it" : v === "gas" ? "\u26FD Use gas" : "\u2248 Toss-up";
 
     // Layman framing: the gas price that would cost the same per mile, plus how
@@ -218,7 +230,9 @@ function render() {
       ? `Like ${money(equivDisp, cur)}${gasUnit} gas, ${pct}% cheaper`
       : v === "gas"
         ? `Like ${money(equivDisp, cur)}${gasUnit} gas, ${pricier}`
-        : `About the same as gas (~${money(equivDisp, cur)}${gasUnit})`;
+        : pct > 0
+          ? `About the same as gas (~${money(equivDisp, cur)}${gasUnit}), leaning ${elecPerMile < gasPerMile ? "cheaper" : "pricier"} ${pct}%`
+          : `About the same as gas (~${money(equivDisp, cur)}${gasUnit})`;
 
     detailLine.hidden = false;
     detailLine.textContent = showEffective
@@ -233,8 +247,9 @@ function render() {
       timeline.hidden = true;
     }
 
-    // Time-of-day suggestion based on the current clock time.
-    if (rateMode === "tod" && schedule && schedule.length) {
+    // Time-of-day suggestion based on the current clock time. Suppressed when a
+    // best-value tip is showing, so the card gives one clear action, not two.
+    if (rateMode === "tod" && schedule && schedule.length && !tip) {
       const now = nowMinutes();
       const nowRate = rateAtTime(schedule, now);
       const cheap = cheapestPeriod(schedule);
@@ -249,15 +264,16 @@ function render() {
     }
 
     // Best-value tip: when a shorter charge is the smart move (rising duration
-    // tiers), keep the verdict and surface the sweet spot in a distinct green
-    // block (miles + saving). Otherwise fall back to the plain worth-limit note
-    // (time fee) or hide it. The "Charge for" slider answers "how far can I go."
+    // tiers, or a per-hour time fee whose $/kWh bottoms out below 100%), surface
+    // the sweet spot in a distinct green block (miles + saving). Otherwise fall
+    // back to the plain worth-limit note or hide it. The "Charge for" slider
+    // answers "how far can I go."
     worthTip.hidden = true;
-    if (sweet) {
+    if (tip) {
       timeNote.hidden = true;
       worthTip.hidden = false;
-      $("worthTipLead").textContent = `\uD83D\uDCA1 Best value: charge about ${formatDuration(sweet.min)}`;
-      $("worthTipSub").textContent = `~${sweet.range} ${sweet.rangeUnit} \u00b7 like ${sweet.equiv}${sweet.unit} gas, ${sweet.pct}% cheaper`;
+      $("worthTipLead").textContent = `\uD83D\uDCA1 Best value: charge about ${formatDuration(tip.min)}`;
+      $("worthTipSub").textContent = `~${tip.range} ${tip.rangeUnit} \u00b7 like ${tip.equiv}${tip.unit} gas, ${tip.pct}% cheaper`;
     } else if (fullNotWorth) {
       timeNote.hidden = false;
       timeNote.textContent = `\u23F1\uFE0F Even a short charge here costs more than gas.`;
@@ -336,6 +352,41 @@ function durSweetSpot(tiers, breakeven, curveArgs, m, cur) {
   };
 }
 
+// The best-value stop for a per-hour time fee. Past the charge taper you pull
+// little energy while the clock keeps running, so the all-in $/kWh bottoms out
+// before 100% (chargeCurve tracks that point as bestMin). Returns the same
+// gas-equivalent framing as the hero, plus whether that stop is a confident win
+// (`worth`) and how many points it beats a full charge by (`improvesBy`), so
+// the caller can pick "charge it + note" vs "charge briefly". Null when there's
+// no meaningfully-earlier stop to recommend.
+function timeFeeSweetSpot(full, curveArgs, m, cur, breakeven) {
+  if (!(m.mpg > 0) || !(m.miPerKwh > 0)) return null;
+  const stopMin = full.bestMin;
+  if (!(stopMin > 0) || !(stopMin < full.fullMinutes - 2)) return null; // not meaningfully earlier
+  const best = chargeCurve({ ...curveArgs, capMinutes: stopMin });
+  const eff = best.effectivePerKwh;
+  if (!(eff > 0)) return null;
+  const gpm = m.gasPrice / m.mpg;
+  const pctOf = (e) => (gpm > 0 ? Math.round(((gpm - e / m.miPerKwh) / gpm) * 100) : 0);
+  const pct = pctOf(eff);
+  const fullPct = Number.isFinite(full.effectivePerKwh) ? pctOf(full.effectivePerKwh) : 0;
+  const equivGas = (eff * m.mpg) / m.miPerKwh; // canonical $/gallon
+  const equivDisp = U.gasPriceForDisplay(equivGas, prefs.units);
+  const distMiles = m.miPerKwh * best.kwhIntoBattery; // canonical miles added
+  const distDisp = (prefs.units === "metric" || prefs.units === "kmL") ? U.kmFromMiles(distMiles) : distMiles;
+  return {
+    min: stopMin,
+    soc: Math.round(best.soc),
+    range: Math.round(distDisp),
+    rangeUnit: U.labels(prefs.units).distance,
+    equiv: money(equivDisp, cur),
+    unit: prefs.units === "imperial" ? "/gal" : "/L",
+    pct,
+    worth: verdict(eff, breakeven) === "worth",
+    improvesBy: pct - fullPct,
+  };
+}
+
 // time fee makes a shorter charge worth considering. Untouched, it sits at the
 // full charge so nothing changes; drag it back to price a partial top-up.
 function updateChargeSlider(show, fullChargeMin, curMin, curSoc, hasTimeFeeContext = true) {
@@ -345,9 +396,9 @@ function updateChargeSlider(show, fullChargeMin, curMin, curSoc, hasTimeFeeConte
   const slider = $("chargeForMin");
   const maxMin = Math.max(15, Math.ceil(fullChargeMin));
   slider.max = String(maxMin);
-  slider.value = String(capTouched
-    ? Math.max(0, Math.min(maxMin, Math.round(chargeCapMin)))
-    : maxMin);
+  // Follow the current selection (a dragged cap, the recommended partial, or the
+  // full charge) so the slider and the numbers around it always agree.
+  slider.value = String(Math.max(0, Math.min(maxMin, Math.round(curMin))));
   $("chargeForOut").textContent = `${formatDuration(Number(slider.value))} (~${Math.round(curSoc)}%)`;
   $("chargeForNote").textContent = Number(slider.value) >= maxMin - 0.5
     ? "Full charge to your target."

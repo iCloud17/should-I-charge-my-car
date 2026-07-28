@@ -34,8 +34,13 @@ export function powerAtSoc(soc, powerKw, kneePct = 92.5, taperEndFactor = 0.25) 
   return powerKw * (1 - (1 - taperEndFactor) * t);
 }
 
-/** Simple verdict bucket comparing a price against break-even, with a margin band. */
-export function verdict(pricePerKwh, breakeven, marginPct = 0.08) {
+/**
+ * Simple verdict bucket comparing a price against break-even, with a margin
+ * band. The band defaults to 5%: closer than that and the difference is smaller
+ * than the wobble in the inputs (mpg and mi/kWh are EPA estimates that swing
+ * with weather and driving), so we call it a wash rather than overclaim a win.
+ */
+export function verdict(pricePerKwh, breakeven, marginPct = 0.05) {
   if (Number.isNaN(pricePerKwh) || !Number.isFinite(breakeven) || breakeven < 0) return "unknown";
   if (breakeven === 0) return pricePerKwh > 0 ? "gas" : "close"; // free gas: charging can't win
   const band = breakeven * marginPct;
@@ -128,7 +133,12 @@ export function timeFeeCost(tiers, minutes) {
  *    effective $/kWh, and the SoC you'd reach),
  *  - the full charge time to `targetPct` (the far end of the "charge for" slider),
  *  - the worth-it limit: the longest you can charge while the all-in effective
- *    price still beats `breakeven`.
+ *    price still beats `breakeven`,
+ *  - the best-value point (`bestMin`/`bestSoc`/`bestEffectivePerKwh`): the stop
+ *    that maximises total money saved versus gas. Every kWh whose marginal cost
+ *    still beats gas adds savings, so with a per-hour time fee plus the charge
+ *    taper this peak sits below 100%. Only set when some stop actually saves
+ *    money (needs `breakeven` > 0); otherwise `bestMin` stays 0.
  *
  * `rateOf(clockMin, elapsedMin)` returns the energy $/kWh at a point in the
  * session (constant for flat pricing). Fees included: a one-time `sessionFee`
@@ -160,6 +170,7 @@ export function chargeCurve({
     kwhIntoBattery: 0, kwhFromCharger: 0, minutes: 0, soc: start,
     energyCost: 0, timeFee: 0, totalCost: sessionFee * taxFactor, effectivePerKwh: NaN,
     fullMinutes: 0, fullSoc: start, worthLimitMin: 0, worthLimitSoc: start, everWorth: false,
+    bestMin: 0, bestSoc: start, bestEffectivePerKwh: NaN,
   };
   if (!(target > start) || !(batteryKwh > 0) || !(powerKw > 0)) return empty;
 
@@ -172,6 +183,9 @@ export function chargeCurve({
   let kwhIntoBattery = 0, kwhFromCharger = 0, hours = 0, energyCost = 0;
   let snap = null; // partial result at the cap
   let everWorth = false, worthLimitMin = 0, worthLimitSoc = start;
+  // Most-savings point. bestSav starts at 0 so it's only recorded when a stop
+  // actually saves money vs gas; if nothing does, bestMin stays 0 / bestEff NaN.
+  let bestSav = 0, bestMin = 0, bestSoc = start, bestEff = NaN;
 
   for (let soc = start; soc < target; soc += stepPct) {
     const frac = Math.min(stepPct, target - soc) / stepPct;
@@ -204,10 +218,17 @@ export function chargeCurve({
     kwhIntoBattery += battPerStep * frac;
     hours += stepHours;
 
-    // Track the last elapsed point that still beats gas.
+    // Walk the all-in price along the charge (needs a break-even to compare to):
+    //  - best value: the stop that maximises total money saved vs gas. Every kWh
+    //    whose marginal cost still beats gas adds savings, so the peak sits where
+    //    the marginal kWh crosses break-even (past the taper knee, below 100%).
+    //  - worth limit: the last point whose running average still beats gas.
     if (breakeven > 0 && kwhFromCharger > 0) {
       const connectedMin = hours * 60;
-      const eff = ((sessionFee + energyCost + timeFeeCost(timeTiers, connectedMin)) * taxFactor) / kwhFromCharger;
+      const total = (sessionFee + energyCost + timeFeeCost(timeTiers, connectedMin)) * taxFactor;
+      const eff = total / kwhFromCharger;
+      const sav = breakeven * kwhFromCharger - total;
+      if (sav > bestSav) { bestSav = sav; bestMin = connectedMin; bestSoc = socOf(kwhIntoBattery); bestEff = eff; }
       if (eff <= breakeven) { everWorth = true; worthLimitMin = connectedMin; worthLimitSoc = socOf(kwhIntoBattery); }
     }
   }
@@ -221,5 +242,8 @@ export function chargeCurve({
     effectivePerKwh: kwhFromCharger > 0 ? fullTotal / kwhFromCharger : NaN,
   };
   const display = snap || full; // cap beyond the full charge → show the full charge
-  return { ...display, fullMinutes, fullSoc: target, worthLimitMin, worthLimitSoc, everWorth };
+  return {
+    ...display, fullMinutes, fullSoc: target, worthLimitMin, worthLimitSoc, everWorth,
+    bestMin, bestSoc, bestEffectivePerKwh: bestEff,
+  };
 }
