@@ -609,10 +609,10 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
    block look airy. Removing it from layout keeps the label right above the
    add button; it reappears the moment a row is added. */
 .tou-rows:empty { display: none; }
-/* Wrap the multi-control schedule rows on very narrow widths so the rate
-   field or delete button drops to a second line instead of spilling out of
-   the card. */
-.tou-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* Keep the multi-control schedule rows on a single line: the rate field is
+   the only flexible item, so it shrinks to absorb narrow widths while the
+   "after N hr" group, unit and delete button stay put on one row. */
+.tou-row { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
 .tou-time {
   flex: 0 0 auto;
   border: 1px solid var(--line);
@@ -623,10 +623,16 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   font-size: 15px;
   font-weight: 600;
 }
-.tou-rate-wrap { flex: 1 1 120px; min-width: 0; }
+/* The rate field holds a currency value. On a phone the schedule row is
+   cramped, so the field keeps a compact base width (packed left with the small
+   hour/unit controls) instead of stretching wide and dwarfing them. It can
+   still shrink toward its minimum at the 320px floor. Once the column has room
+   (>=480px, see the media query below) the field grows to fill the row so the
+   tiers line up edge-to-edge with the full-width Service fee field above. */
+.tou-rate-wrap { flex: 0 1 88px; min-width: 60px; }
 .tou-del {
   flex: 0 0 auto;
-  width: 44px;
+  width: 40px;
   height: 44px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--line);
@@ -638,7 +644,7 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 }
 .tou-del:active { transform: scale(0.96); }
 .tou-add { display: inline-block; margin-top: 2px; }
-.tf-unit { flex: 0 0 auto; font-size: 14px; font-weight: 600; color: var(--muted); }
+.tf-unit { flex: 0 0 auto; margin-left: -2px; font-size: 14px; font-weight: 600; color: var(--muted); }
 .result__tou { color: var(--text); }
 
 /* Charger fees: three distinct fee types (service / time / tax). A hairline
@@ -695,7 +701,7 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 .dur-after {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   flex: 0 0 auto;
   font-size: 14px;
   font-weight: 600;
@@ -703,13 +709,13 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   white-space: nowrap;
 }
 .dur-min {
-  width: 58px;
-  flex: 0 0 58px;
+  width: 46px;
+  flex: 0 0 46px;
   border: 1px solid var(--line);
   background: var(--field);
   color: var(--text);
   border-radius: var(--radius-sm);
-  padding: 11px 8px;
+  padding: 11px 6px;
   font-size: 15px;
   font-weight: 600;
   text-align: center;
@@ -720,7 +726,7 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   background: var(--field);
   color: var(--text);
   border-radius: var(--radius-sm);
-  padding: 10px 6px;
+  padding: 10px 4px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -979,4 +985,25 @@ output { font-weight: 800; color: var(--text); }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
   .toast { animation: none; }
+}
+
+/* At the ~320px layout floor the schedule rows have every control plus the
+   delete button competing for one line. Reclaim side padding inside the
+   disclosure cards and shrink the fixed controls so the rate field keeps its
+   minimum width without pushing anything to a second row or overflowing.
+   Placed last so it wins over the base .disclosure__body padding shorthand. */
+@media (max-width: 360px) {
+  .disclosure__body { padding-left: 12px; padding-right: 12px; }
+  .tou-row { gap: 4px; }
+  .dur-after { gap: 4px; }
+  .dur-min { width: 40px; flex-basis: 40px; padding-left: 4px; padding-right: 4px; }
+  .tou-del { width: 36px; }
+}
+
+/* Once the column has room to spare (large phones landscape, tablets, the
+   centered desktop column), let the rate field grow to fill the row so the
+   tier rows span the same full width as the Service fee field and their delete
+   buttons line up at the right edge, instead of stopping short mid-card. */
+@media (min-width: 480px) {
+  .tou-rate-wrap { flex: 1 1 88px; }
 }
