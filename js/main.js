@@ -339,8 +339,7 @@ function durSweetSpot(tiers, breakeven, curveArgs, m, cur) {
   const gpm = m.gasPrice / m.mpg;
   const epm = eff / m.miPerKwh;
   const pct = gpm > 0 ? Math.round(((gpm - epm) / gpm) * 100) : 0;
-  // EPA mi/kWh is wall-measured, so range uses charger energy, not battery energy.
-  const distMiles = m.miPerKwh * best.kwhFromCharger; // canonical miles added
+  const distMiles = m.miPerKwh * best.kwhIntoBattery; // canonical miles added
   const distDisp = (prefs.units === "metric" || prefs.units === "kmL") ? U.kmFromMiles(distMiles) : distMiles;
   return {
     min: stopMin,
@@ -373,8 +372,7 @@ function timeFeeSweetSpot(full, curveArgs, m, cur, breakeven) {
   const fullPct = Number.isFinite(full.effectivePerKwh) ? pctOf(full.effectivePerKwh) : 0;
   const equivGas = (eff * m.mpg) / m.miPerKwh; // canonical $/gallon
   const equivDisp = U.gasPriceForDisplay(equivGas, prefs.units);
-  // EPA mi/kWh is wall-measured, so range uses charger energy, not battery energy.
-  const distMiles = m.miPerKwh * best.kwhFromCharger; // canonical miles added
+  const distMiles = m.miPerKwh * best.kwhIntoBattery; // canonical miles added
   const distDisp = (prefs.units === "metric" || prefs.units === "kmL") ? U.kmFromMiles(distMiles) : distMiles;
   return {
     min: stopMin,
@@ -415,8 +413,7 @@ function renderAdvanced(m, be, cur, session, effective, timeFee) {
   if (Number.isFinite(kwhIn) && kwhIn > 0) {
     const kwhStr = `${kwhIn.toFixed(1)} kWh`;
     if (Number.isFinite(m.miPerKwh) && m.miPerKwh > 0) {
-      // EPA mi/kWh is wall-measured, so range is miPerKwh x charger energy, not battery energy.
-      const dist = m.miPerKwh * session.kwhFromCharger; // canonical miles
+      const dist = m.miPerKwh * kwhIn; // canonical miles
       const distDisp = (prefs.units === "metric" || prefs.units === "kmL") ? U.kmFromMiles(dist) : dist;
       $("advKwh").textContent = `${Math.round(distDisp)} ${U.labels(prefs.units).distance} \u00b7 ${kwhStr}`;
     } else {
