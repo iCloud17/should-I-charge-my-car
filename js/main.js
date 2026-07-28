@@ -236,8 +236,8 @@ function render() {
 
     detailLine.hidden = false;
     detailLine.textContent = showEffective
-      ? `Effective ${money(effective, cur)}/kWh${hasFees ? " incl. fees" : ""} \u00b7 break-even ${money(be, cur)}`
-      : `You pay ${money(m.yourRate, cur)} \u00b7 break-even ${money(be, cur)}/kWh`;
+      ? `Effective ${money(effective, cur)}/kWh${hasFees ? " incl. fees" : ""} \u00b7 break-even ${money(be, cur)}/kWh`
+      : `You pay ${money(m.yourRate, cur)}/kWh \u00b7 break-even ${money(be, cur)}/kWh`;
 
     // "How long" at a glance, using your saved battery / power / charge target.
     if (!showBriefly && v !== "gas" && Number.isFinite(session.minutes) && session.minutes > 0) {
@@ -339,7 +339,8 @@ function durSweetSpot(tiers, breakeven, curveArgs, m, cur) {
   const gpm = m.gasPrice / m.mpg;
   const epm = eff / m.miPerKwh;
   const pct = gpm > 0 ? Math.round(((gpm - epm) / gpm) * 100) : 0;
-  const distMiles = m.miPerKwh * best.kwhIntoBattery; // canonical miles added
+  // EPA mi/kWh is wall-measured, so range uses charger energy, not battery energy.
+  const distMiles = m.miPerKwh * best.kwhFromCharger; // canonical miles added
   const distDisp = (prefs.units === "metric" || prefs.units === "kmL") ? U.kmFromMiles(distMiles) : distMiles;
   return {
     min: stopMin,
@@ -372,7 +373,8 @@ function timeFeeSweetSpot(full, curveArgs, m, cur, breakeven) {
   const fullPct = Number.isFinite(full.effectivePerKwh) ? pctOf(full.effectivePerKwh) : 0;
   const equivGas = (eff * m.mpg) / m.miPerKwh; // canonical $/gallon
   const equivDisp = U.gasPriceForDisplay(equivGas, prefs.units);
-  const distMiles = m.miPerKwh * best.kwhIntoBattery; // canonical miles added
+  // EPA mi/kWh is wall-measured, so range uses charger energy, not battery energy.
+  const distMiles = m.miPerKwh * best.kwhFromCharger; // canonical miles added
   const distDisp = (prefs.units === "metric" || prefs.units === "kmL") ? U.kmFromMiles(distMiles) : distMiles;
   return {
     min: stopMin,
@@ -413,7 +415,8 @@ function renderAdvanced(m, be, cur, session, effective, timeFee) {
   if (Number.isFinite(kwhIn) && kwhIn > 0) {
     const kwhStr = `${kwhIn.toFixed(1)} kWh`;
     if (Number.isFinite(m.miPerKwh) && m.miPerKwh > 0) {
-      const dist = m.miPerKwh * kwhIn; // canonical miles
+      // EPA mi/kWh is wall-measured, so range is miPerKwh x charger energy, not battery energy.
+      const dist = m.miPerKwh * session.kwhFromCharger; // canonical miles
       const distDisp = (prefs.units === "metric" || prefs.units === "kmL") ? U.kmFromMiles(dist) : dist;
       $("advKwh").textContent = `${Math.round(distDisp)} ${U.labels(prefs.units).distance} \u00b7 ${kwhStr}`;
     } else {
@@ -478,6 +481,10 @@ function writeDisplayValues() {
   $("targetPctOut").textContent = `${$("targetPct").value}%`;
   $("carNickname").value = prefs.customName || "";
   for (const id of ["curSym1", "curSym2", "curSym3"]) $(id).textContent = prefs.currency;
+  // Dynamic pricing rows bake the symbol in at creation; refresh them too on a currency change.
+  for (const el of document.querySelectorAll("#touRows .input-money__sym, #durRows .input-money__sym, #timeFeeRows .input-money__sym")) {
+    el.textContent = prefs.currency;
+  }
   $("currencyBtn").textContent = prefs.currency;
   renderCurrencyMenu();
 }

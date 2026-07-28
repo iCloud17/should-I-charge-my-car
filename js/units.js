@@ -113,5 +113,7 @@ export function gasPriceToCanonical(value, system) {
   return system === "imperial" ? value : perGallonFromPerLiter(value);
 }
 export function gasPriceForDisplay(perGallon, system) {
+  // Preserve a non-finite (unset) price so it renders blank, not a divided-down 0.
+  if (!Number.isFinite(perGallon)) return perGallon;
   return system === "imperial" ? perGallon : perLiterFromPerGallon(perGallon);
 }

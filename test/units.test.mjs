@@ -106,3 +106,21 @@ test("labels: kmL is km + km/L + km/kWh + liter", () => {
     distance: "km",
   });
 });
+
+test("gasPriceForDisplay keeps an unset (non-finite) price non-finite in every unit", () => {
+  // Regression: null / LITERS_PER_GALLON used to coerce to 0, showing "0.00"
+  // in UK/metric/km-L for a price the user never entered.
+  for (const sys of ["imperial", "uk", "metric", "kmL"]) {
+    assert.ok(!Number.isFinite(gasPriceForDisplay(null, sys)), `null stays non-finite for ${sys}`);
+    assert.ok(!Number.isFinite(gasPriceForDisplay(NaN, sys)), `NaN stays non-finite for ${sys}`);
+    assert.ok(!Number.isFinite(gasPriceForDisplay(undefined, sys)), `undefined stays non-finite for ${sys}`);
+  }
+});
+
+test("gasPriceForDisplay still converts a real finite price (including 0)", () => {
+  // A finite 0 is a genuine price, not an unset field, so it converts normally.
+  assert.equal(gasPriceForDisplay(0, "uk"), 0);
+  assert.equal(gasPriceForDisplay(3.89, "imperial"), 3.89);
+  approx(gasPriceForDisplay(LITERS_PER_GALLON, "uk"), 1);
+  approx(gasPriceForDisplay(LITERS_PER_GALLON, "metric"), 1);
+});
