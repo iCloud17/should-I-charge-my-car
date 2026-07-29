@@ -11,11 +11,13 @@ import {
   addTouRow, addDurRow, addTimeFeeRow, addTaxRow,
   readSchedule, readDurationTiers, readTimeFee, readTaxRate,
 } from "./editorRows.js";
+import { createDropdown } from "./dropdown.js";
 
 let prefs = loadPrefs();
 let rateMode = "flat"; // "flat" | "tod" | "dur" (volatile - never persisted)
 let chargeCapMin = null; // "charge for" slider value in minutes (volatile)
 let capTouched = false;  // has the user dragged the "charge for" slider?
+let currencyDropdown = null, unitDropdown = null; // built in attachEvents()
 
 // Above this, a stop-early recommendation reads as "partway", not "briefly".
 const BRIEF_MAX_MIN = 60;
@@ -574,49 +576,20 @@ function cycleTheme() {
 // --- Units picker (a dropdown mirroring the currency picker) ---
 // Switch to an explicit unit system. Values in `prefs` are canonical, so we
 // capture any in-progress edits first, flip the flag, then relabel/re-render.
+// Commit a units choice; the dropdown component owns open/close and focus.
 function chooseUnit(system) {
   const m = readInputs();
-  persistFrom(m); // capture any edits in the current units first
+  persistFrom(m); // capture edits made in the current units first
   prefs.units = system;
   savePrefs(prefs);
-  applyUnitLabels();
+  applyUnitLabels(); // relabels #unitBtn and re-renders the menu
   writeDisplayValues();
   render();
-  $("unitBtn").textContent = unitTriggerLabel(system);
-  closeUnitMenu();
 }
 
-// Build the units menu rows, marking the active system (aria-selected).
+// Re-render the units menu after the selection changes.
 function renderUnitMenu() {
-  const ul = $("unitMenu");
-  if (!ul) return;
-  ul.innerHTML = "";
-  for (const { system, menu } of UNIT_SYSTEMS) {
-    const li = document.createElement("li");
-    li.className = "combo__item unit-item";
-    li.dataset.system = system;
-    li.setAttribute("role", "option");
-    li.setAttribute("tabindex", "-1");
-    li.setAttribute("aria-selected", system === prefs.units ? "true" : "false");
-    li.textContent = menu;
-    ul.appendChild(li);
-  }
-}
-
-function openUnitMenu() {
-  closeCurrencyMenu(); // never leave both menus open at once
-  renderUnitMenu();
-  $("unitMenu").hidden = false;
-  $("unitBtn").setAttribute("aria-expanded", "true");
-  const active =
-    $("unitMenu").querySelector('[aria-selected="true"]') ||
-    $("unitMenu").querySelector(".unit-item");
-  if (active) active.focus();
-}
-
-function closeUnitMenu() {
-  $("unitMenu").hidden = true;
-  $("unitBtn").setAttribute("aria-expanded", "false");
+  if (unitDropdown) unitDropdown.render();
 }
 
 // Currency is display-only (both prices are entered in the user's own currency),
@@ -650,51 +623,9 @@ const CURRENCIES = [
   { sym: "\u20BD", name: "Ruble" },
 ];
 
-// Build the currency menu rows, marking the active currency (aria-selected) so
-// users can see which one is set. Rebuilt whenever the selection changes.
+// Re-render the currency menu after the selection changes.
 function renderCurrencyMenu() {
-  const ul = $("currencyMenu");
-  if (!ul) return;
-  ul.innerHTML = "";
-  for (const { sym, name } of CURRENCIES) {
-    const li = document.createElement("li");
-    li.className = "combo__item currency-item";
-    li.dataset.sym = sym;
-    li.setAttribute("role", "option");
-    li.setAttribute("tabindex", "-1");
-    li.setAttribute("aria-selected", sym === prefs.currency ? "true" : "false");
-    const symEl = document.createElement("span");
-    symEl.className = "currency-item__sym";
-    symEl.textContent = sym;
-    const nameEl = document.createElement("span");
-    nameEl.className = "currency-item__name";
-    nameEl.textContent = name;
-    li.append(symEl, nameEl);
-    ul.appendChild(li);
-  }
-}
-
-function openCurrencyMenu() {
-  closeUnitMenu(); // never leave both menus open at once
-  renderCurrencyMenu();
-  $("currencyMenu").hidden = false;
-  $("currencyBtn").setAttribute("aria-expanded", "true");
-  const active =
-    $("currencyMenu").querySelector('[aria-selected="true"]') ||
-    $("currencyMenu").querySelector(".currency-item");
-  if (active) active.focus();
-}
-
-function closeCurrencyMenu() {
-  $("currencyMenu").hidden = true;
-  $("currencyBtn").setAttribute("aria-expanded", "false");
-}
-
-// Commit a currency choice from the menu: relabel the trigger, apply, and close.
-function chooseCurrency(sym) {
-  setCurrency(sym);
-  $("currencyBtn").textContent = sym;
-  closeCurrencyMenu();
+  if (currencyDropdown) currencyDropdown.render();
 }
 
 // --- Car selection ---
@@ -893,81 +824,36 @@ function attachEvents() {
     render();
   });
 
-  $("unitBtn").addEventListener("click", () => {
-    if ($("unitBtn").getAttribute("aria-expanded") === "true") closeUnitMenu();
-    else openUnitMenu();
+  // Currency + units pickers: custom dropdowns (native selects can't be styled
+  // or lay out the symbol + name rows). Both use the shared dropdown component,
+  // which handles open/close, outside-click, and keyboard nav.
+  currencyDropdown = createDropdown({
+    trigger: "currencyBtn",
+    menu: "currencyMenu",
+    itemClass: "currency-item",
+    options: () => CURRENCIES,
+    getValue: () => prefs.currency,
+    optionValue: (c) => c.sym,
+    renderItem: (li, c) => {
+      const sym = document.createElement("span");
+      sym.className = "currency-item__sym";
+      sym.textContent = c.sym;
+      const name = document.createElement("span");
+      name.className = "currency-item__name";
+      name.textContent = c.name;
+      li.append(sym, name);
+    },
+    onChange: (sym) => setCurrency(sym),
   });
-  // mousedown + preventDefault selects before any focus/blur race can close us.
-  $("unitMenu").addEventListener("mousedown", (e) => {
-    const li = e.target.closest(".unit-item");
-    if (!li) return;
-    e.preventDefault();
-    chooseUnit(li.dataset.system);
-    $("unitBtn").focus();
-  });
-  // Currency picker: a custom dropdown (the native select menu is unstylable).
-  $("currencyBtn").addEventListener("click", () => {
-    if ($("currencyBtn").getAttribute("aria-expanded") === "true") closeCurrencyMenu();
-    else openCurrencyMenu();
-  });
-  // mousedown + preventDefault selects before any focus/blur race can close us.
-  $("currencyMenu").addEventListener("mousedown", (e) => {
-    const li = e.target.closest(".currency-item");
-    if (!li) return;
-    e.preventDefault();
-    chooseCurrency(li.dataset.sym);
-    $("currencyBtn").focus();
-  });
-  // Outside click closes either menu.
-  document.addEventListener("click", (e) => {
-    if (!$("currencyMenu").hidden &&
-        !e.target.closest("#currencyMenu") && !e.target.closest("#currencyBtn")) {
-      closeCurrencyMenu();
-    }
-    if (!$("unitMenu").hidden &&
-        !e.target.closest("#unitMenu") && !e.target.closest("#unitBtn")) {
-      closeUnitMenu();
-    }
-  });
-  // Keyboard: Escape closes (focus returns to trigger); arrows move; Enter picks.
-  document.addEventListener("keydown", (e) => {
-    if (!$("currencyMenu").hidden) {
-      const items = Array.from($("currencyMenu").querySelectorAll(".currency-item"));
-      if (!items.length) return;
-      const idx = items.indexOf(document.activeElement);
-      if (e.key === "Escape") {
-        closeCurrencyMenu();
-        $("currencyBtn").focus();
-      } else if (e.key === "ArrowDown") {
-        e.preventDefault();
-        (items[idx + 1] || items[0]).focus();
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        (items[idx - 1] || items[items.length - 1]).focus();
-      } else if ((e.key === "Enter" || e.key === " ") && idx >= 0) {
-        e.preventDefault();
-        chooseCurrency(items[idx].dataset.sym);
-        $("currencyBtn").focus();
-      }
-    } else if (!$("unitMenu").hidden) {
-      const items = Array.from($("unitMenu").querySelectorAll(".unit-item"));
-      if (!items.length) return;
-      const idx = items.indexOf(document.activeElement);
-      if (e.key === "Escape") {
-        closeUnitMenu();
-        $("unitBtn").focus();
-      } else if (e.key === "ArrowDown") {
-        e.preventDefault();
-        (items[idx + 1] || items[0]).focus();
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        (items[idx - 1] || items[items.length - 1]).focus();
-      } else if ((e.key === "Enter" || e.key === " ") && idx >= 0) {
-        e.preventDefault();
-        chooseUnit(items[idx].dataset.system);
-        $("unitBtn").focus();
-      }
-    }
+  unitDropdown = createDropdown({
+    trigger: "unitBtn",
+    menu: "unitMenu",
+    itemClass: "unit-item",
+    options: () => UNIT_SYSTEMS,
+    getValue: () => prefs.units,
+    optionValue: (u) => u.system,
+    renderItem: (li, u) => { li.textContent = u.menu; },
+    onChange: (system) => chooseUnit(system),
   });
   $("themeToggle").addEventListener("click", cycleTheme);
   // Re-resolve auto theme when the user returns (day may have turned to night).

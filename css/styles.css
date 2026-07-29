@@ -720,17 +720,29 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   font-weight: 600;
   text-align: center;
 }
+.row-unit-wrap { position: relative; flex: 0 0 auto; display: inline-flex; }
 .row-unit {
-  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   border: 1px solid var(--line);
   background: var(--field);
   color: var(--text);
   border-radius: var(--radius-sm);
-  padding: 11px 4px;
+  padding: 11px 7px;
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
 }
+.row-unit__label {
+  display: inline-block;
+  min-width: 27px; /* fit the widest option ("min") so the button never reflows */
+  text-align: center;
+}
+.row-unit__caret { font-size: 9px; color: var(--muted); }
+.row-unit-menu { left: 0; right: auto; min-width: 76px; }
+.row-unit-item { padding: 10px 12px; }
 
 /* --- Compare box --- */
 .compare {
