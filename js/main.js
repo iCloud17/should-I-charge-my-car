@@ -88,8 +88,11 @@ function render() {
     if (durTiers.length) { rateOf = (_clock, elapsed) => rateAtElapsed(durTiers, elapsed); hasRate = true; }
   }
   if (!rateOf) {
-    // Flat rate (also the fallback when a schedule/tier list isn't filled in yet).
-    hasRate = Number.isFinite(m.yourRate) && m.yourRate >= 0;
+    // Only the flat mode uses the single charger-price field. In time-of-day or
+    // by-duration mode with no schedule entered yet there's no price to judge,
+    // so leave hasRate false and show the break-even prompt instead of silently
+    // reusing the (now disabled) flat field.
+    if (rateMode === "flat") hasRate = Number.isFinite(m.yourRate) && m.yourRate >= 0;
     rateOf = () => (hasRate ? m.yourRate : 0);
   }
 
@@ -179,7 +182,11 @@ function render() {
     // No charger price yet - the break-even IS the headline answer.
     card.dataset.verdict = "worth";
     headline.textContent = `${money(be, cur)}/kWh`;
-    sub.textContent = "Break-even price. Enter the charger's energy rate for a yes/no.";
+    sub.textContent = rateMode === "tod"
+      ? "Break-even price. Add your time-of-day rates below for a yes/no."
+      : rateMode === "dur"
+        ? "Break-even price. Add your duration tiers below for a yes/no."
+        : "Break-even price. Enter the charger's energy rate for a yes/no.";
     timeline.hidden = true;
     touNote.hidden = true;
     timeNote.hidden = true;
@@ -230,10 +237,14 @@ function render() {
       : `${pct}% pricier`;
     // The sub always describes the CURRENT selection (updates live with the
     // slider), so it never disagrees with the price shown for it just below.
-    sub.textContent = v === "worth"
+    sub.textContent = !(m.gasPrice > 0)
+      ? "Gas is free here, so charging can't win."
+      : v === "worth"
       ? `Like ${money(equivDisp, cur)}${gasUnit} gas, ${pct}% cheaper`
       : v === "gas"
-        ? `Like ${money(equivDisp, cur)}${gasUnit} gas, ${pricier}`
+        ? (mult > 100
+            ? "Charging here costs far more than gas."
+            : `Like ${money(equivDisp, cur)}${gasUnit} gas, ${pricier}`)
         : pct > 0
           ? `About the same as gas (~${money(equivDisp, cur)}${gasUnit}), leaning ${elecPerMile < gasPerMile ? "cheaper" : "pricier"} ${pct}%`
           : `About the same as gas (~${money(equivDisp, cur)}${gasUnit})`;
@@ -465,8 +476,11 @@ function applyUnitLabels() {
 
 function writeDisplayValues() {
   const s = prefs.units;
-  $("gasPrice").value = fixed2(U.gasPriceForDisplay(prefs.gasPrice, s));
-  $("yourRate").value = fixed2(prefs.yourRate);
+  // Prices show at up to 6 decimals (trailing zeros trimmed) so switching
+  // currency/units or picking a car never rounds away what the user typed
+  // (e.g. 3.899, 0.257). Results are still rounded to 2 dp by money().
+  $("gasPrice").value = round(U.gasPriceForDisplay(prefs.gasPrice, s), 6);
+  $("yourRate").value = round(prefs.yourRate, 6);
   $("mpg").value = round(U.economyForDisplay(prefs.mpg, s), 2);
   $("miPerKwh").value = round(U.efficiencyForDisplay(prefs.miPerKwh, s), 2);
   $("batteryKwh").value = round(prefs.batteryKwh, 2);
@@ -496,11 +510,6 @@ function round(n, d) {
   return String(Math.round(n * f) / f);
 }
 
-// Currency-style fixed 2-decimal display (e.g., 0.3 -> "0.30"); blank if unset.
-function fixed2(n) {
-  return Number.isFinite(n) ? n.toFixed(2) : "";
-}
-
 // --- Time-of-day helpers ---
 function nowMinutes() {
   const d = new Date();
@@ -527,19 +536,13 @@ function applyRateMode() {
   $("durEditor").hidden = rateMode !== "dur";
 
   const rateInput = $("yourRate");
-  const note = $("rateModeNote");
   const field = rateInput.closest(".field");
   if (rateMode === "flat") {
     rateInput.disabled = false;
     field.classList.remove("is-disabled");
-    note.hidden = true;
   } else {
     rateInput.disabled = true;
     field.classList.add("is-disabled");
-    note.hidden = false;
-    note.textContent = rateMode === "tod"
-      ? "Using time-of-day pricing (set in Advanced)."
-      : "Using duration-based pricing (set in Advanced).";
   }
 
   if (rateMode === "tod" && $("touRows").children.length === 0) {

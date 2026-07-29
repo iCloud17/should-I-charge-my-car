@@ -23,7 +23,13 @@ export function parseNum(value) {
 
 export function money(value, currency = "$", digits = 2) {
   if (!Number.isFinite(value)) return "-";
-  return `${currency}${value.toFixed(digits)}`;
+  const fixed = value.toFixed(digits);
+  // toFixed switches to exponential for |value| >= 1e21; fall back to a plain
+  // grouped number so the UI never shows "$1e+60".
+  if (fixed.includes("e") || fixed.includes("E")) {
+    return `${currency}${Math.round(value).toLocaleString("en-US")}`;
+  }
+  return `${currency}${fixed}`;
 }
 
 // Escape a string for safe interpolation into innerHTML templates.
