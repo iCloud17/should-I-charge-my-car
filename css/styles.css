@@ -709,25 +709,25 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   white-space: nowrap;
 }
 .dur-min {
-  width: 46px;
-  flex: 0 0 46px;
+  width: 54px;
+  flex: 0 0 54px;
   border: 1px solid var(--line);
   background: var(--field);
   color: var(--text);
   border-radius: var(--radius-sm);
-  padding: 11px 6px;
+  padding: 11px 8px;
   font-size: 15px;
   font-weight: 600;
   text-align: center;
 }
-.tf-start-unit {
+.row-unit {
   flex: 0 0 auto;
   border: 1px solid var(--line);
   background: var(--field);
   color: var(--text);
   border-radius: var(--radius-sm);
-  padding: 10px 4px;
-  font-size: 14px;
+  padding: 11px 4px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -994,9 +994,18 @@ output { font-weight: 800; color: var(--text); }
    Placed last so it wins over the base .disclosure__body padding shorthand. */
 @media (max-width: 360px) {
   .disclosure__body { padding-left: 12px; padding-right: 12px; }
+  /* The energy-mode editors live in the plain Prices card (18px padding) rather
+     than a disclosure body (12px here), so widen them 6px each side to give the
+     tier rows the same width the fees rows get, keeping controls on one line. */
+  #touEditor, #durEditor { margin-left: -6px; margin-right: -6px; }
   .tou-row { gap: 4px; }
   .dur-after { gap: 4px; }
-  .dur-min { width: 40px; flex-basis: 40px; padding-left: 4px; padding-right: 4px; }
+  .dur-min { width: 48px; flex-basis: 48px; padding-left: 6px; padding-right: 6px; }
+  .row-unit { padding-left: 2px; padding-right: 2px; }
+  /* Tighten the currency indent so the compact tier rate still shows all its
+     digits once the row is this cramped. */
+  .tou-rate-wrap .input-money__sym { left: 9px; font-size: 15px; }
+  .tou-rate-wrap input { padding-left: 22px; }
   .tou-del { width: 36px; }
 }
 

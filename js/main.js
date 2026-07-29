@@ -7,6 +7,10 @@ import { loadCars, getCar, getCars, carLabel, maxLabelLength } from "./cars.js";
 import { $, parseNum, money, formatDuration, escapeHtml } from "./ui.js";
 import { applyTheme, nextThemeMode, themeLabel } from "./theme.js";
 import { track, trackWhenReady } from "./analytics.js";
+import {
+  addTouRow, addDurRow, addTimeFeeRow, addTaxRow,
+  readSchedule, readDurationTiers, readTimeFee, readTaxRate,
+} from "./editorRows.js";
 
 let prefs = loadPrefs();
 let rateMode = "flat"; // "flat" | "tod" | "dur" (volatile - never persisted)
@@ -513,115 +517,8 @@ function fmtClock(min) {
   return `${h}:${String(m).padStart(2, "0")} ${ap}`;
 }
 
-// Build the TOU schedule from the editor rows: [{ start(min), rate }].
-function readSchedule() {
-  const sched = [];
-  for (const r of document.querySelectorAll("#touRows .tou-row")) {
-    const t = r.querySelector(".tou-time").value;
-    const rate = parseNum(r.querySelector(".tou-rate").value);
-    if (!t || !Number.isFinite(rate)) continue;
-    const [h, mm] = t.split(":").map(Number);
-    sched.push({ start: h * 60 + mm, rate });
-  }
-  return sched;
-}
-
-function addTouRow(time = "00:00", rate = "") {
-  const row = document.createElement("div");
-  row.className = "tou-row";
-  row.innerHTML =
-    `<input type="time" class="tou-time" value="${escapeHtml(time)}" />` +
-    `<div class="input-money tou-rate-wrap">` +
-    `<span class="input-money__sym">${escapeHtml(prefs.currency)}</span>` +
-    `<input type="text" min="0" step="any" inputmode="decimal" class="tou-rate" placeholder="0.30" value="${escapeHtml(rate)}" />` +
-    `</div>` +
-    `<button type="button" class="tou-del" aria-label="Remove period">\u00d7</button>`;
-  $("touRows").appendChild(row);
-}
-
-// Build duration tiers from the editor rows: [{ start(elapsed min), rate }].
-function readDurationTiers() {
-  const tiers = [];
-  for (const r of document.querySelectorAll("#durRows .dur-row")) {
-    const min = parseNum(r.querySelector(".dur-min").value);
-    const rate = parseNum(r.querySelector(".dur-rate").value);
-    if (!Number.isFinite(rate)) continue;
-    tiers.push({ start: Number.isFinite(min) ? min : 0, rate });
-  }
-  return tiers;
-}
-
-function addDurRow(min = 0, rate = "") {
-  const row = document.createElement("div");
-  row.className = "tou-row dur-row";
-  row.innerHTML =
-    `<div class="dur-after">after <input type="text" min="0" step="any" inputmode="numeric" class="dur-min" value="${escapeHtml(min)}" /> min</div>` +
-    `<div class="input-money tou-rate-wrap">` +
-    `<span class="input-money__sym">${escapeHtml(prefs.currency)}</span>` +
-    `<input type="text" min="0" step="any" inputmode="decimal" class="dur-rate" placeholder="0.30" value="${escapeHtml(rate)}" />` +
-    `</div>` +
-    `<button type="button" class="tou-del" aria-label="Remove tier">\u00d7</button>`;
-  $("durRows").appendChild(row);
-}
-
-// Build by-the-hour time-fee tiers from the editor rows: [{ start(min), perHour }].
-// Each row's start can be entered in hours (default) or minutes; we normalize to
-// minutes here so the math and the rest of the app stay in one unit.
-function readTimeFee() {
-  const tiers = [];
-  for (const r of document.querySelectorAll("#timeFeeRows .tf-row")) {
-    const num = parseNum(r.querySelector(".tf-start").value);
-    const unit = r.querySelector(".tf-start-unit").value; // "hr" | "min"
-    const perHour = parseNum(r.querySelector(".tf-rate").value);
-    if (!Number.isFinite(perHour) || perHour <= 0) continue;
-    const startMin = Number.isFinite(num) ? (unit === "hr" ? num * 60 : num) : 0;
-    tiers.push({ start: startMin, perHour });
-  }
-  return tiers;
-}
-
-function addTimeFeeRow(start = 0, perHour = "", unit = "hr") {
-  const row = document.createElement("div");
-  row.className = "tou-row tf-row";
-  row.innerHTML =
-    `<div class="dur-after">after <input type="text" min="0" step="any" inputmode="decimal" class="dur-min tf-start" value="${escapeHtml(start)}" />` +
-    `<select class="tf-start-unit" aria-label="Tier start unit">` +
-    `<option value="hr"${unit === "hr" ? " selected" : ""}>hr</option>` +
-    `<option value="min"${unit === "min" ? " selected" : ""}>min</option>` +
-    `</select></div>` +
-    `<div class="input-money tou-rate-wrap">` +
-    `<span class="input-money__sym">${escapeHtml(prefs.currency)}</span>` +
-    `<input type="text" min="0" step="any" inputmode="decimal" class="tf-rate" placeholder="3" value="${escapeHtml(perHour)}" />` +
-    `</div>` +
-    `<span class="tf-unit">/hr</span>` +
-    `<button type="button" class="tou-del" aria-label="Remove tier">\u00d7</button>`;
-  $("timeFeeRows").appendChild(row);
-}
-
-// Sum every tax row into a single fraction (e.g. 6.25% + 1% + 1% -> 0.0825).
-// Applied to the whole bill in chargeCurve, matching how chargers add sales tax
-// on top of the listed rate and fees.
-function readTaxRate() {
-  let pct = 0;
-  for (const r of document.querySelectorAll("#taxRows .tax-row")) {
-    const v = parseNum(r.querySelector(".tax-pct").value);
-    if (Number.isFinite(v) && v > 0) pct += v;
-  }
-  return pct / 100;
-}
-
-function addTaxRow(label = "", pct = "") {
-  const row = document.createElement("div");
-  row.className = "tou-row tax-row";
-  row.innerHTML =
-    `<input type="text" class="tax-label" placeholder="Tax name (optional)" value="${escapeHtml(label)}" />` +
-    `<div class="input-money has-suffix tax-pct-wrap">` +
-    `<input type="text" min="0" step="any" inputmode="decimal" class="tax-pct" placeholder="6.25" value="${escapeHtml(pct)}" />` +
-    `<span class="input-money__suffix">%</span>` +
-    `</div>` +
-    `<button type="button" class="tou-del" aria-label="Remove tax">\u00d7</button>`;
-  $("taxRows").appendChild(row);
-}
+// The fee/schedule editor rows (time-of-day, by-duration, station-time, tax)
+// are built and read in ./editorRows.js.
 
 // Reflect the selected pricing mode: show the right editor, and disable the flat
 // charger-price field when a schedule/tier mode is driving the result instead.
@@ -646,12 +543,12 @@ function applyRateMode() {
   }
 
   if (rateMode === "tod" && $("touRows").children.length === 0) {
-    addTouRow("00:00", "");
-    addTouRow("16:00", "");
+    addTouRow(prefs.currency, "00:00", "");
+    addTouRow(prefs.currency, "16:00", "");
   }
   if (rateMode === "dur" && $("durRows").children.length === 0) {
-    addDurRow(0, "");
-    addDurRow(60, "");
+    addDurRow(prefs.currency, 0, "");
+    addDurRow(prefs.currency, 60, "");
   }
 }
 
@@ -1083,7 +980,7 @@ function attachEvents() {
     });
   }
   $("touAdd").addEventListener("click", () => {
-    addTouRow();
+    addTouRow(prefs.currency);
     render();
   });
   $("touRows").addEventListener("input", render);
@@ -1094,7 +991,7 @@ function attachEvents() {
     }
   });
   $("durAdd").addEventListener("click", () => {
-    addDurRow();
+    addDurRow(prefs.currency);
     render();
   });
   $("durRows").addEventListener("input", render);
@@ -1119,7 +1016,7 @@ function attachEvents() {
   });
 
   $("timeFeeAdd").addEventListener("click", () => {
-    addTimeFeeRow();
+    addTimeFeeRow(prefs.currency);
     render();
   });
   $("timeFeeRows").addEventListener("input", render);
