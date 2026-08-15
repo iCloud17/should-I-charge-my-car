@@ -973,6 +973,7 @@ function attachEvents() {
     infoBtn.addEventListener("click", (e) => { e.stopPropagation(); setPinned(!pinned); });
   };
   wireInfo("carInfoBtn", "carInfoNote");
+  wireInfo("batteryInfoBtn", "batteryInfoNote");
   wireInfo("powerInfoBtn", "powerInfoNote");
   wireInfo("timeFeeInfoBtn", "timeFeeInfoNote");
   wireInfo("taxInfoBtn", "taxInfoNote");

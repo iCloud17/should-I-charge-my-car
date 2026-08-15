@@ -575,6 +575,9 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 
 .field-row { display: flex; gap: 12px; }
 .field-row .field { flex: 1; margin-top: 0; }
+/* A single field after a row (e.g. Battery size below the MPG/efficiency row)
+   isn't caught by `.field + .field`, so give it the same rhythm. */
+.field-row + .field { margin-top: 14px; }
 /* The charge-power row sits right below the preset buttons. The generic
    `.field + .field` rhythm doesn't match `.field + .field-row`, leaving zero
    gap, which lets the info button's tap target overlap the presets above. */
