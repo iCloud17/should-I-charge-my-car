@@ -155,7 +155,11 @@
                 <input id="miPerKwh" type="text" min="0" step="any" inputmode="decimal" autocomplete="off" value="" />
               </div>
             </div>
-            <p class="hint">Auto-filled from your car. Only change these if you track your own real-world numbers.</p>
+            <div class="field">
+              <label for="batteryKwh">Battery size (kWh)</label>
+              <input id="batteryKwh" type="text" min="0" step="any" inputmode="decimal" autocomplete="off" value="" />
+            </div>
+            <p class="hint">Auto-filled from your car. Only change these if you track your own real-world numbers. Battery affects the charge time, not the verdict.</p>
           </div>
         </details>
       </div>
@@ -258,12 +262,8 @@
             </div>
             <input id="powerKw" type="text" min="0" step="any" inputmode="decimal" autocomplete="off" value="6.6" />
           </div>
-          <div class="field">
-            <label for="batteryKwh">Battery size (kWh)</label>
-            <input id="batteryKwh" type="text" min="0" step="any" inputmode="decimal" autocomplete="off" value="" />
-          </div>
         </div>
-        <p class="hint">PHEVs charge on AC only, so speed is capped by the car&rsquo;s onboard charger. Power and battery affect the time estimate only.</p>
+        <p class="hint">PHEVs charge on AC only, so speed is capped by the car&rsquo;s onboard charger. Charge power affects the time estimate only.</p>
 
         <div class="field">
           <label for="startPct">Battery now: <output id="startPctOut">0%</output></label>
