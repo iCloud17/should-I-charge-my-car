@@ -447,6 +447,16 @@ function renderAdvanced(m, be, cur, session, effective, timeFee) {
   } else {
     tfRow.hidden = true;
   }
+  // Bottom line: the all-in dollar cost of this charge. Only meaningful once a
+  // rate is set (effective is finite) and we know the battery size to bill an
+  // actual amount of energy against.
+  const totalRow = $("advTotalRow");
+  if (Number.isFinite(effective) && session.kwhFromCharger > 0 && Number.isFinite(session.totalCost)) {
+    totalRow.hidden = false;
+    $("advTotal").textContent = money(session.totalCost, cur);
+  } else {
+    totalRow.hidden = true;
+  }
 }
 
 // --- Units picker ---

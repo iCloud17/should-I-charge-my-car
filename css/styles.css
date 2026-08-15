@@ -861,6 +861,14 @@ output { font-weight: 800; color: var(--text); }
   color: var(--muted);
 }
 .advanced-result__row strong { color: var(--text); font-size: 15px; }
+.advanced-result__row--total {
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  color: var(--text);
+  font-weight: 600;
+}
+.advanced-result__row--total strong { font-size: 16px; }
 .advanced-result__verdict {
   margin: 10px 0 0;
   font-size: 14px;
