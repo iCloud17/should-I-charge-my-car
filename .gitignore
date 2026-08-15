@@ -14,22 +14,26 @@ npm-debug.log*
 # Logs
 *.log
 
-# Local browser-testing artifacts (screenshots, Playwright output)
+# Local browser-testing artifacts
 .playwright-mcp/
 /*.png
-# ...except the social-preview image, which is a shipped asset.
 !/og-image.png
 
-# Seed script cache (large bulk CSV from fueleconomy.gov)
+# Seed script cache
 scripts/.vehicles.cache.csv
 
-# Local design notes (not part of the shipped app)
+# Local design notes
 DESIGN.md
 
-# Vendored AI design skill (ui-ux-pro-max) + Copilot prompt wrapper; local tooling, not shipped.
-# Ignore everything under .github/ EXCEPT the Pages deploy workflow, which must
-# be tracked so it runs on GitHub.
+# Local tooling under .github (keep only the Pages deploy workflow)
 .github/*
 !.github/workflows/
 .github/workflows/*
 !.github/workflows/deploy.yml
+
+# AI-agent workflow tooling (local only)
+.squad/
+.squad-workstream
+.gitattributes
+.mcp.json
+.copilot/
