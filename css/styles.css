@@ -2,7 +2,10 @@
   /* Text-safe green (>=4.5:1 on white) so small links/labels pass WCAG AA;
      the large hero headline and borders read fine too. */
   --accent: #15803d;
-  --accent-ink: #052e16;
+  /* Same green, darkened just enough to clear AA on --bg (6.34:1). Going
+     darker (e.g. #052e16) passes too, but reads black and kills the cue
+     that the text is a link. */
+  --accent-ink: #166534;
   --worth: #15803d;
   --close: #b45309;
   --gas: #dc2626;
@@ -34,6 +37,7 @@
     --field: #1a2436;
     /* Lighter accents so green/amber pass contrast on the dark surfaces. */
     --accent: #22c55e;
+    --accent-ink: #22c55e;
     --worth: #22c55e;
     --close: #f59e0b;
     --shadow: 0 6px 28px rgba(0, 0, 0, 0.5);
@@ -51,6 +55,7 @@
   --field: #1a2436;
   /* Lighter accents so green/amber pass contrast on the dark surfaces. */
   --accent: #22c55e;
+  --accent-ink: #22c55e;
   --worth: #22c55e;
   --close: #f59e0b;
   --shadow: 0 6px 28px rgba(0, 0, 0, 0.5);
@@ -928,6 +933,8 @@ output { font-weight: 800; color: var(--text); }
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
   padding: 4px 6px 0;
 }
 .app__foot-note { font-size: 12px; color: var(--muted); }
@@ -951,6 +958,10 @@ output { font-weight: 800; color: var(--text); }
   cursor: pointer;
   padding: 0;
 }
+.link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--radius-sm); }
+/* Footer links sit on --bg, not --card, where plain --accent is only 4.46:1. */
+.app__foot .link { color: var(--accent-ink); text-decoration: none; }
+.app__foot .link:hover { text-decoration: underline; text-underline-offset: 3px; }
 
 /* --- Dialog --- */
 .dialog {
@@ -1015,6 +1026,9 @@ output { font-weight: 800; color: var(--text); }
   animation: toast-in 0.2s ease-out;
 }
 .toast__text { white-space: nowrap; }
+/* Text-only variant: the base padding is shaped around the 44px action buttons. */
+.toast--copy { padding: 12px 16px; }
+.toast--stacked { bottom: calc(max(16px, env(safe-area-inset-bottom)) + 70px); }
 .toast__action {
   border: 0;
   cursor: pointer;

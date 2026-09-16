@@ -746,6 +746,26 @@ function hideCarResults() {
 }
 
 // --- Events ---
+let copyToastTimer = null;
+
+function showCopyToast(message) {
+  document.querySelector(".toast--copy")?.remove();
+  const toast = document.createElement("div");
+  toast.className = "toast toast--copy";
+  toast.setAttribute("role", "status");
+  // The update toast is pinned to the same spot, so sit above it rather than on it.
+  if (document.querySelector(".toast:not(.toast--copy)")) toast.classList.add("toast--stacked");
+  const text = document.createElement("span");
+  text.className = "toast__text";
+  toast.append(text);
+  document.body.appendChild(toast);
+  // Fill after insertion: a live region that arrives already populated is not
+  // reliably announced, and this toast is the only confirmation of the copy.
+  requestAnimationFrame(() => { text.textContent = message; });
+  clearTimeout(copyToastTimer);
+  copyToastTimer = setTimeout(() => toast.remove(), 2500);
+}
+
 function attachEvents() {
   const liveIds = ["gasPrice", "yourRate", "mpg", "miPerKwh", "batteryKwh", "sessionFee", "powerKw"];
   for (const id of liveIds) $(id).addEventListener("input", render);
@@ -1002,6 +1022,16 @@ function attachEvents() {
     if (prefs.carId === CUSTOM_ID) {
       $("carName").textContent = prefs.customName || "My car";
     }
+  });
+
+  // track() dedupes per session, so this counts visits that reached out, not clicks.
+  $("feedbackLink").addEventListener("click", () => {
+    track("feedback-clicked");
+    // Read the address off the href so it can never drift from what the link opens.
+    const email = $("feedbackLink").href.replace(/^mailto:/, "").split("?")[0];
+    const copied = navigator.clipboard?.writeText(email);
+    if (!copied) return;
+    copied.then(() => showCopyToast("Email address copied"), () => {});
   });
 
   $("resetBtn").addEventListener("click", () => {
