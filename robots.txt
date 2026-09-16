@@ -13,4 +13,4 @@ Allow: /
 User-agent: ClaudeBot
 Allow: /
 
-Sitemap: https://icloud17.github.io/should-I-charge-my-car/sitemap.xml
+Sitemap: https://shouldichargemycar.com/sitemap.xml

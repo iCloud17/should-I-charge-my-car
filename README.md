@@ -1,6 +1,6 @@
 # Should I Charge My Car?
 
-**[Try it live &rarr;](https://icloud17.github.io/should-I-charge-my-car/)**
+**[Try it live &rarr;](https://shouldichargemycar.com)**
 
 A dead-simple calculator for **plug-in hybrid (PHEV)** owners that answers one question: **is charging actually cheaper than just burning gas right now?**
 
