@@ -878,6 +878,51 @@ output { font-weight: 800; color: var(--text); }
   font-weight: 700;
 }
 
+/* --- FAQ --- */
+.faq__item + .faq__item { border-top: 1px solid var(--line); }
+.faq__item > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 0;
+}
+.faq__item > summary::-webkit-details-marker { display: none; }
+.faq__item > summary::after {
+  content: "＋";
+  color: var(--muted);
+  font-size: 13px;
+  flex: none;
+}
+.faq__item[open] > summary::after { content: "－"; }
+.faq__q {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+.faq__a {
+  margin: 0 0 14px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.faq__a a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.faq__steps {
+  margin: 0 0 14px;
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.faq__steps li + li { margin-top: 6px; }
+
 /* --- Footer --- */
 .app__foot {
   display: flex;

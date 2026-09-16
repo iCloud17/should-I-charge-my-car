@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#15803d" />
-  <meta name="description" content="Find the max price per kWh you can pay to charge your plug-in hybrid before gas becomes cheaper." />
-  <title>Should I Charge My Car?</title>
+  <meta name="description" content="Is charging your plug-in hybrid cheaper than gas? Enter your car, gas price, and charger rate to get a straight answer plus your break-even price per kWh." />
+  <title>Should I Charge My Car? PHEV Charge-vs-Gas Calculator</title>
 
   <!-- SEO + social link previews. Absolute URLs point at the custom domain;
        swapping this one base is enough if it ever changes again. Open Graph
@@ -299,6 +299,56 @@
             <span>Total for this charge</span><strong id="advTotal">-</strong>
           </div>
         </div>
+      </div>
+    </details>
+
+    <!-- Answers to the questions people actually asked on the r/PHEV thread. Also
+         the only prose on an otherwise all-controls page, so it is what crawlers read.
+         Headings stay inside each summary so the accordion keeps its outline. -->
+    <details class="card disclosure" id="faq">
+      <summary>Common questions</summary>
+      <div class="disclosure__body">
+        <details class="faq__item">
+          <summary><h2 class="faq__q">Why I built this</h2></summary>
+          <p class="faq__a">I drive a plug-in hybrid and got tired of standing at chargers doing the same mental math every time. With this gas price and this charger rate, am I actually saving money, or just feeling good about plugging in? Half the time I could not even work out the real price per kWh, because every network prices it differently. So I built the thing I wanted. You put in your car, your gas price, and what the charger costs, and it tells you charge it or use gas. It works offline too, because every charger I use is buried in a garage with no signal. It is free, there is no signup, and nothing you type leaves your device.</p>
+        </details>
+
+        <details class="faq__item">
+          <summary><h2 class="faq__q">How do I use it?</h2></summary>
+          <ol class="faq__steps">
+            <li>Pick your car, or choose &ldquo;My own car&rdquo; to enter your own numbers.</li>
+            <li>Enter today&rsquo;s gas price.</li>
+            <li>Enter the charger&rsquo;s price per kWh. For time-of-day or tiered pricing, use &ldquo;Energy price isn&rsquo;t flat?&rdquo;. Add session, hourly, or tax charges under &ldquo;Charger fees.&rdquo;</li>
+            <li>Read the verdict at the top. It updates as you type and saves for next time.</li>
+          </ol>
+        </details>
+
+        <details class="faq__item">
+          <summary><h2 class="faq__q">What is &ldquo;Charge time &amp; cost&rdquo; for?</h2></summary>
+          <p class="faq__a">This section is optional. It estimates how long a charge takes and what the whole session costs.</p>
+          <p class="faq__a">Set the charger speed (Level 1 is a wall socket, Level 2 is a 240V unit) and the two battery sliders. You get range added, time, and total.</p>
+          <p class="faq__a">Charge power affects the time estimate, not the verdict. If the station bills by the hour, a &ldquo;Charge for&rdquo; slider appears so you can price a partial charge.</p>
+        </details>
+
+        <details class="faq__item">
+          <summary><h2 class="faq__q">How does it decide?</h2></summary>
+          <p class="faq__a">It compares cost per mile. Gas is pump price &divide; MPG. Electricity is charger price &divide; miles per kWh. Whichever is lower wins. Set the two equal and you get your break-even price, the most you can pay per kWh before gas is cheaper.</p>
+        </details>
+
+        <details class="faq__item">
+          <summary><h2 class="faq__q">Where do the car numbers come from?</h2></summary>
+          <p class="faq__a">The US EPA, via <a href="https://www.fueleconomy.gov" target="_blank" rel="noopener">fueleconomy.gov</a>. The electric figure is the EPA&rsquo;s measured kWh per 100 miles, not a conversion from MPGe. Battery size is estimated from EPA electric range. Every value is editable.</p>
+        </details>
+
+        <details class="faq__item">
+          <summary><h2 class="faq__q">Why can public charging cost more than gas?</h2></summary>
+          <p class="faq__a">The per-kWh price is often only part of the bill. Stations add session fees, hourly fees while you are plugged in, and tax. Plug-in hybrids charge slowly, 3.6 to 6.6 kW, so hourly fees hit hard. A $2/hour fee on a 3.6 kW car adds about 55 cents per kWh by itself.</p>
+        </details>
+
+        <details class="faq__item">
+          <summary><h2 class="faq__q">My car isn&rsquo;t listed.</h2></summary>
+          <p class="faq__a">Choose &ldquo;My own car&rdquo; and enter your MPG, miles per kWh, and battery size. The list covers 441 US models from 2012 to 2026, so cars sold only in the UK or Europe are missing.</p>
+        </details>
       </div>
     </details>
 
