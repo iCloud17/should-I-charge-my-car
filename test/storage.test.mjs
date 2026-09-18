@@ -4,12 +4,18 @@
 
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 import {
   loadPrefs, savePrefs, mergeCarOverride, defaultPrefs, DEFAULT_PREFS,
   applyCarEdit, applyCarSelection, persistableFrom, resetPrefs,
+  sanitizePrefs, PERSIST_KEYS,
 } from "../js/storage.js";
-import { chargeDrawKw } from "../js/cars.js";
+import { chargeDrawKw, MAX_OUTLET_KW } from "../js/cars.js";
+// Imported to prove a point rather than to test theme.js: sanitizePrefs
+// deliberately leaves themeMode alone, and these are the rules that make that
+// safe. See "themeMode is passed through" below.
+import { resolveTheme, nextThemeMode } from "../js/theme.js";
 
 const KEY = "sicc.prefs.v1";
 
@@ -153,7 +159,219 @@ test("loadPrefs ignores prototype-polluting override keys", () => {
   assert.equal({}.mpg, undefined);
 });
 
+// --- Untrusted input: localStorage is fully user-editable ---
+//
+// Most of these go through sanitizePrefs directly rather than through the
+// store. NaN and Infinity cannot survive JSON.stringify, but nothing obliges a
+// hand-edited store to be something we wrote, and sanitizePrefs is the function
+// that has to hold either way.
+
+// The numbers that must be finite and above zero, each with the default it
+// falls back to when the stored value is not.
+const POSITIVE_FIELDS = { mpg: null, miPerKwh: null, batteryKwh: null, gasPrice: null, powerKw: 6.6 };
+
+const BAD_NUMBERS = [null, undefined, NaN, Infinity, -Infinity, "42", "", -1, 0, true, {}, []];
+
+test("a numeric field holding anything but a positive number falls back to its default", () => {
+  for (const [field, fallback] of Object.entries(POSITIVE_FIELDS)) {
+    for (const bad of BAD_NUMBERS) {
+      const out = sanitizePrefs({ [field]: bad });
+      assert.equal(out[field], fallback, `${field} = ${String(bad)}`);
+    }
+  }
+});
+
+test("a numeric field holding a positive number is kept exactly", () => {
+  const good = { mpg: 42, miPerKwh: 3.1, batteryKwh: 17, gasPrice: 3.899, powerKw: 3.3 };
+  const out = sanitizePrefs(good);
+  for (const [field, v] of Object.entries(good)) assert.equal(out[field], v, field);
+});
+
+test("an outlet power past the AC ceiling falls back to the default, not to the ceiling", () => {
+  // Clamping would hand back a socket the user never plugged into, and the next
+  // render reads the field and saves it, so the invention becomes their setting.
+  for (const bad of [MAX_OUTLET_KW + 0.1, 50, 350, 99999999]) {
+    assert.equal(sanitizePrefs({ powerKw: bad }).powerKw, DEFAULT_PREFS.powerKw, `powerKw = ${bad}`);
+  }
+  assert.equal(sanitizePrefs({ powerKw: MAX_OUTLET_KW }).powerKw, MAX_OUTLET_KW, "the ceiling itself is a real outlet");
+});
+
+test("a percentage outside 0 to 100 falls back to its default", () => {
+  for (const bad of [...BAD_NUMBERS, 101, -0.1, 1e9]) {
+    if (bad === 0) continue; // zero is a valid state of charge, covered below
+    assert.equal(sanitizePrefs({ startPct: bad }).startPct, DEFAULT_PREFS.startPct, `startPct = ${String(bad)}`);
+    assert.equal(sanitizePrefs({ targetPct: bad }).targetPct, DEFAULT_PREFS.targetPct, `targetPct = ${String(bad)}`);
+  }
+});
+
+test("a percentage keeps every value on its own scale, zero included", () => {
+  for (const ok of [0, 5, 37, 95, 100]) {
+    assert.equal(sanitizePrefs({ startPct: ok }).startPct, ok, `startPct = ${ok}`);
+    assert.equal(sanitizePrefs({ targetPct: ok }).targetPct, ok, `targetPct = ${ok}`);
+  }
+});
+
+test("a stored startPct of null comes back as 0, never as a made-up 50", () => {
+  // The slider runs 0 to 100. Handed null it cannot hold the value and falls
+  // back to the midpoint of its own min and max, so the app came up claiming a
+  // 50% starting charge, and the next render saved that 50 as if it were chosen.
+  seed(JSON.stringify({ ...DEFAULT_PREFS, startPct: null }));
+  const out = loadPrefs();
+  assert.equal(out.startPct, 0);
+  assert.notEqual(out.startPct, 50);
+});
+
+test("a start above the target is left alone: both numbers are the user's", () => {
+  // Two individually valid percentages in a surprising order, not garbage.
+  // Overwriting one would invent a relationship nobody expressed, and the
+  // ordering already has homes downstream, in writeDisplayValues and chargeCurve.
+  const out = sanitizePrefs({ startPct: 90, targetPct: 20 });
+  assert.equal(out.startPct, 90);
+  assert.equal(out.targetPct, 20);
+});
+
+test("a carId that isn't a usable string falls back to no car", () => {
+  for (const bad of [null, 42, true, {}, [], "", "   ", "\u0000\u0007"]) {
+    assert.equal(sanitizePrefs({ carId: bad }).carId, null, `carId = ${JSON.stringify(bad)}`);
+  }
+});
+
+test("a carId is bounded, and real ones pass through untouched", () => {
+  assert.equal(sanitizePrefs({ carId: "x".repeat(5000) }).carId.length, 128);
+  // The longest id in the bundled dataset, and the custom-car sentinel.
+  for (const id of ["mercedes-benz-amg-e53-hybrid-4matic-plus-station-wagon-2026", "__custom__"]) {
+    assert.equal(sanitizePrefs({ carId: id }).carId, id);
+  }
+});
+
+test("a customName that isn't a string falls back to empty", () => {
+  for (const bad of [null, 42, true, {}, []]) {
+    assert.equal(sanitizePrefs({ customName: bad }).customName, "", `customName = ${String(bad)}`);
+  }
+});
+
+test("a customName is stripped of control characters and capped", () => {
+  assert.equal(sanitizePrefs({ customName: "Nel\u0000lie\u001b\u009f" }).customName, "Nellie");
+  assert.equal(sanitizePrefs({ customName: "x".repeat(500) }).customName.length, 40);
+  assert.equal(sanitizePrefs({ customName: "Nellie" }).customName, "Nellie");
+});
+
+test("source guard: the nickname cap matches the input's own maxlength", () => {
+  // maxlength is a DOM hint a tampered store walks straight past, so storage
+  // enforces the same number. If one moves the other has to move with it.
+  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const input = html.split("\n").find((l) => l.includes('id="carNickname"'));
+  assert.ok(input, "the nickname input moved or was renamed");
+  assert.match(input, /maxlength="40"/, "storage caps the nickname at 40; keep the markup in step");
+});
+
+test("themeMode is passed through, because theme.js is the one place that rule lives", () => {
+  // Not an oversight. resolveTheme, nextThemeMode and themeLabel all treat
+  // anything that is not "light" or "dark" as auto, so a tampered value paints
+  // as auto and cycles back to auto without a second rule in storage.
+  const noon = new Date(2026, 0, 1, 12, 0, 0);
+  for (const bad of [null, 42, "chartreuse", {}]) {
+    const mode = sanitizePrefs({ themeMode: bad }).themeMode;
+    assert.equal(resolveTheme(mode, noon), "light", `${String(bad)} paints as auto`);
+    assert.equal(nextThemeMode(mode), "auto", `${String(bad)} cycles to auto`);
+  }
+  assert.equal(sanitizePrefs({ themeMode: "dark" }).themeMode, "dark");
+});
+
+test("one bad field never costs a good one", () => {
+  // The whole point of checking field by field. safeOverrides already worked
+  // this way; everything else now does too.
+  seed(JSON.stringify({
+    carId: 42, customName: { evil: true }, mpg: -5, miPerKwh: "3.1", batteryKwh: 0,
+    gasPrice: 3.899, units: "klingon", currency: "<>&\"'", powerKw: 99999999,
+    startPct: null, targetPct: 1e9, themeMode: "dark",
+    carOverrides: { "honda-clarity": { mpg: 42 } },
+  }));
+  const out = loadPrefs();
+  assert.equal(out.carId, null);
+  assert.equal(out.customName, "");
+  assert.equal(out.mpg, null);
+  assert.equal(out.miPerKwh, null);
+  assert.equal(out.batteryKwh, null);
+  assert.equal(out.units, "imperial");
+  assert.equal(out.currency, "$");
+  assert.equal(out.powerKw, 6.6);
+  assert.equal(out.startPct, 0);
+  assert.equal(out.targetPct, 100);
+  // The ones that were fine are untouched.
+  assert.equal(out.gasPrice, 3.899);
+  assert.equal(out.themeMode, "dark");
+  assert.deepEqual(out.carOverrides, { "honda-clarity": { mpg: 42 } });
+});
+
+test("keys the app never persists cannot be pushed in through the store", () => {
+  // yourRate and sessionFee change at every stop and are deliberately not
+  // saved. A hand-edited store must not hand them back as if they had been.
+  const out = sanitizePrefs({ yourRate: 0.99, sessionFee: 12, injected: "x" });
+  assert.equal(out.yourRate, null);
+  assert.equal(out.sessionFee, 0);
+  assert.equal("injected" in out, false);
+});
+
+test("a store carrying __proto__ reaches neither the prefs nor Object.prototype", () => {
+  // JSON.parse makes __proto__ an OWN property, so it survives into the parsed
+  // object and would be walked by anything iterating the store's own keys.
+  // Driving the loop off PERSIST_KEYS instead means the name is never looked up.
+  seed('{"__proto__":{"pwned":1},"constructor":{"pwned":1},"carId":"honda-clarity","mpg":42}');
+  const out = loadPrefs();
+  assert.equal(out.pwned, undefined);
+  assert.equal({}.pwned, undefined, "Object.prototype must be untouched");
+  assert.equal(out.carId, "honda-clarity", "and the good fields still load");
+  assert.equal(out.mpg, 42);
+});
+
+test("every persisted key survives sanitation when its value is valid", () => {
+  // A key added to PERSIST_KEYS with no rule behind it is dropped on every
+  // load, silently resetting itself. Handing each key a plainly valid value
+  // and demanding it back is what makes that visible.
+  const valid = {
+    carId: "honda-clarity", customName: "Nellie",
+    carOverrides: { "honda-clarity": { mpg: 42 } },
+    mpg: 42, miPerKwh: 3.1, batteryKwh: 17, gasPrice: 3.899,
+    units: "uk", currency: "£", powerKw: 3.3, startPct: 20, targetPct: 80,
+    themeMode: "dark",
+  };
+  const out = sanitizePrefs(valid);
+  for (const k of PERSIST_KEYS) {
+    assert.ok(k in valid, `PERSIST_KEYS gained ${k}; give it a value here and a rule in storage.js`);
+    assert.deepEqual(out[k], valid[k], k);
+  }
+});
+
+test("sanitizePrefs does not mutate what it was given", () => {
+  const raw = { carId: "honda-clarity", carOverrides: { "honda-clarity": { mpg: 42 } }, mpg: -5 };
+  const copy = JSON.parse(JSON.stringify(raw));
+  sanitizePrefs(raw);
+  assert.deepEqual(raw, copy);
+});
+
 // --- round trip and persistence contract ---
+
+test("a valid setup round trips through storage byte for byte", () => {
+  // The case that matters most: sanitation must be invisible to everyone whose
+  // store was never tampered with.
+  const store = seed();
+  const saved = {
+    carId: "honda-clarity", customName: "Nellie",
+    carOverrides: { "honda-clarity": { mpg: 42, miPerKwh: 3.1, batteryKwh: 17 } },
+    mpg: 42, miPerKwh: 3.1, batteryKwh: 17, gasPrice: 3.899,
+    units: "uk", currency: "£", powerKw: 3.3, startPct: 20, targetPct: 80,
+    themeMode: "dark",
+  };
+  savePrefs({ ...DEFAULT_PREFS, ...saved });
+  const before = store.map.get(KEY);
+
+  const out = loadPrefs();
+  for (const [k, v] of Object.entries(saved)) assert.deepEqual(out[k], v, k);
+
+  savePrefs(out);
+  assert.equal(store.map.get(KEY), before, "a clean load must not rewrite a single byte");
+});
 
 test("savePrefs and loadPrefs round trip the stable fields", () => {
   savePrefs({

@@ -7,7 +7,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-import { carCeilingKw, chargeDrawKw, presetMatchesKw } from "../js/cars.js";
+import { carCeilingKw, chargeDrawKw, presetMatchesKw, MAX_OUTLET_KW } from "../js/cars.js";
 
 const SLOW = { id: "slow-phev", mpg: 25, miPerKwh: 2.4, batteryKwh: 12, chargeKw: 3.3 };
 const FAST = { id: "fast-phev", mpg: 38, miPerKwh: 2.6, batteryKwh: 18, chargeKw: 7.4 };
@@ -49,6 +49,37 @@ test("an unreadable power field stays unreadable rather than becoming a number",
   // would show a charge time for a charger the user never told us about.
   assert.equal(Number.isNaN(chargeDrawKw(NaN, SLOW)), true);
   assert.equal(Number.isNaN(chargeDrawKw(NaN, null)), true);
+});
+
+// --- The outlet's own ceiling: the only bound a custom car has ---
+
+test("the outlet ceiling is an AC figure, not a DC fast-charging one", () => {
+  // The number is load-bearing, not decorative: a DC-sized ceiling would let a
+  // PHEV estimate run at a rate no plug-in hybrid can physically accept.
+  assert.equal(MAX_OUTLET_KW, 22);
+});
+
+test("an absurd outlet figure cannot drive the estimate", () => {
+  // A custom car has no rated charge power, so carCeilingKw is Infinity and the
+  // car cannot bound anything. Without the outlet ceiling the estimate renders
+  // "0 min at 99999999 kW" with a straight face.
+  const custom = { id: "__custom__", mpg: 30 };
+  assert.equal(chargeDrawKw(99999999, custom), MAX_OUTLET_KW);
+  assert.equal(chargeDrawKw(99999999, null), MAX_OUTLET_KW);
+  assert.equal(chargeDrawKw(Infinity, custom), MAX_OUTLET_KW);
+});
+
+test("the car's onboard charger still wins when it is the lower of the two", () => {
+  assert.equal(chargeDrawKw(99999999, SLOW), 3.3, "the ceiling never raises the draw");
+  assert.equal(chargeDrawKw(99999999, FAST), 7.4);
+});
+
+test("every real outlet passes through the ceiling untouched", () => {
+  // Level 1 through the fastest three-phase wallbox. If any of these moved, the
+  // ceiling would be bounding ordinary use rather than nonsense.
+  for (const kw of [1.4, 1.9, 3.3, 3.6, 6.6, 7.2, 7.4, 9.6, 11, 19.2, 22]) {
+    assert.equal(chargeDrawKw(kw, null), kw, `${kw} kW is a real outlet`);
+  }
 });
 
 // --- Presets highlight at their own value, because the field is the outlet ---
