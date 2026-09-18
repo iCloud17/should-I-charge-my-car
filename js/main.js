@@ -10,7 +10,7 @@ import {
   loadCars, getCar, getCars, carLabel, maxLabelLength,
   chargeDrawKw, presetMatchesKw,
 } from "./cars.js";
-import { $, parseNum, money, formatDuration, escapeHtml } from "./ui.js";
+import { $, parseNum, money, formatDuration, escapeHtml, nextOptionIndex, enterAction } from "./ui.js";
 import { applyTheme, nextThemeMode, themeLabel } from "./theme.js";
 import { track, trackWhenReady } from "./analytics.js";
 import {
@@ -712,40 +712,108 @@ function filterCars(query) {
   });
 }
 
+// This is a combobox, not a menu: focus stays in the text field the whole time
+// so typing keeps working, and the "which row am I on" state that focus would
+// normally carry has to be tracked by hand and published as
+// aria-activedescendant. That is the one real difference from dropdown.js,
+// where the rows take DOM focus outright.
+const carOptionId = (i) => `carOption-${i}`;
+// Index into the rendered .combo__item rows, or -1 for "none, the caret is
+// still just in the text field". Mouse hover deliberately does not move it.
+let carActiveIndex = -1;
+// The text Escape puts back. It is sampled at the two moments the field is
+// settled, focus and close, and never while the list is open. Every close is a
+// real one: the deferred blur close is cancelled on refocus, so a timer from a
+// blur the user already undid cannot land mid-query and bank a half-typed
+// search. It cannot be sampled on open: typing is itself an open, and by the
+// time the input event runs the keystroke is already in the value, so opening
+// that way would bank the character the user is about to ask us to throw away.
+let carRestoreValue = "";
+// The pending deferred close from a blur, held so a refocus can cancel it.
+let carBlurTimer = null;
+
+function carOptionEls() {
+  return [...$("carResults").querySelectorAll(".combo__item")];
+}
+
+// Single place that paints the active row: the attribute a screen reader
+// follows and the styling everyone else sees, set together so they cannot drift.
+function setCarActive(index) {
+  const items = carOptionEls();
+  carActiveIndex = index >= 0 && index < items.length ? index : -1;
+  items.forEach((li, i) => {
+    const on = i === carActiveIndex;
+    li.classList.toggle("combo__item--active", on);
+    li.setAttribute("aria-selected", on ? "true" : "false");
+  });
+  const active = carActiveIndex >= 0 ? items[carActiveIndex] : null;
+  if (!active) {
+    $("carSearch").removeAttribute("aria-activedescendant");
+    return;
+  }
+  $("carSearch").setAttribute("aria-activedescendant", active.id);
+  // "nearest" scrolls the 46vh results panel and leaves the page alone.
+  active.scrollIntoView({ block: "nearest" });
+}
+
 function renderCarResults(query) {
   const ul = $("carResults");
   ul.innerHTML = "";
 
   const custom = document.createElement("li");
   custom.className = "combo__item combo__item--custom";
+  custom.id = carOptionId(0);
   custom.dataset.id = CUSTOM_ID;
   custom.setAttribute("role", "option");
+  custom.setAttribute("aria-selected", "false");
   custom.textContent = "\u270F\uFE0F My own car (enter numbers)";
   ul.appendChild(custom);
 
   const results = filterCars(query);
-  for (const car of results) {
+  results.forEach((car, i) => {
     const li = document.createElement("li");
     li.className = "combo__item";
+    li.id = carOptionId(i + 1); // the custom row is always option 0
     li.dataset.id = car.id;
     li.setAttribute("role", "option");
+    li.setAttribute("aria-selected", "false");
     li.textContent = carLabel(car);
     ul.appendChild(li);
-  }
+  });
   if (!results.length && query.trim()) {
     const none = document.createElement("li");
     none.className = "combo__none";
+    // A listbox may only contain options, so a bare <li> here was a malformed
+    // child the whole time. It is a message and not a choice, hence disabled,
+    // and it carries no .combo__item class so the arrow keys skip past it.
+    none.setAttribute("role", "option");
+    none.setAttribute("aria-disabled", "true");
+    none.setAttribute("aria-selected", "false");
     none.textContent = "No matches, try a make or model.";
     ul.appendChild(none);
   }
 
   ul.hidden = false;
   $("carSearch").setAttribute("aria-expanded", "true");
+  // The rows underneath just changed, so any previously active one is gone.
+  setCarActive(-1);
 }
 
 function hideCarResults() {
   $("carResults").hidden = true;
   $("carSearch").setAttribute("aria-expanded", "false");
+  // Every row is still in the DOM here; renderCarResults is what replaces them.
+  // This clears because the listbox is hidden as of the line above, and an
+  // active option inside a hidden listbox points a screen reader at a row the
+  // user can no longer see or move to.
+  $("carSearch").removeAttribute("aria-activedescendant");
+  carActiveIndex = -1;
+  // Whatever the field reads now is the baseline the next search starts from,
+  // whether a selection just wrote a label into it, Escape just put the old
+  // text back, Enter dismissed the list, or a blur left the typing where it
+  // stood. Escape reaching here re-banks the value it restored a line earlier,
+  // which is a no-op by construction.
+  carRestoreValue = $("carSearch").value;
 }
 
 // --- Events ---
@@ -1015,20 +1083,69 @@ function attachEvents() {
 
   $("carSearch").addEventListener("focus", (e) => {
     track("car-search-focused"); // diagnostic: did they engage the first step at all?
+    // A close still pending from a blur belongs to a blur this focus just undid.
+    // Left to land it closes the list the user is typing into and banks that
+    // half-typed query as the Escape value, so drop it here rather than teach
+    // hideCarResults to second-guess whoever called it.
+    clearTimeout(carBlurTimer);
+    // boot() fills this field from saved prefs without the list ever closing,
+    // so first focus is the only chance to bank that label before the list opens.
+    carRestoreValue = e.target.value;
     e.target.select();
     renderCarResults(e.target.value === "My own car" ? "" : e.target.value);
   });
   $("carSearch").addEventListener("input", (e) => renderCarResults(e.target.value));
-  $("carSearch").addEventListener("blur", () => setTimeout(hideCarResults, 120));
+  // Deferred so a mousedown on a row lands before the list goes away.
+  $("carSearch").addEventListener("blur", () => {
+    carBlurTimer = setTimeout(hideCarResults, 120);
+  });
+
+  // One commit path for both mouse and keyboard, so the two cannot diverge.
+  // keepFocus is the difference between them: a click is a finished gesture, but
+  // a keyboard user who is dropped onto <body> has lost their place in the tab
+  // order, so Enter leaves them in the field they were already in.
+  const chooseCarOption = (li, { keepFocus = false } = {}) => {
+    const id = li?.dataset.id;
+    if (!id) return;
+    if (id === CUSTOM_ID) setCustomCar(); // this one moves focus to mpg on purpose
+    else { const car = getCar(id); if (car) setCar(car); }
+    hideCarResults();
+    if (!keepFocus) $("carSearch").blur();
+  };
+
   $("carResults").addEventListener("mousedown", (e) => {
     const li = e.target.closest(".combo__item");
     if (!li) return;
     e.preventDefault(); // select before the input's blur hides the list
-    const id = li.dataset.id;
-    if (id === CUSTOM_ID) setCustomCar();
-    else { const car = getCar(id); if (car) setCar(car); }
-    hideCarResults();
-    $("carSearch").blur();
+    chooseCarOption(li);
+  });
+
+  // Arrow/Enter/Escape on the input itself. Nothing here touches aria-expanded:
+  // it opens by calling renderCarResults and closes by calling hideCarResults,
+  // which are still the only two writers of it.
+  $("carSearch").addEventListener("keydown", (e) => {
+    const closed = $("carResults").hidden;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault(); // otherwise the caret jumps to one end of the text
+      if (closed) renderCarResults(e.target.value === "My own car" ? "" : e.target.value);
+      setCarActive(nextOptionIndex(carActiveIndex, carOptionEls().length, e.key));
+    } else if (e.key === "Enter") {
+      const action = enterAction(!closed, carActiveIndex);
+      if (action === "ignore") return;
+      e.preventDefault();
+      // Nothing active means a soft keyboard, which sends no arrow keys at all.
+      // Dismissing the list is the least this key can do and still mean something.
+      if (action === "close") hideCarResults();
+      else chooseCarOption(carOptionEls()[carActiveIndex], { keepFocus: true });
+    } else if (e.key === "Escape") {
+      if (closed) return;
+      e.preventDefault();
+      // Escape cancels the search, so put back the text the box opened with.
+      e.target.value = carRestoreValue;
+      hideCarResults();
+    }
+    // Home and End are left alone on purpose: this is an editable combobox, so
+    // they belong to the caret in the text field, not to the list.
   });
 
   $("carNickname").addEventListener("input", (e) => {

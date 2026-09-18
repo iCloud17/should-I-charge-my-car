@@ -358,6 +358,16 @@ body {
 }
 .combo__item:hover { background: var(--field); }
 .combo__item--custom { color: var(--accent); }
+/* The keyboard's active row. It cannot take focus (the caret has to stay in the
+   search field), so it borrows the same ring :focus-visible draws on the
+   currency and units rows, which do. Hover is background only, so the two stay
+   tellable apart when a mouse and the arrow keys are on different rows. */
+.combo__item--active {
+  background: var(--field);
+  color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
 .combo__none { padding: 12px; font-size: 13px; color: var(--muted); }
 
 /* Currency picker menu: reuses .combo__results / .combo__item, but anchors to

@@ -48,3 +48,27 @@ export function formatDuration(minutes) {
   if (m === 0) return `${h} hr`;
   return `${h} hr ${m} min`;
 }
+
+// Arrow-key movement for a listbox, as a value in and a value out so it can be
+// tested without a DOM. `current` is the active option's index, or -1 for
+// "nothing active yet", which is the state a combobox sits in while the caret is
+// still in the text field. Both ends wrap, so the last car in a 441-row list is
+// one ArrowUp away instead of 440 ArrowDowns.
+export function nextOptionIndex(current, count, key) {
+  if (!Number.isInteger(count) || count <= 0) return -1;
+  const at = Number.isInteger(current) && current >= 0 && current < count ? current : -1;
+  if (key === "ArrowDown") return at === -1 || at === count - 1 ? 0 : at + 1;
+  if (key === "ArrowUp") return at <= 0 ? count - 1 : at - 1;
+  return at;
+}
+
+// What Enter does in that same listbox, again as values in and a value out so
+// the rule can be tested without a DOM. "commit" takes the active option.
+// "close" dismisses a list the user can see but has nothing active in, which is
+// every soft keyboard: phones send no arrow keys, so activeIndex never leaves
+// -1 and Enter would otherwise be a dead key over an open list. "ignore" hands
+// the key back to the page when the list is not showing.
+export function enterAction(expanded, activeIndex) {
+  if (!expanded) return "ignore";
+  return Number.isInteger(activeIndex) && activeIndex >= 0 ? "commit" : "close";
+}
