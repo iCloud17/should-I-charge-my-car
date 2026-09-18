@@ -99,6 +99,75 @@ export function mergeCarOverride(existing, incoming) {
   return out;
 }
 
+// The number fields that describe the CAR, so editing one saves an override
+// keyed to the current car. This is the single source of truth: main.js watches
+// exactly these inputs and applyCarEdit copies exactly these fields, so the list
+// can't drift between the two.
+//
+// powerKw is deliberately absent. It's the OUTLET you're standing at, not a
+// property of the car, and putting it back here writes a station's power into
+// the car's saved numbers, where it later reads as the car's own ceiling.
+export const CAR_EDIT_FIELDS = ["mpg", "miPerKwh", "batteryKwh"];
+
+// Remember a per-car number edit: merge the car-scoped fields of `inputs` into
+// the override saved for `carId` and return the prefs to store. Only
+// CAR_EDIT_FIELDS are read from `inputs`, so anything else in the live model
+// (the outlet power, the gas price, a charger fee) can never reach a car.
+// Pure: returns new prefs, never mutates what it was given.
+export function applyCarEdit(prefs, carId, inputs) {
+  if (!carId) return prefs;
+  const src = inputs && typeof inputs === "object" ? inputs : {};
+  const incoming = {};
+  for (const k of CAR_EDIT_FIELDS) incoming[k] = src[k];
+  const existing = prefs.carOverrides && typeof prefs.carOverrides === "object" ? prefs.carOverrides : {};
+  return {
+    ...prefs,
+    carOverrides: { ...existing, [carId]: mergeCarOverride(existing[carId], incoming) },
+  };
+}
+
+// Picking a car fills in its numbers, preferring any the user has edited for it.
+//
+// powerKw is deliberately NOT touched. The car's onboard ceiling belongs where
+// the number is used (see carCeilingKw), never written back into storage:
+// clamping on the way in only ratchets down, so picking one 3.3 kW car would
+// leave the outlet field stuck at 3.3 for every car chosen afterwards.
+// Pure: returns new prefs, never mutates what it was given.
+export function applyCarSelection(prefs, car) {
+  const all = prefs.carOverrides && typeof prefs.carOverrides === "object" ? prefs.carOverrides : {};
+  const ov = all[car.id];
+  const pick = (k) => (ov && typeof ov === "object" && Number.isFinite(ov[k]) ? ov[k] : car[k]);
+  return {
+    ...prefs,
+    carId: car.id,
+    mpg: pick("mpg"),
+    miPerKwh: pick("miPerKwh"),
+    batteryKwh: pick("batteryKwh"),
+  };
+}
+
+// Fold one render pass's canonical model values back into prefs, giving exactly
+// the object that gets saved.
+//
+// powerKw is stored EXACTLY as the user typed it. The car's onboard cap is
+// applied downstream, where the number is used; a capped value must never reach
+// this function, or the cap ratchets into storage and outlives the car.
+// Pure: returns new prefs, never mutates what it was given.
+export function persistableFrom(prefs, m) {
+  return {
+    ...prefs,
+    gasPrice: m.gasPrice,
+    yourRate: m.yourRate,
+    mpg: m.mpg,
+    miPerKwh: m.miPerKwh,
+    batteryKwh: m.batteryKwh,
+    sessionFee: m.sessionFee,
+    powerKw: m.powerKw,
+    startPct: m.startPct,
+    targetPct: m.targetPct,
+  };
+}
+
 export function savePrefs(prefs) {
   try {
     const toSave = {};
@@ -115,4 +184,16 @@ export function clearPrefs() {
   } catch {
     /* ignore */
   }
+}
+
+// "Reset everything": drop what's stored and hand back a genuinely fresh set.
+// The clear/build/save sequence lives here so the freshness rule has one home.
+// It must build through defaultPrefs(): spreading DEFAULT_PREFS hands out the
+// shared carOverrides object, so the next per-car edit writes into the defaults
+// and the reset after that gives the user their old overrides straight back.
+export function resetPrefs() {
+  clearPrefs();
+  const prefs = defaultPrefs();
+  savePrefs(prefs);
+  return prefs;
 }

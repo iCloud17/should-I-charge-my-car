@@ -2,8 +2,14 @@
 
 import { breakevenKwhPrice, chargeCurve, verdict, rateAtTime, rateAtElapsed, cheapestPeriod } from "./calc.js";
 import * as U from "./units.js";
-import { loadPrefs, savePrefs, clearPrefs, mergeCarOverride, defaultPrefs } from "./storage.js";
-import { loadCars, getCar, getCars, carLabel, maxLabelLength } from "./cars.js";
+import {
+  loadPrefs, savePrefs, resetPrefs,
+  applyCarEdit, applyCarSelection, persistableFrom, CAR_EDIT_FIELDS,
+} from "./storage.js";
+import {
+  loadCars, getCar, getCars, carLabel, maxLabelLength,
+  chargeDrawKw, presetMatchesKw,
+} from "./cars.js";
 import { $, parseNum, money, formatDuration, escapeHtml } from "./ui.js";
 import { applyTheme, nextThemeMode, themeLabel } from "./theme.js";
 import { track, trackWhenReady } from "./analytics.js";
@@ -43,19 +49,10 @@ function readInputs() {
   };
 }
 
+// Persist a render pass. `m` must carry the RAW outlet power: persistableFrom
+// stores powerKw as typed, and the car's cap belongs downstream at drawKw.
 function persistFrom(m) {
-  prefs = {
-    ...prefs,
-    gasPrice: m.gasPrice,
-    yourRate: m.yourRate,
-    mpg: m.mpg,
-    miPerKwh: m.miPerKwh,
-    batteryKwh: m.batteryKwh,
-    sessionFee: m.sessionFee,
-    powerKw: m.powerKw,
-    startPct: m.startPct,
-    targetPct: m.targetPct,
-  };
+  prefs = persistableFrom(prefs, m);
   savePrefs(prefs);
 }
 
@@ -100,8 +97,9 @@ function render() {
 
   // The outlet can be set higher than the car's onboard charger accepts, so cap
   // it here, at the point of use. Clamping the stored value instead would only
-  // ever ratchet it down and lose what the user typed.
-  const drawKw = Math.min(m.powerKw, carMaxKw());
+  // ever ratchet it down and lose what the user typed, so m.powerKw stays raw
+  // all the way to persistFrom below.
+  const drawKw = chargeDrawKw(m.powerKw, currentCar());
 
   const curveArgs = { batteryKwh: m.batteryKwh, startPct: m.startPct, targetPct: m.targetPct, powerKw: drawKw, rateOf, sessionFee: m.sessionFee, timeTiers, taxRate, breakeven: be, startClockMin };
 
@@ -313,28 +311,25 @@ function render() {
   persistFrom(m);
 }
 
-// The car's onboard-charger ceiling: the car's rated max, else no limit (custom
-// cars, or a car the dataset has no figure for). This is a property of the CAR.
-// The #powerKw field is a different quantity - the outlet you're plugged into -
-// so it is never read here. The time estimate and the presets are both capped
-// to this, so we never claim the car pulls more than its charger allows.
-function carMaxKw() {
-  const car = prefs.carId && prefs.carId !== CUSTOM_ID ? getCar(prefs.carId) : null;
-  if (car && Number.isFinite(car.chargeKw)) return car.chargeKw;
-  return Infinity;
+// The dataset entry for the selected car, or null for a custom car (or none
+// picked yet). The only thing that turns prefs into a car, so every charge-power
+// cap routes through cars.js and this file never invents its own ceiling.
+//
+// That is not the same as the cap being pinned here. chargeDrawKw is already
+// imported above, so moving the cap up into readInputs is a one-line edit that
+// leaves the suite green while ratcheting the capped value into m.powerKw and
+// on into storage. The rule is that a capped value never reaches m.powerKw;
+// review enforces that, the tests do not.
+function currentCar() {
+  return prefs.carId && prefs.carId !== CUSTOM_ID ? getCar(prefs.carId) : null;
 }
 
 // Highlight the charger-speed preset that matches the current power, if any.
-// A preset is compared at its capped value so, e.g., Level 2 still highlights
-// on a car whose charger tops out below 6.6 kW (the click caps it too).
 function updatePresetActive() {
   const kw = parseNum($("powerKw").value);
-  const max = carMaxKw();
+  const car = currentCar();
   for (const btn of document.querySelectorAll("#powerPresets .preset")) {
-    const preset = parseNum(btn.dataset.kw);
-    const effective = Number.isFinite(preset) ? Math.min(preset, max) : preset;
-    const match = Number.isFinite(kw) && Number.isFinite(effective) && Math.abs(effective - kw) < 0.05;
-    btn.classList.toggle("is-active", match);
+    btn.classList.toggle("is-active", presetMatchesKw(kw, parseNum(btn.dataset.kw), car));
   }
 }
 
@@ -647,21 +642,9 @@ function renderCurrencyMenu() {
 const CUSTOM_ID = "__custom__";
 
 function setCar(car, { keepCustom = false } = {}) {
-  prefs.carId = car.id;
-  if (!keepCustom) {
-    // Prefer the user's saved edits for this car, else the dataset values.
-    const ov = prefs.carOverrides ? prefs.carOverrides[car.id] : null;
-    prefs.mpg = ov && Number.isFinite(ov.mpg) ? ov.mpg : car.mpg;
-    prefs.miPerKwh = ov && Number.isFinite(ov.miPerKwh) ? ov.miPerKwh : car.miPerKwh;
-    prefs.batteryKwh = ov && Number.isFinite(ov.batteryKwh) ? ov.batteryKwh : car.batteryKwh;
-    // prefs.powerKw is deliberately NOT touched here. It's the OUTLET you're
-    // standing at, not a property of the car. The car's onboard ceiling is
-    // applied where the number is used (see render), never written back into
-    // storage: a stored clamp only ever ratchets down, so picking one low-power
-    // car would pin the field there for every car chosen afterwards.
-    // (ov.powerKw is legacy data from when this field was stored per-car; it is
-    // deliberately left in storage but never read.)
-  }
+  // applyCarSelection owns which fields a car fills in (and which it must leave
+  // alone, powerKw above all); keepCustom means take the identity only.
+  prefs = keepCustom ? { ...prefs, carId: car.id } : applyCarSelection(prefs, car);
   savePrefs(prefs);
   $("carName").textContent = `${car.make} ${car.model}`;
   $("carSearch").value = carLabel(car);
@@ -779,17 +762,12 @@ function attachEvents() {
 
   // Remember the user's edits per car: tweaking the car numbers saves an
   // override keyed to the current car, so switching away and back restores them.
-  // Merge rather than replace, because a field the user has momentarily cleared
-  // reads as non-finite and must not wipe what's already saved for this car.
-  // powerKw is absent on purpose: it's the outlet, not the car.
-  for (const id of ["mpg", "miPerKwh", "batteryKwh"]) {
+  // Watch exactly the fields applyCarEdit copies (CAR_EDIT_FIELDS is the one
+  // list), so widening this loop can't smuggle a non-car field into a car.
+  for (const id of CAR_EDIT_FIELDS) {
     $(id).addEventListener("input", () => {
       if (!prefs.carId) return;
-      const m = readInputs();
-      if (!prefs.carOverrides || typeof prefs.carOverrides !== "object") prefs.carOverrides = {};
-      prefs.carOverrides[prefs.carId] = mergeCarOverride(prefs.carOverrides[prefs.carId], {
-        mpg: m.mpg, miPerKwh: m.miPerKwh, batteryKwh: m.batteryKwh,
-      });
+      prefs = applyCarEdit(prefs, prefs.carId, readInputs());
       savePrefs(prefs);
     });
   }
@@ -939,9 +917,7 @@ function attachEvents() {
     // Presets are the outlet's rate (Level 1 / Level 2). The car can't pull more
     // than its onboard charger, so cap the preset at the car's max. Manual entry
     // into the field stays the user's authority and is never capped here.
-    const preset = parseNum(btn.dataset.kw);
-    const carMax = carMaxKw();
-    const kw = Number.isFinite(preset) ? Math.min(preset, carMax) : preset;
+    const kw = chargeDrawKw(parseNum(btn.dataset.kw), currentCar());
     $("powerKw").value = round(kw, 2);
     render();
   });
@@ -1047,9 +1023,7 @@ function attachEvents() {
   });
 
   $("resetBtn").addEventListener("click", () => {
-    clearPrefs();
-    prefs = defaultPrefs();
-    savePrefs(prefs);
+    prefs = resetPrefs();
     // Reset volatile UI too: pricing mode, schedule/tier rows, info note.
     rateMode = "flat";
     chargeCapMin = null;

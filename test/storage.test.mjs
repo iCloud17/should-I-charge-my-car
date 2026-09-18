@@ -5,9 +5,27 @@
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
-import { loadPrefs, savePrefs, mergeCarOverride, defaultPrefs, DEFAULT_PREFS } from "../js/storage.js";
+import {
+  loadPrefs, savePrefs, mergeCarOverride, defaultPrefs, DEFAULT_PREFS,
+  applyCarEdit, applyCarSelection, persistableFrom, resetPrefs,
+} from "../js/storage.js";
+import { chargeDrawKw } from "../js/cars.js";
 
 const KEY = "sicc.prefs.v1";
+
+// Two cars that sit either side of a Level 2 outlet, so a cap shows up as a
+// changed number rather than a coincidence.
+const SLOW_CAR = { id: "slow-phev", mpg: 25, miPerKwh: 2.4, batteryKwh: 12, chargeKw: 3.3 };
+const FAST_CAR = { id: "fast-phev", mpg: 38, miPerKwh: 2.6, batteryKwh: 18, chargeKw: 7.4 };
+
+// One render pass's canonical model: what readInputs() hands to persistFrom.
+function liveModel(over = {}) {
+  return {
+    gasPrice: 3.899, yourRate: 0.48, mpg: 38, miPerKwh: 2.6, batteryKwh: 18.1,
+    sessionFee: 1.5, powerKw: 6.6, startPct: 20, targetPct: 90,
+    ...over,
+  };
+}
 
 // A fake localStorage: only the three methods storage.js touches, backed by a Map.
 function fakeStorage(initial = {}) {
@@ -244,4 +262,190 @@ test("savePrefs swallows a quota error instead of breaking the render", () => {
 test("savePrefs does not throw when localStorage is absent entirely", () => {
   delete globalThis.localStorage;
   assert.doesNotThrow(() => savePrefs({ ...DEFAULT_PREFS }));
+});
+
+// --- applyCarEdit: which fields a per-car edit is allowed to save ---
+
+test("a car edit made while another field is blank keeps the saved value", () => {
+  // The regression: the writer rebuilt the whole override from the live fields,
+  // so clearing the MPG box to retype it wrote nothing, and the 25 the user had
+  // already saved silently reverted to the dataset number on the next load.
+  const carId = "outlander-phev-2023";
+  let prefs = defaultPrefs();
+  prefs = applyCarEdit(prefs, carId, { mpg: 25, miPerKwh: 2.4, batteryKwh: 20 });
+  prefs = applyCarEdit(prefs, carId, { mpg: NaN, miPerKwh: 2.4, batteryKwh: 20 });
+  assert.deepEqual(prefs.carOverrides[carId], { mpg: 25, miPerKwh: 2.4, batteryKwh: 20 });
+});
+
+test("a car override never takes the outlet power from the live fields", () => {
+  // powerKw is the OUTLET you're standing at, not a property of the car. Let a
+  // car edit save it and a station's power lands in the car's own numbers,
+  // where an older release reads it straight back as the car's ceiling. The
+  // other live values (gas price, charger rate, session fee) aren't the car's
+  // either, so the same rule keeps them out.
+  const carId = "rav4-prime-2023";
+  const prefs = applyCarEdit(defaultPrefs(), carId, liveModel({
+    mpg: 38, miPerKwh: 2.6, batteryKwh: 18.1, powerKw: 3.3,
+  }));
+  assert.deepEqual(prefs.carOverrides[carId], { mpg: 38, miPerKwh: 2.6, batteryKwh: 18.1 });
+});
+
+test("a car edit leaves an already-saved legacy powerKw untouched", () => {
+  // The rollback contract: a powerKw already in the store is inert data nothing
+  // reads. Editing the car's MPG must neither delete it nor refresh it with
+  // whatever outlet the user happens to be at now.
+  const carId = "volt-2018";
+  const prefs = applyCarEdit(
+    { ...defaultPrefs(), carOverrides: { [carId]: { mpg: 42, powerKw: 3.3 } } },
+    carId,
+    liveModel({ mpg: 45, miPerKwh: 2.9, batteryKwh: 18.4, powerKw: 6.6 }),
+  );
+  assert.equal(prefs.carOverrides[carId].powerKw, 3.3, "the outlet in hand must not overwrite it");
+  assert.equal(prefs.carOverrides[carId].mpg, 45, "while the edit itself lands");
+});
+
+test("editing one car's numbers leaves every other car's alone", () => {
+  const prefs = applyCarEdit(
+    { ...defaultPrefs(), carOverrides: { "volt-2018": { mpg: 42 } } },
+    "clarity-2018",
+    { mpg: 38, miPerKwh: 3.1, batteryKwh: 17 },
+  );
+  assert.deepEqual(prefs.carOverrides["volt-2018"], { mpg: 42 });
+  assert.equal(prefs.carOverrides["clarity-2018"].mpg, 38);
+});
+
+test("a number typed before any car is chosen saves no override", () => {
+  assert.deepEqual(applyCarEdit(defaultPrefs(), null, { mpg: 42 }).carOverrides, {});
+});
+
+test("applyCarEdit does not mutate the prefs it was given", () => {
+  const before = defaultPrefs();
+  const after = applyCarEdit(before, "clarity-2018", { mpg: 42, miPerKwh: 3.1, batteryKwh: 17 });
+  assert.deepEqual(before.carOverrides, {}, "the caller's prefs are untouched");
+  assert.equal(after.carOverrides["clarity-2018"].mpg, 42);
+});
+
+test("a tampered car id cannot reach Object.prototype through a car edit", () => {
+  // carId comes straight out of the store and is never sanitized on load, so
+  // treat it as attacker-controlled. A computed key writes an own property
+  // rather than moving the prototype, and safeOverrides drops the entry on the
+  // way back in, so nothing dangerous survives the round trip.
+  for (const carId of ["__proto__", "constructor", "prototype"]) {
+    savePrefs(applyCarEdit(defaultPrefs(), carId, { mpg: 99 }));
+    const back = loadPrefs().carOverrides;
+    assert.deepEqual(Object.keys(back), [], `${carId} survived a reload`);
+    assert.equal(Object.getPrototypeOf(back), Object.prototype, `${carId} moved the prototype`);
+    assert.equal(Object.prototype.mpg, undefined, `${carId} polluted the prototype`);
+    assert.equal({}.mpg, undefined, `${carId} reached a plain object`);
+  }
+});
+
+// --- applyCarSelection: what picking a car fills in, and what it must not ---
+
+test("picking a car uses its numbers, or the ones the user saved for it", () => {
+  const fresh = applyCarSelection(defaultPrefs(), FAST_CAR);
+  assert.equal(fresh.carId, "fast-phev");
+  assert.equal(fresh.mpg, 38);
+  assert.equal(fresh.batteryKwh, 18);
+
+  const edited = applyCarSelection(
+    { ...defaultPrefs(), carOverrides: { "fast-phev": { mpg: 34 } } },
+    FAST_CAR,
+  );
+  assert.equal(edited.mpg, 34, "the number the user measured wins");
+  assert.equal(edited.miPerKwh, 2.6, "the fields they never edited come from the dataset");
+});
+
+test("picking a car never moves the outlet power the user set", () => {
+  // The ratchet: writing a car-capped power into prefs only ever lowers it, so
+  // one 3.3 kW car left the field pinned at 3.3 for every car chosen after it,
+  // on every outlet, until the user noticed and typed it back.
+  let prefs = { ...defaultPrefs(), powerKw: 6.6 };
+  prefs = applyCarSelection(prefs, SLOW_CAR);
+  assert.equal(prefs.powerKw, 6.6, "the outlet is where you're standing, not what the car accepts");
+  prefs = applyCarSelection(prefs, FAST_CAR);
+  assert.equal(prefs.powerKw, 6.6, "so the next car isn't stuck at the last one's limit");
+  // The cap is still enforced, just where the number is used.
+  assert.equal(chargeDrawKw(6.6, SLOW_CAR), 3.3, "the slow car still only pulls 3.3");
+});
+
+test("applyCarSelection does not mutate the prefs it was given", () => {
+  const before = { ...defaultPrefs(), mpg: 25, carOverrides: { "fast-phev": { mpg: 34 } } };
+  const after = applyCarSelection(before, FAST_CAR);
+  assert.equal(before.carId, null, "the caller's prefs are untouched");
+  assert.equal(before.mpg, 25);
+  assert.equal(after.mpg, 34);
+});
+
+// --- persistableFrom: exactly what a render pass writes to storage ---
+
+test("a render pass saves the typed values, including the raw outlet power", () => {
+  const prefs = persistableFrom({ ...defaultPrefs(), carId: "rav4-prime-2023" }, liveModel());
+  savePrefs(prefs);
+  const back = loadPrefs();
+  assert.equal(back.powerKw, 6.6, "the outlet the user typed, never a car-capped value");
+  assert.equal(back.gasPrice, 3.899, "at full precision");
+  assert.equal(back.startPct, 20);
+  assert.equal(back.targetPct, 90);
+  assert.equal(back.carId, "rav4-prime-2023", "a render pass must not forget which car this is");
+  assert.equal(back.yourRate, null, "and the per-stop values still don't persist");
+});
+
+test("the saved outlet power survives a slow car, a render, and the next car", () => {
+  // The whole ratchet loop the app actually runs: pick a car, render (which
+  // persists), pick another. A cap applied anywhere on that path sticks in
+  // storage and outlives the car that caused it.
+  savePrefs(applyCarSelection({ ...defaultPrefs(), powerKw: 6.6 }, SLOW_CAR));
+
+  const typed = loadPrefs().powerKw;
+  assert.equal(chargeDrawKw(typed, SLOW_CAR), 3.3, "the car is still capped where it matters");
+  savePrefs(persistableFrom(loadPrefs(), liveModel({ powerKw: typed })));
+
+  savePrefs(applyCarSelection(loadPrefs(), FAST_CAR));
+  assert.equal(loadPrefs().powerKw, 6.6, "a Level 2 outlet is not downgraded by one 3.3 kW car");
+});
+
+test("persistableFrom does not mutate the prefs it was given", () => {
+  const before = { ...defaultPrefs(), powerKw: 6.6 };
+  const after = persistableFrom(before, liveModel({ powerKw: 1.4 }));
+  assert.equal(before.powerKw, 6.6, "the caller's prefs are untouched");
+  assert.equal(after.powerKw, 1.4);
+});
+
+// --- resetPrefs: "Reset everything" really has to reach everything ---
+
+test("resetting forgets the stored setup", () => {
+  savePrefs({ ...DEFAULT_PREFS, carId: "honda-clarity", mpg: 42, gasPrice: 3.899, powerKw: 3.3 });
+  const out = resetPrefs();
+  assert.equal(out.carId, null);
+  assert.equal(out.mpg, null);
+  assert.equal(out.gasPrice, null);
+  assert.equal(out.powerKw, 6.6, "back to the default outlet");
+  assert.equal(loadPrefs().carId, null, "and the store agrees, so a reload stays reset");
+});
+
+test("resetting twice never hands back the first session's car overrides", () => {
+  // Reset has to build a genuinely fresh object. Spreading DEFAULT_PREFS shares
+  // its carOverrides, so a caller writing into the prefs it was just handed is
+  // writing into the defaults, and the next "Reset everything" gives the user
+  // their old car straight back. The write below is in place on purpose: that's
+  // what the app did before the overrides moved behind applyCarEdit, and it's
+  // what the next caller to reach for prefs.carOverrides will do.
+  const first = resetPrefs();
+  first.carOverrides["honda-clarity"] = { mpg: 42 };
+  savePrefs(first);
+  assert.equal(loadPrefs().carOverrides["honda-clarity"].mpg, 42, "saved, as the app would");
+
+  const second = resetPrefs();
+  assert.deepEqual(second.carOverrides, {}, "a reset hands back a clean slate");
+  assert.deepEqual(loadPrefs().carOverrides, {}, "and clears what was stored");
+  assert.deepEqual(DEFAULT_PREFS.carOverrides, {}, "without ever writing into the defaults");
+});
+
+test("resetting still works when storage is unavailable", () => {
+  delete globalThis.localStorage;
+  let out;
+  assert.doesNotThrow(() => { out = resetPrefs(); });
+  assert.equal(out.carId, null);
+  assert.deepEqual(out.carOverrides, {});
 });
