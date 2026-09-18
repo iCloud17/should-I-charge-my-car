@@ -61,6 +61,16 @@ python3 -m http.server 8000
 # open http://localhost:8000
 ```
 
+Run the unit tests from the repo root:
+
+```sh
+npm test        # or just: node --test
+```
+
+Note that `node --test test/` does **not** work. Node reads the `test` argument
+as a module specifier and fails with `MODULE_NOT_FOUND`. Run it from the repo
+root with no path.
+
 ## Tech
 
 Vanilla HTML, CSS, and JavaScript (ES modules). No framework, no build, no backend. Installable offline PWA, hostable free on GitHub Pages.

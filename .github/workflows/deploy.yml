@@ -25,7 +25,27 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Gate the deploy on the unit tests so a broken commit never reaches Pages.
+  test:
+    runs-on: ubuntu-latest
+    # Job-level permissions replace the workflow-level set rather than adding to
+    # it, so running the tests can't reach the Pages or OIDC tokens.
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Run unit tests
+        run: node --test
+
   deploy:
+    needs: test
     runs-on: ubuntu-latest
     environment:
       name: github-pages

@@ -2,7 +2,7 @@
 
 import { breakevenKwhPrice, chargeCurve, verdict, rateAtTime, rateAtElapsed, cheapestPeriod } from "./calc.js";
 import * as U from "./units.js";
-import { loadPrefs, savePrefs, clearPrefs, DEFAULT_PREFS } from "./storage.js";
+import { loadPrefs, savePrefs, clearPrefs, mergeCarOverride, defaultPrefs } from "./storage.js";
 import { loadCars, getCar, getCars, carLabel, maxLabelLength } from "./cars.js";
 import { $, parseNum, money, formatDuration, escapeHtml } from "./ui.js";
 import { applyTheme, nextThemeMode, themeLabel } from "./theme.js";
@@ -98,7 +98,12 @@ function render() {
     rateOf = () => (hasRate ? m.yourRate : 0);
   }
 
-  const curveArgs = { batteryKwh: m.batteryKwh, startPct: m.startPct, targetPct: m.targetPct, powerKw: m.powerKw, rateOf, sessionFee: m.sessionFee, timeTiers, taxRate, breakeven: be, startClockMin };
+  // The outlet can be set higher than the car's onboard charger accepts, so cap
+  // it here, at the point of use. Clamping the stored value instead would only
+  // ever ratchet it down and lose what the user typed.
+  const drawKw = Math.min(m.powerKw, carMaxKw());
+
+  const curveArgs = { batteryKwh: m.batteryKwh, startPct: m.startPct, targetPct: m.targetPct, powerKw: drawKw, rateOf, sessionFee: m.sessionFee, timeTiers, taxRate, breakeven: be, startClockMin };
 
   // Full charge first: its duration is the far end of the "charge for" slider.
   const full = chargeCurve({ ...curveArgs, capMinutes: Infinity });
@@ -259,7 +264,7 @@ function render() {
     // "How long" at a glance, using your saved battery / power / charge target.
     if (!showBriefly && v !== "gas" && Number.isFinite(session.minutes) && session.minutes > 0) {
       timeline.hidden = false;
-      timeline.textContent = `Est. ${formatDuration(session.minutes)} to ${Math.round(session.soc)}% at ${round(m.powerKw, 2)} kW`;
+      timeline.textContent = `Est. ${formatDuration(session.minutes)} to ${Math.round(session.soc)}% at ${round(drawKw, 2)} kW`;
     } else {
       timeline.hidden = true;
     }
@@ -308,13 +313,13 @@ function render() {
   persistFrom(m);
 }
 
-// The car's onboard-charger ceiling: an explicit override wins, else the car's
-// EPA-derived max, else no limit. Presets are the outlet level and get capped
-// to this so we never claim the car pulls more than its charger allows.
+// The car's onboard-charger ceiling: the car's rated max, else no limit (custom
+// cars, or a car the dataset has no figure for). This is a property of the CAR.
+// The #powerKw field is a different quantity - the outlet you're plugged into -
+// so it is never read here. The time estimate and the presets are both capped
+// to this, so we never claim the car pulls more than its charger allows.
 function carMaxKw() {
   const car = prefs.carId && prefs.carId !== CUSTOM_ID ? getCar(prefs.carId) : null;
-  const ov = prefs.carOverrides ? prefs.carOverrides[prefs.carId] : null;
-  if (ov && Number.isFinite(ov.powerKw)) return ov.powerKw;
   if (car && Number.isFinite(car.chargeKw)) return car.chargeKw;
   return Infinity;
 }
@@ -649,11 +654,13 @@ function setCar(car, { keepCustom = false } = {}) {
     prefs.mpg = ov && Number.isFinite(ov.mpg) ? ov.mpg : car.mpg;
     prefs.miPerKwh = ov && Number.isFinite(ov.miPerKwh) ? ov.miPerKwh : car.miPerKwh;
     prefs.batteryKwh = ov && Number.isFinite(ov.batteryKwh) ? ov.batteryKwh : car.batteryKwh;
-    // Max onboard AC charge power drives the time estimate. Use the user's saved
-    // edit, else the car's rated kW, else fall back to the generic default.
-    prefs.powerKw = ov && Number.isFinite(ov.powerKw) ? ov.powerKw
-      : Number.isFinite(car.chargeKw) ? car.chargeKw
-      : DEFAULT_PREFS.powerKw;
+    // prefs.powerKw is deliberately NOT touched here. It's the OUTLET you're
+    // standing at, not a property of the car. The car's onboard ceiling is
+    // applied where the number is used (see render), never written back into
+    // storage: a stored clamp only ever ratchets down, so picking one low-power
+    // car would pin the field there for every car chosen afterwards.
+    // (ov.powerKw is legacy data from when this field was stored per-car; it is
+    // deliberately left in storage but never read.)
   }
   savePrefs(prefs);
   $("carName").textContent = `${car.make} ${car.model}`;
@@ -772,12 +779,17 @@ function attachEvents() {
 
   // Remember the user's edits per car: tweaking the car numbers saves an
   // override keyed to the current car, so switching away and back restores them.
-  for (const id of ["mpg", "miPerKwh", "batteryKwh", "powerKw"]) {
+  // Merge rather than replace, because a field the user has momentarily cleared
+  // reads as non-finite and must not wipe what's already saved for this car.
+  // powerKw is absent on purpose: it's the outlet, not the car.
+  for (const id of ["mpg", "miPerKwh", "batteryKwh"]) {
     $(id).addEventListener("input", () => {
       if (!prefs.carId) return;
       const m = readInputs();
       if (!prefs.carOverrides || typeof prefs.carOverrides !== "object") prefs.carOverrides = {};
-      prefs.carOverrides[prefs.carId] = { mpg: m.mpg, miPerKwh: m.miPerKwh, batteryKwh: m.batteryKwh, powerKw: m.powerKw };
+      prefs.carOverrides[prefs.carId] = mergeCarOverride(prefs.carOverrides[prefs.carId], {
+        mpg: m.mpg, miPerKwh: m.miPerKwh, batteryKwh: m.batteryKwh,
+      });
       savePrefs(prefs);
     });
   }
@@ -1036,7 +1048,7 @@ function attachEvents() {
 
   $("resetBtn").addEventListener("click", () => {
     clearPrefs();
-    prefs = { ...DEFAULT_PREFS };
+    prefs = defaultPrefs();
     savePrefs(prefs);
     // Reset volatile UI too: pricing mode, schedule/tier rows, info note.
     rateMode = "flat";

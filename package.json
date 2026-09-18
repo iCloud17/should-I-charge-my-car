@@ -1,0 +1,10 @@
+{
+  "name": "should-i-charge-my-car",
+  "private": true,
+  "description": "Calculator that tells plug-in hybrid (PHEV) owners whether charging is cheaper than gas right now.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  }
+}

@@ -19,21 +19,31 @@ export const DEFAULT_PREFS = {
   gasPrice: null, // canonical: currency per gallon (stable - persisted once entered)
   yourRate: null, // currency per kWh at the charger (volatile - NOT persisted)
   customName: "", // user's nickname for a custom car
-  carOverrides: {}, // per-car edited numbers: { [carId]: { mpg, miPerKwh, batteryKwh, powerKw } }
+  carOverrides: {}, // per-car edited numbers: { [carId]: { mpg, miPerKwh, batteryKwh } }
   units: "imperial", // "imperial" (US) | "uk" | "metric" | "kmL"
   currency: "$",
   themeMode: "auto", // "auto" (follows local time) | "light" | "dark"
   // Advanced - charger fees & session (volatile - NOT persisted).
   sessionFee: 0,
-  powerKw: 6.6,
   startPct: 0,
   targetPct: 100,
+  // The outlet you're plugged into, not a property of the car. Persisted,
+  // because the outlet you use most is usually the same one.
+  powerKw: 6.6,
 };
+
+// A fresh prefs object. DEFAULT_PREFS is a shared constant and carOverrides
+// inside it is mutable, so spreading it alone hands out the SAME overrides
+// object every time: saving a per-car edit would write straight into the
+// defaults, and "Reset everything" would hand those edits back.
+export function defaultPrefs() {
+  return { ...DEFAULT_PREFS, carOverrides: {} };
+}
 
 export function loadPrefs() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return { ...DEFAULT_PREFS };
+    if (!raw) return defaultPrefs();
     const parsed = JSON.parse(raw);
     const prefs = { ...DEFAULT_PREFS, ...parsed };
     prefs.currency = safeCurrency(prefs.currency);
@@ -41,7 +51,7 @@ export function loadPrefs() {
     prefs.carOverrides = safeOverrides(prefs.carOverrides);
     return prefs;
   } catch {
-    return { ...DEFAULT_PREFS };
+    return defaultPrefs();
   }
 }
 
@@ -50,6 +60,12 @@ function safeCurrency(cur) {
   const c = String(cur == null ? "$" : cur).replace(/[<>&"'`]/g, "").trim().slice(0, 3);
   return c || "$";
 }
+
+// The slots a per-car override may hold. `powerKw` is LEGACY and inert: it used
+// to double as the car's onboard ceiling, nothing reads or writes it now, and
+// it's kept only so rolling back to the previous release still finds its data.
+// Do not start reusing it - the values in there conflate car and outlet power.
+const OVERRIDE_KEYS = ["mpg", "miPerKwh", "batteryKwh", "powerKw"];
 
 // Per-car edited numbers merged back from storage. Keep only finite numeric
 // fields and skip prototype-polluting keys, so a tampered store can't inject junk.
@@ -60,10 +76,25 @@ function safeOverrides(raw) {
     if (id === "__proto__" || id === "constructor" || id === "prototype") continue;
     if (!v || typeof v !== "object") continue;
     const o = {};
-    for (const k of ["mpg", "miPerKwh", "batteryKwh", "powerKw"]) {
+    for (const k of OVERRIDE_KEYS) {
       if (Number.isFinite(v[k])) o[k] = v[k];
     }
     if (Object.keys(o).length) out[id] = o;
+  }
+  return out;
+}
+
+// Fold freshly typed numbers into the override already saved for a car.
+// Merge, never replace: a field cleared mid-edit parses as non-finite, and
+// writing that through would erase a value the user had already saved.
+// Pure, so the rule is testable without a DOM or localStorage.
+export function mergeCarOverride(existing, incoming) {
+  const base = existing && typeof existing === "object" ? existing : {};
+  const next = incoming && typeof incoming === "object" ? incoming : {};
+  const out = {};
+  for (const k of OVERRIDE_KEYS) {
+    if (Number.isFinite(next[k])) out[k] = next[k];
+    else if (Number.isFinite(base[k])) out[k] = base[k];
   }
   return out;
 }
