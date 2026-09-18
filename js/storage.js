@@ -23,8 +23,10 @@ export const DEFAULT_PREFS = {
   units: "imperial", // "imperial" (US) | "uk" | "metric" | "kmL"
   currency: "$",
   themeMode: "auto", // "auto" (follows local time) | "light" | "dark"
-  // Advanced - charger fees & session (volatile - NOT persisted).
-  sessionFee: 0,
+  // Advanced - charger fees & session.
+  sessionFee: 0, // volatile - NOT persisted, it changes at every stop
+  // These two ARE in PERSIST_KEYS and do come back next visit, despite sitting
+  // next to sessionFee. Whether they should persist is an open product question.
   startPct: 0,
   targetPct: 100,
   // The outlet you're plugged into, not a property of the car. Persisted,

@@ -58,9 +58,16 @@ export function chargeDrawKw(outletKw, car) {
 }
 
 // Does a charger-speed preset match what's in the power field? Compared at the
-// preset's CAPPED value, so Level 2 still highlights on a car whose onboard
-// charger tops out below 6.6 kW (clicking the preset caps it the same way).
-export function presetMatchesKw(fieldKw, presetKw, car) {
-  const effective = chargeDrawKw(presetKw, car);
-  return Number.isFinite(fieldKw) && Number.isFinite(effective) && Math.abs(effective - fieldKw) < 0.05;
+// preset's own RAW value, because the field holds the OUTLET and tapping a
+// preset writes the number on its label unchanged. So Level 2 lights up on a
+// 6.6 kW field for every car, including one whose onboard charger tops out at
+// 1.7 - the button describes the outlet you're plugged into, not the car.
+//
+// The car is deliberately not a parameter: it cannot change the answer. Capping
+// here would re-link the highlight to the ceiling and leave nothing selected on
+// any car rated below 6.6, which is most of the dataset at the default field
+// value. The cap still applies where it is physically true, at chargeDrawKw in
+// the estimate, so a 1.7 kW car shows Level 2 lit and "at 1.7 kW" together.
+export function presetMatchesKw(fieldKw, presetKw) {
+  return Number.isFinite(fieldKw) && Number.isFinite(presetKw) && Math.abs(presetKw - fieldKw) < 0.05;
 }

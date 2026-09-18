@@ -306,7 +306,7 @@ function render() {
     }
   }
 
-  renderAdvanced(m, be, cur, session, effective, timeFee);
+  renderAdvanced(m, be, cur, session, effective, timeFee, drawKw);
   updatePresetActive();
   persistFrom(m);
 }
@@ -325,11 +325,11 @@ function currentCar() {
 }
 
 // Highlight the charger-speed preset that matches the current power, if any.
+// The car is not consulted: the field and the presets are both outlet rates.
 function updatePresetActive() {
   const kw = parseNum($("powerKw").value);
-  const car = currentCar();
   for (const btn of document.querySelectorAll("#powerPresets .preset")) {
-    btn.classList.toggle("is-active", presetMatchesKw(kw, parseNum(btn.dataset.kw), car));
+    btn.classList.toggle("is-active", presetMatchesKw(kw, parseNum(btn.dataset.kw)));
   }
 }
 
@@ -424,7 +424,7 @@ function updateChargeSlider(show, fullChargeMin, curMin, curSoc, hasTimeFeeConte
         : "Stopping early: less energy, and you skip the pricier later rate.");
 }
 
-function renderAdvanced(m, be, cur, session, effective, timeFee) {
+function renderAdvanced(m, be, cur, session, effective, timeFee, drawKw) {
   // Lead with range added (the tangible benefit), keep kWh for pricing context.
   const kwhIn = session.kwhIntoBattery;
   if (Number.isFinite(kwhIn) && kwhIn > 0) {
@@ -439,6 +439,19 @@ function renderAdvanced(m, be, cur, session, effective, timeFee) {
   } else {
     $("advKwh").textContent = "-";
   }
+  // The power field holds the OUTLET, so on a car whose onboard charger is
+  // slower the estimate runs at a rate that appears nowhere on screen until
+  // both prices are in and the verdict card's timeline shows up. This row
+  // always renders and sits in the same disclosure as the presets, so it names
+  // the rate here. In the label rather than the value because the rate is
+  // context and the duration is the answer: muted keeps it from reading as a
+  // warning. Only when the cap actually bites, since a car that can take the
+  // whole outlet would just repeat the field two rows above.
+  const capped = Number.isFinite(drawKw) && Number.isFinite(m.powerKw) && drawKw < m.powerKw - 0.05;
+  const hasTime = Number.isFinite(session.minutes) && session.minutes > 0;
+  $("advTimeLabel").textContent = capped && hasTime
+    ? `Time at ${round(drawKw, 2)} kW (est.)`
+    : "Time to charge (est.)";
   $("advTime").textContent = formatDuration(session.minutes);
   const tfRow = $("advTimeFeeRow");
   if (timeFee > 0) {
@@ -914,11 +927,12 @@ function attachEvents() {
   $("powerPresets").addEventListener("click", (e) => {
     const btn = e.target.closest(".preset");
     if (!btn) return;
-    // Presets are the outlet's rate (Level 1 / Level 2). The car can't pull more
-    // than its onboard charger, so cap the preset at the car's max. Manual entry
-    // into the field stays the user's authority and is never capped here.
-    const kw = chargeDrawKw(parseNum(btn.dataset.kw), currentCar());
-    $("powerKw").value = round(kw, 2);
+    // Presets are the outlet's rate (Level 1 / Level 2), so each writes exactly
+    // the number on its label. Nothing on this path is capped: a car-derived
+    // value here would flow through readInputs into m.powerKw and on into
+    // storage, where it would outlive the car that produced it and shorten the
+    // next car's estimate. The ceiling belongs at chargeDrawKw in render().
+    $("powerKw").value = round(parseNum(btn.dataset.kw), 2);
     render();
   });
 
@@ -953,6 +967,19 @@ function attachEvents() {
   const wireInfo = (btnId, noteId) => {
     const infoBtn = $(btnId), infoNote = $(noteId);
     if (!infoBtn || !infoNote) return;
+    infoBtn.setAttribute("aria-controls", noteId);
+    // The note is `hidden`, so it is absent from the accessibility tree and a
+    // screen reader can never reach it. aria-describedby resolves THROUGH the
+    // hidden attribute (checked in Chrome's accessibility tree: the computed
+    // description is byte-identical hidden or shown), so associating it
+    // announces the text without revealing the note. It goes on the input the
+    // note explains, so it arrives with the thing it is about. The two notes
+    // that head a group of rows have no single input, so their (i) carries it.
+    // Never both: the (i) sits immediately before its input in the tab order,
+    // so describing both would read the same paragraph out twice in a row.
+    const labelled = infoBtn.closest(".field-label-row")?.querySelector("label[for]");
+    const described = (labelled && $(labelled.htmlFor)) || infoBtn;
+    described.setAttribute("aria-describedby", noteId);
     let pinned = false;
     const show = (v) => {
       infoNote.hidden = !v;

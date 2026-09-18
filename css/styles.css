@@ -310,6 +310,11 @@ body {
    absolutely (anchored to the label row so it sits right under the title/(i))
    keeps page height constant, so the trigger never moves. */
 .field-label-row:has(> .info-note) { position: relative; }
+/* Keep width and position here, never per instance: `left: 0; right: 0` anchors
+   the note to whichever .field-label-row holds it, so it stays right when a
+   field moves between layouts. The deleted #powerInfoNote override was correct
+   when written and silently went wrong the day battery size moved out of that
+   row, leaving the note at double the width of its card. */
 .info-note {
   position: absolute;
   top: 100%;
@@ -323,9 +328,6 @@ body {
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-sm);
 }
-/* The charge-power label sits in a half-width column; break its note out to
-   span the full two-column row so the text isn't crammed. */
-#powerInfoNote { right: auto; width: calc(200% + 12px); }
 .info-note a { color: var(--accent); font-weight: 700; }
 
 /* Searchable car combobox */

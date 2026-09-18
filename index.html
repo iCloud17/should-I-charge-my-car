@@ -163,7 +163,7 @@
               </div>
               <input id="batteryKwh" type="text" min="0" step="any" inputmode="decimal" autocomplete="off" value="" />
             </div>
-            <p class="hint">Auto-filled from your car. Only change these if you track your own real-world numbers. Battery affects the charge time, not the verdict.</p>
+            <p class="hint">Auto-filled from your car. Only change these if you track your own real-world numbers. MPG and mi/kWh drive the break-even. Battery size drives the charge time and total.</p>
           </div>
         </details>
       </div>
@@ -261,13 +261,13 @@
           <div class="field">
             <div class="field-label-row">
               <label for="powerKw">Charge power (kW)</label>
-              <button type="button" id="powerInfoBtn" class="info-btn" aria-label="How is the charge rate set?" aria-expanded="false">i</button>
-              <p class="hint info-note" id="powerInfoNote" hidden>Your car&rsquo;s max AC charge rate, an EPA estimate, so it&rsquo;s approximate. It affects the charge-time estimate. Edit it if you know your exact rate.</p>
+              <button type="button" id="powerInfoBtn" class="info-btn" aria-label="What charge power should I enter?" aria-expanded="false">i</button>
+              <p class="hint info-note" id="powerInfoNote" hidden>The charger you&rsquo;re plugged into, not your car. Your car&rsquo;s own limit is already in the estimate, so you don&rsquo;t need to account for it here. Edit this when the charger&rsquo;s rate differs from the Level 1 or Level 2 presets.</p>
             </div>
             <input id="powerKw" type="text" min="0" step="any" inputmode="decimal" autocomplete="off" value="6.6" />
           </div>
         </div>
-        <p class="hint">PHEVs charge on AC only, so speed is capped by the car&rsquo;s onboard charger. Charge power affects the time estimate only.</p>
+        <p class="hint">PHEVs charge on AC only, so speed is capped by the car&rsquo;s onboard charger. That sets how long it takes, which also changes the total if the station bills by time.</p>
 
         <div class="field">
           <label for="startPct">Battery now: <output id="startPctOut">0%</output></label>
@@ -290,7 +290,7 @@
             <span>Range added</span><strong id="advKwh">-</strong>
           </div>
           <div class="advanced-result__row">
-            <span>Time to charge (est.)</span><strong id="advTime">-</strong>
+            <span id="advTimeLabel">Time to charge (est.)</span><strong id="advTime">-</strong>
           </div>
           <div class="advanced-result__row" id="advTimeFeeRow" hidden>
             <span>Time fee</span><strong id="advTimeFee">-</strong>
@@ -327,7 +327,7 @@
           <summary><h2 class="faq__q">What is &ldquo;Charge time &amp; cost&rdquo; for?</h2></summary>
           <p class="faq__a">This section is optional. It estimates how long a charge takes and what the whole session costs.</p>
           <p class="faq__a">Set the charger speed (Level 1 is a wall socket, Level 2 is a 240V unit) and the two battery sliders. You get range added, time, and total.</p>
-          <p class="faq__a">Charge power affects the time estimate, not the verdict. If the station bills by the hour, a &ldquo;Charge for&rdquo; slider appears so you can price a partial charge.</p>
+          <p class="faq__a">Charge power sets the time estimate. On flat per-kWh pricing that is all it does. If the station bills by time, slower charging adds fee without adding kWh, so it can flip the verdict, and a &ldquo;Charge for&rdquo; slider appears so you can price a partial charge.</p>
         </details>
 
         <details class="faq__item">

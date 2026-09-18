@@ -1,10 +1,11 @@
-// cars.test.mjs - assertions for the car's charge-power ceiling and the draw
-// derived from it.
+// cars.test.mjs - assertions for the car's charge-power ceiling, the draw
+// derived from it, and the preset rules built on both.
 // Run with:  node --test
 // No framework, no dependencies (uses the built-in node:test runner).
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 import { carCeilingKw, chargeDrawKw, presetMatchesKw } from "../js/cars.js";
 
@@ -50,16 +51,37 @@ test("an unreadable power field stays unreadable rather than becoming a number",
   assert.equal(Number.isNaN(chargeDrawKw(NaN, null)), true);
 });
 
-// --- Presets highlight at the value clicking them would actually produce ---
+// --- Presets highlight at their own value, because the field is the outlet ---
 
-test("a preset highlights at its capped value, not its label value", () => {
-  // Level 2 on a 3.3 kW car writes 3.3 into the field, so 3.3 is what has to
-  // light the button up. Comparing against the uncapped 6.6 leaves the preset
-  // the user just clicked looking unselected.
-  assert.equal(presetMatchesKw(3.3, 6.6, SLOW), true, "Level 2 on a car that tops out at 3.3");
-  assert.equal(presetMatchesKw(6.6, 6.6, SLOW), false, "6.6 is not reachable on this car");
+test("a preset highlights at its label value on every car", () => {
+  // Level 2 means a 6.6 kW outlet, so 6.6 in the field lights it up whatever
+  // car is selected. Comparing against the car-capped value instead left the
+  // button dark on every car rated under 6.6, which is most of the dataset at
+  // the field's 6.6 default, so a typical first load showed nothing selected.
+  assert.equal(presetMatchesKw(6.6, 6.6, SLOW), true, "a 3.3 kW car at a Level 2 outlet");
   assert.equal(presetMatchesKw(6.6, 6.6, FAST), true);
   assert.equal(presetMatchesKw(1.4, 1.4, SLOW), true, "Level 1 is under every ceiling");
+  assert.equal(presetMatchesKw(3.3, 6.6, SLOW), false, "3.3 is the car's ceiling, not an outlet preset");
+});
+
+test("the car cannot change which preset is highlighted", () => {
+  // The car is not a parameter, and passing one anyway must leave the answer
+  // alone. This is the guard against the cap creeping back into the compare.
+  for (const car of [SLOW, FAST, null, undefined, { id: "x", chargeKw: 1.7 }]) {
+    assert.equal(presetMatchesKw(6.6, 6.6, car), true, "Level 2 against a 6.6 field");
+    assert.equal(presetMatchesKw(1.4, 6.6, car), false, "Level 2 against a 1.4 field");
+  }
+});
+
+test("the QA case: Level 2 lights up on a 1.7 kW car while the estimate stays capped", () => {
+  // The screen state this fix is for. The field holds the outlet (6.6), so the
+  // Level 2 button is lit and honest about where the user is standing. The
+  // estimate still runs at what the car can actually pull (1.7). Both numbers
+  // are true at once; neither is allowed to overwrite the other.
+  const VALHALLA = { id: "valhalla", chargeKw: 1.7 };
+  assert.equal(presetMatchesKw(6.6, 6.6, VALHALLA), true, "Level 2 is lit");
+  assert.equal(presetMatchesKw(6.6, 1.4, VALHALLA), false, "Level 1 is not");
+  assert.equal(chargeDrawKw(6.6, VALHALLA), 1.7, "and the estimate still caps at the onboard charger");
 });
 
 test("a hand-typed power between the presets highlights neither", () => {
@@ -70,4 +92,35 @@ test("a hand-typed power between the presets highlights neither", () => {
 test("an empty or unreadable power field highlights nothing", () => {
   assert.equal(presetMatchesKw(NaN, 6.6, FAST), false, "empty field");
   assert.equal(presetMatchesKw(6.6, NaN, FAST), false, "unreadable preset");
+});
+
+// --- The preset WRITE path, guarded by reading source rather than running it ---
+//
+// Be clear about what this is: a source scan, not a behavior test. The click
+// handler lives in main.js, which needs a DOM and cannot be imported here, so
+// nothing in this suite can observe the value it writes. What can be checked is
+// that the writing line still derives from the preset's own label value and
+// never routes through a cap. A failure means "go read the handler", not "a bug
+// is proven". Reformatting the handler will break this; rewrite the guard then.
+
+test("source guard: the preset click handler writes the preset's own kW, uncapped", () => {
+  const src = readFileSync(new URL("../js/main.js", import.meta.url), "utf8");
+  const start = src.indexOf('$("powerPresets").addEventListener("click"');
+  assert.notEqual(start, -1, "the preset click handler moved or was renamed");
+
+  const end = src.indexOf("\n  });", start);
+  assert.notEqual(end, -1, "could not find the end of the handler");
+  const body = src.slice(start, end)
+    .split("\n")
+    .filter((line) => !line.trim().startsWith("//"))
+    .join("\n");
+
+  const write = body.split("\n").find((line) => line.includes('$("powerKw").value'));
+  assert.ok(write, "the handler no longer writes the power field");
+  assert.match(write, /btn\.dataset\.kw/, "the value written must be the preset's own");
+  assert.doesNotMatch(
+    body,
+    /chargeDrawKw|carCeilingKw|currentCar|Math\.min/,
+    "a cap on this path reaches m.powerKw and then storage, outliving the car that caused it",
+  );
 });
