@@ -20,6 +20,7 @@ const ASSETS = [
   "./js/calc.js",
   "./js/units.js",
   "./js/storage.js",
+  "./js/myCars.js",
   "./js/cars.js",
   "./js/ui.js",
   "./js/theme.js",

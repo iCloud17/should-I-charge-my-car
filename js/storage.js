@@ -108,8 +108,11 @@ const UNIT_SYSTEM_IDS = ["imperial", "uk", "metric", "kmL"];
 // Text caps. The longest id in the bundled dataset is 59 characters, so 128 is
 // slack rather than a tight fit. 40 matches the nickname input's maxlength,
 // which is only a DOM hint and a tampered store walks straight past it.
-const MAX_CAR_ID_LEN = 128;
-const MAX_CUSTOM_NAME_LEN = 40;
+//
+// Both are exported because a saved car holds the same two quantities: a
+// dataset id, and the user's name for the car. Same quantity, same cap.
+export const MAX_CAR_ID_LEN = 128;
+export const MAX_CUSTOM_NAME_LEN = 40;
 
 // C0 and C1 control characters survive JSON and reach the page through
 // textContent and input values, where they render as nothing or as broken
@@ -117,7 +120,12 @@ const MAX_CUSTOM_NAME_LEN = 40;
 // instead of the whole nickname.
 const CONTROL_CHARS = /[\u0000-\u001F\u007F-\u009F]/g;
 
-function cleanText(v, max) {
+// Exported so a second store can BUILD ON this rule instead of restating it.
+// Two sanitizers applying different rules to one quantity is this project's
+// recorded defect shape (safeOverrides vs positiveNumber), and the weaker site
+// is the one that ends up defining the contract. myCars.js layers extra
+// stripping on top of a cleanText call rather than writing its own.
+export function cleanText(v, max) {
   if (typeof v !== "string") return undefined;
   return v.replace(CONTROL_CHARS, "").trim().slice(0, max);
 }
@@ -126,7 +134,11 @@ function cleanText(v, max) {
 // rejected along with the rest: a zero battery, economy or gas price is not a
 // setting anyone means, and it propagates as a division by zero or as a verdict
 // with nothing behind it.
-function positiveNumber(v) {
+//
+// Exported for the same reason as cleanText: the saved-car numbers are the same
+// quantities as the top-level mirrors and the per-car overrides, so they get the
+// same predicate rather than a second one that agrees by inspection.
+export function positiveNumber(v) {
   return Number.isFinite(v) && v > 0 ? v : undefined;
 }
 

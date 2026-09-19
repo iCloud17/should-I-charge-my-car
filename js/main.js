@@ -10,6 +10,10 @@ import {
   loadCars, getCar, getCars, carLabel, maxLabelLength,
   chargeDrawKw, presetMatchesKw,
 } from "./cars.js";
+import { CUSTOM_CAR_ID, loadMyCars, saveMyCars, clearMyCars, emptyCarsState, migrateIfNeeded,
+  addMyCar, setActiveMyCar, applyMyCarEdit,
+  activeMyCar, findMyCarByCarId, savedCarNumbers, savedCarCeilingKw,
+} from "./myCars.js";
 import { $, parseNum, money, formatDuration, escapeHtml, nextOptionIndex, enterAction } from "./ui.js";
 import { applyTheme, nextThemeMode, themeLabel } from "./theme.js";
 import { track, trackWhenReady } from "./analytics.js";
@@ -20,6 +24,18 @@ import {
 import { createDropdown } from "./dropdown.js";
 
 let prefs = loadPrefs();
+let myCars = emptyCarsState(); // sicc.cars.v1, filled in by initMyCars() at boot
+// Did initMyCars() get all the way through? Every write to the store is gated
+// on it, and that gate is load bearing rather than defensive.
+//
+// initMyCars bails when the dataset fetch failed, because the one-shot
+// migration would otherwise write cars with no label and no onboard maximum.
+// If a car selection could still write after that bail, the SELECTION would
+// create sicc.cars.v1, and the key's presence is the record that the migration
+// already ran. The user's carOverrides would then never be carried across, on
+// this load or any later one. A store that was never written falls back to
+// prefs and loses nothing; a half-written one loses the migration.
+let myCarsLive = false;
 let rateMode = "flat"; // "flat" | "tod" | "dur" (volatile - never persisted)
 let chargeCapMin = null; // "charge for" slider value in minutes (volatile)
 let capTouched = false;  // has the user dragged the "charge for" slider?
@@ -99,7 +115,7 @@ function render() {
   // it here, at the point of use. Clamping the stored value instead would only
   // ever ratchet it down and lose what the user typed, so m.powerKw stays raw
   // all the way to persistFrom below.
-  const drawKw = chargeDrawKw(m.powerKw, currentCar());
+  const drawKw = chargeDrawKw(m.powerKw, ceilingCar());
 
   const curveArgs = { batteryKwh: m.batteryKwh, startPct: m.startPct, targetPct: m.targetPct, powerKw: drawKw, rateOf, sessionFee: m.sessionFee, timeTiers, taxRate, breakeven: be, startClockMin };
 
@@ -161,7 +177,7 @@ function render() {
   // --- Analytics: categorical funnel + feature usage (each once per session) ---
   if (Number.isFinite(m.mpg) && Number.isFinite(m.miPerKwh)) {
     track("car-selected");
-    track(prefs.carId && prefs.carId !== CUSTOM_ID ? "car-from-list" : "car-custom");
+    track(prefs.carId && prefs.carId !== CUSTOM_CAR_ID ? "car-from-list" : "car-custom");
   }
   if (hasRate) {
     track("charger-priced");
@@ -321,7 +337,145 @@ function render() {
 // on into storage. The rule is that a capped value never reaches m.powerKw;
 // review enforces that, the tests do not.
 function currentCar() {
-  return prefs.carId && prefs.carId !== CUSTOM_ID ? getCar(prefs.carId) : null;
+  return prefs.carId && prefs.carId !== CUSTOM_CAR_ID ? getCar(prefs.carId) : null;
+}
+
+// --- Saved cars -------------------------------------------------------------
+//
+// sicc.cars.v1 is the READ source for a car's numbers. sicc.prefs.v1 and
+// carOverrides keep being written exactly as they are today, for one release,
+// as the rollback: either store alone can drive the app.
+//
+// main.js importing both stores does not cross the boundary myCars.js draws.
+// That boundary is that nothing in the PREFS read/write path imports it and it
+// never touches sicc.prefs.v1, which is what stops a cached old build from
+// deleting saved cars through savePrefs. This file is the wiring layer above
+// both, and it is the one place allowed to know they exist together.
+//
+// The risk the dual write carries is divergence. If the two disagree, rolling
+// back hands the user numbers they never entered, and nothing says so, because
+// each store is internally consistent. Three things hold them in step, and all
+// three are structural rather than remembered:
+//
+//   ONE WRITER. saveCarNumbers is the only place either store's car numbers
+//   change. It writes both from the same readInputs() object in the same call,
+//   and applyMyCarEdit applies the same merge rule mergeCarOverride does.
+//
+//   ONE SELECTOR. selectMyCar runs on the same event as applyCarSelection, so
+//   the two stores cannot end up disagreeing about which car is chosen.
+//
+//   A MISMATCH READS AS ABSENT. activeSavedCar refuses to answer when the
+//   record it found points at a different car than prefs does. That is the one
+//   case the first two rules cannot cover, because the five-car cap can refuse
+//   a car prefs has already accepted, and an active record answering for the
+//   wrong vehicle would cap the estimate against the wrong onboard charger.
+
+// A dataset label for a carId, for the migration's snapshot. Empty when the
+// dataset cannot answer, which migrateCars reads as a missing label and never
+// as a missing car.
+function labelForCarId(carId) {
+  const car = getCar(carId);
+  return car ? carLabel(car) : "";
+}
+
+// Bring the store up, once, at boot. Silent either way: this is plumbing, and
+// a user who has never heard of saved cars has nothing to be told.
+function initMyCars() {
+  try {
+    // Not while the dataset is missing. loadCars() answers with an empty list
+    // on a failed fetch, and the migration is one-shot, so running it then
+    // would burn that single chance and write every car with no label and no
+    // onboard maximum. Skipping leaves the key absent and the next load with a
+    // working fetch migrates properly.
+    if (!getCars().length) return;
+    migrateIfNeeded(prefs, labelForCarId, getCar);
+    myCars = loadMyCars();
+    myCarsLive = true;
+  } catch {
+    // Both calls above are already total, so this is the outer boundary rather
+    // than the guard. It is here because initMyCars runs inside init(), ahead
+    // of attachEvents and boot: anything that escaped would cost the user the
+    // whole app rather than their saved cars. myCars stays empty and every read
+    // below falls through to the prefs path that shipped before this feature.
+    myCars = emptyCarsState();
+    myCarsLive = false;
+  }
+}
+
+// The saved record for the car on screen, and only when both stores agree that
+// it IS the car on screen. See the mismatch rule above.
+function activeSavedCar() {
+  if (!prefs.carId) return null;
+  const saved = activeMyCar(myCars);
+  return saved && saved.carId === prefs.carId ? saved : null;
+}
+
+// Make the record for `carId` the active one, adding it the first time that car
+// is picked. Returns the record, or null when the store cannot represent the
+// selection.
+//
+// FIND, DO NOT ADD. Decision 6: the typeahead replaces rather than appends, so
+// picking the same car twice, or mis-tapping through five of them, still leaves
+// one record. A refusal is not worth surfacing: the list is capped, so a sixth
+// car simply has no record, activeSavedCar sees the mismatch, and the reads
+// fall back to prefs, which still holds that car's numbers.
+function selectMyCar(carId, draft) {
+  if (!myCarsLive) return null;
+  let state = myCars;
+  if (!findMyCarByCarId(state, carId)) {
+    const added = addMyCar(state, { ...draft, carId }, getCar);
+    if (!added.ok) return null;
+    state = added.state;
+  }
+  // Re-found rather than carried across, because safeCar narrows what it was
+  // handed: the record that landed is the one to point at, not the draft that
+  // went in. A carId that did not survive that narrowing finds nothing and
+  // deselects, which is the same fall-back-to-prefs path as the cap.
+  const target = findMyCarByCarId(state, carId);
+  const res = setActiveMyCar(state, target ? target.id : null);
+  if (!res.ok) return null;
+  myCars = res.state;
+  saveMyCars(myCars);
+  return activeMyCar(myCars);
+}
+
+// The one writer of a car's numbers. Both stores are written here, from the
+// same inputs, in the same call. Keeping them in step is therefore not
+// something a later caller has to remember: there is nowhere else to write
+// from, and a test pins that there is exactly one call to each.
+//
+// carOverrides goes first and unconditionally. It is the rollback, so it is
+// written exactly as it is today whether or not the cars layer can answer.
+function saveCarNumbers(inputs) {
+  prefs = applyCarEdit(prefs, prefs.carId, inputs);
+  savePrefs(prefs);
+
+  const saved = activeSavedCar();
+  if (!saved) return;
+  const res = applyMyCarEdit(myCars, saved.id, inputs);
+  if (!res.ok) return;
+  myCars = res.state;
+  saveMyCars(myCars);
+}
+
+// What the estimate caps against: a car-shaped carrier whose chargeKw is the
+// selected car's onboard ceiling.
+//
+// savedCarCeilingKw answers with the live dataset row while the carId still
+// resolves, and with the snapshot taken when the car was saved when it does
+// not. That second case is why maxKw exists: a reseed that drops a carId used
+// to leave the car bounded only by the outlet, and the charge-time estimate
+// came out fast in the app's own voice.
+//
+// A carrier rather than a plain number so the Math.min that APPLIES a ceiling
+// stays in chargeDrawKw and the rule for what a ceiling IS stays in
+// savedCarCeilingKw. Restating either here is how this app came to hold two
+// definitions of charge power in the first place. carCeilingKw reads chargeKw
+// and nothing else, so an Infinity carrier answers Infinity exactly as a car
+// with no figure does.
+function ceilingCar() {
+  const saved = activeSavedCar();
+  return saved ? { chargeKw: savedCarCeilingKw(saved, getCar) } : currentCar();
 }
 
 // Highlight the charger-speed preset that matches the current power, if any.
@@ -652,12 +806,27 @@ function renderCurrencyMenu() {
 }
 
 // --- Car selection ---
-const CUSTOM_ID = "__custom__";
+// The sentinel is imported, not restated. main.js used to hold its own copy of
+// the literal, which is two definitions of one identity and no mechanism to
+// keep them equal.
 
-function setCar(car, { keepCustom = false } = {}) {
-  // applyCarSelection owns which fields a car fills in (and which it must leave
-  // alone, powerKw above all); keepCustom means take the identity only.
-  prefs = keepCustom ? { ...prefs, carId: car.id } : applyCarSelection(prefs, car);
+// keepCustom used to ride along here as an option no call site passed. It was
+// harmless while nothing read it; the saved-car line below reads it, which
+// turns a dead parameter into a live branch that only the deleted caller could
+// ever reach. Removed rather than commented, because a branch no caller takes
+// is not reserved capacity, it is an untested path that reads as a tested one.
+
+function setCar(car) {
+  // applyCarSelection owns which fields a car fills in, and which it must leave
+  // alone, powerKw above all.
+  prefs = applyCarSelection(prefs, car);
+  // The saved record for this car becomes the active one, and its numbers are
+  // what the fields show. With nothing saved yet the two answer the same thing:
+  // a freshly added record carries no numbers of its own and inherits the same
+  // dataset row applyCarSelection just read, so the first pick of a car is
+  // indistinguishable from the behavior that shipped before this store existed.
+  const saved = selectMyCar(car.id, { label: carLabel(car) });
+  if (saved) prefs = { ...prefs, ...savedCarNumbers(saved, getCar) };
   savePrefs(prefs);
   $("carName").textContent = `${car.make} ${car.model}`;
   $("carSearch").value = carLabel(car);
@@ -670,10 +839,17 @@ function setCar(car, { keepCustom = false } = {}) {
 // Switch to a user-defined car: keep the current numbers, drive the label from
 // the nickname, and reveal the numbers so the user can enter their own.
 function setCustomCar() {
-  prefs.carId = CUSTOM_ID;
+  prefs.carId = CUSTOM_CAR_ID;
   // Restore this custom car's saved numbers if we have them; otherwise keep
   // whatever's showing so the user can adjust from there.
-  const ov = prefs.carOverrides ? prefs.carOverrides[CUSTOM_ID] : null;
+  //
+  // The saved record answers first, and it answers nothing when the user has
+  // never edited a custom car, because it has no dataset row to inherit from.
+  // That is the same silence carOverrides gives in the same situation, which is
+  // what makes swapping the source here invisible. The override stays the
+  // fallback for a selection the store could not represent.
+  const saved = selectMyCar(CUSTOM_CAR_ID, { name: prefs.customName });
+  const ov = saved ? savedCarNumbers(saved, getCar) : (prefs.carOverrides ? prefs.carOverrides[CUSTOM_CAR_ID] : null);
   if (ov) {
     if (Number.isFinite(ov.mpg)) prefs.mpg = ov.mpg;
     if (Number.isFinite(ov.miPerKwh)) prefs.miPerKwh = ov.miPerKwh;
@@ -763,7 +939,7 @@ function renderCarResults(query) {
   const custom = document.createElement("li");
   custom.className = "combo__item combo__item--custom";
   custom.id = carOptionId(0);
-  custom.dataset.id = CUSTOM_ID;
+  custom.dataset.id = CUSTOM_CAR_ID;
   custom.setAttribute("role", "option");
   custom.setAttribute("aria-selected", "false");
   custom.textContent = "\u270F\uFE0F My own car (enter numbers)";
@@ -853,8 +1029,7 @@ function attachEvents() {
   for (const id of CAR_EDIT_FIELDS) {
     $(id).addEventListener("input", () => {
       if (!prefs.carId) return;
-      prefs = applyCarEdit(prefs, prefs.carId, readInputs());
-      savePrefs(prefs);
+      saveCarNumbers(readInputs());
     });
   }
 
@@ -1145,7 +1320,7 @@ function attachEvents() {
   const chooseCarOption = (li, { keepFocus = false } = {}) => {
     const id = li?.dataset.id;
     if (!id) return;
-    if (id === CUSTOM_ID) setCustomCar(); // this one moves focus to mpg on purpose
+    if (id === CUSTOM_CAR_ID) setCustomCar(); // this one moves focus to mpg on purpose
     else { const car = getCar(id); if (car) setCar(car); }
     hideCarResults();
     if (!keepFocus) $("carSearch").blur();
@@ -1189,7 +1364,7 @@ function attachEvents() {
   $("carNickname").addEventListener("input", (e) => {
     prefs.customName = e.target.value.trim();
     savePrefs(prefs);
-    if (prefs.carId === CUSTOM_ID) {
+    if (prefs.carId === CUSTOM_CAR_ID) {
       $("carName").textContent = prefs.customName || "My car";
     }
   });
@@ -1206,6 +1381,16 @@ function attachEvents() {
 
   $("resetBtn").addEventListener("click", () => {
     prefs = resetPrefs();
+    // "Reset everything" means everything, saved cars included. Keeping them
+    // would also keep the migration's one-shot flag burned, so the fresh prefs
+    // would come up beside a list of cars they know nothing about, and the user
+    // would be looking at a clean slate that is not clean underneath.
+    //
+    // No re-migration afterwards, and none is needed: prefs are at their
+    // defaults now, so there is nothing to carry across and migrateIfNeeded
+    // would write nothing. The empty state below is the same answer it reaches.
+    clearMyCars();
+    myCars = emptyCarsState();
     // Reset volatile UI too: pricing mode, schedule/tier rows, info note.
     rateMode = "flat";
     chargeCapMin = null;
@@ -1229,7 +1414,7 @@ function boot() {
   applyUnitLabels();
   const maxLen = maxLabelLength();
   if (maxLen) $("carSearch").maxLength = maxLen;
-  if (prefs.carId === CUSTOM_ID) {
+  if (prefs.carId === CUSTOM_CAR_ID) {
     $("carName").textContent = prefs.customName || "My car";
     $("carSearch").value = "My own car";
     $("nicknameField").hidden = false;
@@ -1379,6 +1564,7 @@ function setupUpdateWatch() {
 
 async function init() {
   await loadCars();
+  initMyCars(); // after loadCars: the migration snapshots labels and ceilings from it
   attachEvents();
   boot();
 
