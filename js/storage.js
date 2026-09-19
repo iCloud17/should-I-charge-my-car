@@ -1,12 +1,30 @@
-// storage.js - persist the user's setup in localStorage (no server, no cookies).
+// storage.js - the user's setup in localStorage (no server, no cookies), plus
+// the rules for what may be written and what may be read back.
+//
+// Two directions, two jobs. OUT: PERSIST_KEYS decides what gets saved. IN:
+// sanitizePrefs holds every one of those keys to a rule before the app sees it,
+// because localStorage is user-editable, so what comes back is untrusted input
+// and not our own data coming home. The long note above PREF_RULES covers what
+// that layer drops, what it narrows, and why it never repairs a number.
+//
+// The pure prefs transforms the app applies in between live here too
+// (defaultPrefs, mergeCarOverride, applyCarEdit, applyCarSelection,
+// persistableFrom) rather than in main.js, so each rule is testable without a
+// DOM or a store.
 
 import { MAX_OUTLET_KW } from "./cars.js";
 
 const KEY = "sicc.prefs.v1";
 
-// Only STABLE inputs are persisted. Charger-specific values (rate, session fee,
-// time-of-day schedule) change at every stop, so we intentionally do NOT save
-// them - the user re-enters those on the spot.
+// What survives to the next visit: the values that are still true when the app
+// reopens. The ones that change at every stop (the charger's rate, its session
+// fee, its time-of-day schedule) are deliberately left out, because the user
+// re-enters those on the spot.
+//
+// powerKw is the named exception. It is charger-specific by any reading - it's
+// the outlet you're plugged into, not a property of the car - and it is saved
+// anyway, because the outlet you use most is usually the same one. startPct and
+// targetPct sit in the same grey area; see where they're defined below.
 //
 // Exported because it is also the whitelist on the way back IN: sanitizePrefs
 // reads these keys and no others, so the two directions cannot drift apart.
@@ -131,8 +149,8 @@ const PREF_RULES = {
   customName: (v) => cleanText(v, MAX_CUSTOM_NAME_LEN),
   carOverrides: safeOverrides,
 
-  // The canonical numbers. safeOverrides already holds the per-car copies to
-  // finite; these top-level mirrors are the ones that were taken on trust.
+  // The canonical numbers. safeOverrides holds the per-car copies to this same
+  // rule, so the same quantity is checked the same way wherever it is stored.
   mpg: positiveNumber,
   miPerKwh: positiveNumber,
   batteryKwh: positiveNumber,
@@ -202,14 +220,42 @@ function safeCurrency(cur) {
   return c || "$";
 }
 
-// The slots a per-car override may hold. `powerKw` is LEGACY and inert: it used
-// to double as the car's onboard ceiling, nothing reads or writes it now, and
-// it's kept only so rolling back to the previous release still finds its data.
+// The slots a per-car override may hold. `powerKw` is LEGACY: it used to double
+// as the car's onboard ceiling, and it's kept only so rolling back to the
+// previous release still finds its data.
+//
+// Nothing READS it. It is not inert, though, and the difference is the whole
+// point: mergeCarOverride walks this list, falls through to the saved value for
+// any key the caller didn't supply, and applyCarEdit hands the result to
+// savePrefs. So every car edit re-persists this key, and that write is the only
+// thing keeping the rollback data alive.
+//
+// Which makes narrowing this list to the three live fields a deletion, not a
+// tidy-up: the first edit to any field on a car would drop that car's powerKw,
+// and the user decided to keep it. Tests pin it (search the suite for "legacy
+// per-car powerKw"), so that goes red rather than quiet, but the reason it is
+// pinned is here.
+//
 // Do not start reusing it - the values in there conflate car and outlet power.
 const OVERRIDE_KEYS = ["mpg", "miPerKwh", "batteryKwh", "powerKw"];
 
-// Per-car edited numbers merged back from storage. Keep only finite numeric
-// fields and skip prototype-polluting keys, so a tampered store can't inject junk.
+// Per-car edited numbers merged back from storage. Every field goes through
+// positiveNumber, the SAME rule the top-level mpg, miPerKwh and batteryKwh
+// mirrors get, because they are the same quantities: holding the per-car copy
+// to merely finite let an mpg of -99, a mi/kWh of -3 and a battery of -4
+// survive the load, and applyCarSelection promoted them straight into the
+// visible fields, where they sat and re-saved every render. parseNum refuses
+// negatives so the verdict stayed blank and nothing wrong was computed, but
+// nothing took the junk back out either. One rule, applied once, at the one
+// boundary an untrusted value crosses.
+//
+// The legacy powerKw rides the same rule and is unharmed by it: it holds a real
+// positive number (see OVERRIDE_KEYS). It is deliberately NOT held to
+// MAX_OUTLET_KW the way the top-level powerKw is, because that bound describes
+// an outlet and this value is a car's onboard ceiling.
+//
+// Prototype-polluting ids are skipped, so a tampered store can't reparent the
+// object these land in.
 function safeOverrides(raw) {
   const out = {};
   if (!raw || typeof raw !== "object") return out;
@@ -218,7 +264,8 @@ function safeOverrides(raw) {
     if (!v || typeof v !== "object") continue;
     const o = {};
     for (const k of OVERRIDE_KEYS) {
-      if (Number.isFinite(v[k])) o[k] = v[k];
+      const n = positiveNumber(v[k]);
+      if (n !== undefined) o[k] = n;
     }
     if (Object.keys(o).length) out[id] = o;
   }

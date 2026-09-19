@@ -1,4 +1,15 @@
-// ui.js - small DOM/formatting helpers. No business logic here.
+// ui.js - the presentation layer's small helpers: DOM lookup, formatting, and
+// the pure interaction rules behind the widgets (which arrow key moves where,
+// what Enter does).
+//
+// No charging math and no persistence: those are calc.js and storage.js, and
+// nothing here should grow an opinion about break-even, fees or verdicts.
+//
+// Several of these touch no DOM at all - parseNum, money, formatDuration,
+// nextOptionIndex, enterAction. That's deliberate, not a sign they're in the
+// wrong file: they are rules about what the user sees and what a keystroke
+// does, written as a value in and a value out so the whole module can be tested
+// under node with no document.
 
 export const $ = (id) => document.getElementById(id);
 

@@ -333,7 +333,6 @@ function updatePresetActive() {
   }
 }
 
-// The "Charge for" slider spans 0 to the full-charge time. It only shows when a
 // The "sweet spot" for rising by-duration tiers: charge through the cheap tiers
 // and stop where the next tier's rate first crosses break-even. Every kWh past
 // that point costs more than gas, so this maximizes dollars saved. Returns the
@@ -404,6 +403,7 @@ function timeFeeSweetSpot(full, curveArgs, m, cur, breakeven) {
   };
 }
 
+// The "Charge for" slider spans 0 to the full-charge time. It only shows when a
 // time fee makes a shorter charge worth considering. Untouched, it sits at the
 // full charge so nothing changes; drag it back to price a partial top-up.
 function updateChargeSlider(show, fullChargeMin, curMin, curSoc, hasTimeFeeContext = true) {

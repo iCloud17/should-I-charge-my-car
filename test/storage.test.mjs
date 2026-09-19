@@ -95,11 +95,13 @@ test("mergeCarOverride returns only the known numeric fields", () => {
 });
 
 test("mergeCarOverride carries the legacy per-car powerKw through untouched", () => {
-  // The rollback contract: existing carOverrides[*].powerKw is kept as inert
-  // data. The write path never sends powerKw, so the only thing preserving it
-  // is that it's still in OVERRIDE_KEYS and falls through to the saved value.
-  // Narrow OVERRIDE_KEYS to the three live fields and the first edit to ANY
-  // field on a car silently deletes its rollback data - with a green suite.
+  // The rollback contract: carOverrides[*].powerKw is data nothing reads, kept
+  // alive by this merge alone. The write path never sends a powerKw, so what
+  // preserves it is that it's still in OVERRIDE_KEYS and falls through to the
+  // saved value - on every car edit, since applyCarEdit's result goes to
+  // savePrefs. Narrow OVERRIDE_KEYS to the three live fields and the first edit
+  // to ANY field on a car deletes that car's rollback data. This is the test
+  // that makes that go red instead of quiet.
   assert.equal(mergeCarOverride({ mpg: 25, powerKw: 3.3 }, { mpg: 31 }).powerKw, 3.3);
   assert.deepEqual(
     mergeCarOverride({ mpg: 25, miPerKwh: 2.4, powerKw: 3.3 }, { mpg: 31, miPerKwh: 2.4, batteryKwh: 20 }),
@@ -144,6 +146,51 @@ test("loadPrefs keeps the legacy per-car powerKw so a rollback still finds it", 
   assert.deepEqual(loadPrefs().carOverrides.a, { mpg: 25, powerKw: 3.3 });
 });
 
+test("loadPrefs drops override numbers that aren't above zero", () => {
+  // The QA case. These are finite, so the old finite-only check kept them, and
+  // applyCarSelection then promoted them into the mpg, mi/kWh and battery
+  // inputs, where every render read them back and saved them again. parseNum
+  // refuses negatives so the verdict stayed blank and nothing wrong was
+  // computed, but nothing removed the junk either.
+  seed(JSON.stringify({
+    carOverrides: {
+      a: { mpg: -99, miPerKwh: -3, batteryKwh: -4 }, // nothing usable left, so the entry goes
+      b: { mpg: 0, miPerKwh: 2.4 }, // a zero economy is a division by zero, not a setting
+      c: { mpg: 42, batteryKwh: -1 }, // dropped per field: the good mpg stays
+    },
+  }));
+  assert.deepEqual(loadPrefs().carOverrides, { b: { miPerKwh: 2.4 }, c: { mpg: 42 } });
+});
+
+test("the legacy per-car powerKw is held to the same rule, and a real one passes it", () => {
+  seed(JSON.stringify({
+    carOverrides: {
+      a: { mpg: 25, powerKw: 3.3 },
+      b: { mpg: 25, powerKw: -3.3 }, // being legacy is not an exemption from being a number
+      c: { mpg: 25, powerKw: 50 },
+    },
+  }));
+  const out = loadPrefs().carOverrides;
+  assert.deepEqual(out.a, { mpg: 25, powerKw: 3.3 }, "the rollback data still round trips");
+  assert.deepEqual(out.b, { mpg: 25 });
+  // Kept on purpose. MAX_OUTLET_KW bounds the OUTLET, and this value is a car's
+  // onboard ceiling, so the outlet rule has no business dropping it. An old
+  // release reading it back still ends up bounded, because chargeDrawKw takes
+  // the minimum of the outlet, MAX_OUTLET_KW and the car.
+  assert.deepEqual(out.c, { mpg: 25, powerKw: 50 });
+});
+
+test("a corrupt saved override can't reach the car's visible numbers", () => {
+  // End to end, because the gap was only visible downstream: applyCarSelection
+  // prefers a saved override over the dataset number, so a stored -99 was what
+  // the mpg field showed the moment the car was picked.
+  seed(JSON.stringify({ carOverrides: { [SLOW_CAR.id]: { mpg: -99, miPerKwh: -3, batteryKwh: -4 } } }));
+  const prefs = applyCarSelection(loadPrefs(), SLOW_CAR);
+  assert.equal(prefs.mpg, SLOW_CAR.mpg);
+  assert.equal(prefs.miPerKwh, SLOW_CAR.miPerKwh);
+  assert.equal(prefs.batteryKwh, SLOW_CAR.batteryKwh);
+});
+
 test("loadPrefs ignores prototype-polluting override keys", () => {
   // Built as a raw string on purpose: a __proto__ key in an object literal sets
   // the prototype rather than becoming the own property JSON.parse would create.
@@ -185,6 +232,22 @@ test("a numeric field holding a positive number is kept exactly", () => {
   const good = { mpg: 42, miPerKwh: 3.1, batteryKwh: 17, gasPrice: 3.899, powerKw: 3.3 };
   const out = sanitizePrefs(good);
   for (const [field, v] of Object.entries(good)) assert.equal(out[field], v, field);
+});
+
+test("an override field and its top-level mirror accept exactly the same numbers", () => {
+  // The coherence pin. mpg inside carOverrides and mpg at the top level are the
+  // same quantity, and for a while they had two sanitizers applying two rules:
+  // positive at the top, merely finite per car. Whatever sanitizePrefs keeps in
+  // one place it has to keep in the other, and whatever it drops it has to drop
+  // in both. Let these diverge again and the looser one becomes the way in.
+  for (const field of ["mpg", "miPerKwh", "batteryKwh"]) {
+    for (const v of [...BAD_NUMBERS, -99, -3, -0.5, 1e-9, 42]) {
+      const keptAtTop = sanitizePrefs({ [field]: v })[field] !== DEFAULT_PREFS[field];
+      const perCar = sanitizePrefs({ carOverrides: { a: { [field]: v } } }).carOverrides.a;
+      const keptPerCar = perCar !== undefined && Object.hasOwn(perCar, field);
+      assert.equal(keptPerCar, keptAtTop, `${field} = ${String(v)}`);
+    }
+  }
 });
 
 test("an outlet power past the AC ceiling falls back to the default, not to the ceiling", () => {
@@ -509,9 +572,10 @@ test("a car override never takes the outlet power from the live fields", () => {
 });
 
 test("a car edit leaves an already-saved legacy powerKw untouched", () => {
-  // The rollback contract: a powerKw already in the store is inert data nothing
-  // reads. Editing the car's MPG must neither delete it nor refresh it with
-  // whatever outlet the user happens to be at now.
+  // The rollback contract: a powerKw already in the store is data nothing
+  // reads, and this is the write that keeps it. Editing the car's MPG carries
+  // the old value through unchanged - it must neither drop it nor refresh it
+  // with whatever outlet the user happens to be standing at now.
   const carId = "volt-2018";
   const prefs = applyCarEdit(
     { ...defaultPrefs(), carOverrides: { [carId]: { mpg: 42, powerKw: 3.3 } } },
