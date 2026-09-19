@@ -18,19 +18,21 @@ const KEY = "sicc.prefs.v1";
 
 // What survives to the next visit: the values that are still true when the app
 // reopens. The ones that change at every stop (the charger's rate, its session
-// fee, its time-of-day schedule) are deliberately left out, because the user
-// re-enters those on the spot.
+// fee, its time-of-day schedule, where the battery is and how full you want it)
+// are deliberately left out, because the user re-enters those on the spot.
 //
 // powerKw is the named exception. It is charger-specific by any reading - it's
 // the outlet you're plugged into, not a property of the car - and it is saved
-// anyway, because the outlet you use most is usually the same one. startPct and
-// targetPct sit in the same grey area; see where they're defined below.
+// anyway, because the outlet you use most is usually the same one. That is not
+// true of startPct and targetPct: a state of charge is a fact about one stop,
+// and restoring last week's 47% is a plausible wrong number wearing the user's
+// own authority. They keep their defaults below and start every visit there.
 //
 // Exported because it is also the whitelist on the way back IN: sanitizePrefs
 // reads these keys and no others, so the two directions cannot drift apart.
 export const PERSIST_KEYS = [
   "carId", "customName", "carOverrides", "mpg", "miPerKwh", "batteryKwh",
-  "gasPrice", "units", "currency", "powerKw", "startPct", "targetPct", "themeMode",
+  "gasPrice", "units", "currency", "powerKw", "themeMode",
 ];
 
 export const DEFAULT_PREFS = {
@@ -48,8 +50,9 @@ export const DEFAULT_PREFS = {
   themeMode: "auto", // "auto" (follows local time) | "light" | "dark"
   // Advanced - charger fees & session.
   sessionFee: 0, // volatile - NOT persisted, it changes at every stop
-  // These two ARE in PERSIST_KEYS and do come back next visit, despite sitting
-  // next to sessionFee. Whether they should persist is an open product question.
+  // Volatile for the same reason, and they sit next to sessionFee because they
+  // belong to the same category: this stop, not this user. Every visit opens at
+  // empty-to-full, which is a question rather than an answer.
   startPct: 0,
   targetPct: 100,
   // The outlet you're plugged into, not a property of the car. Persisted,
@@ -95,10 +98,6 @@ export function loadPrefs() {
 // strips markup characters and falls back to "$". Each takes something away from
 // what was stored; none of them invents a value the user never had.
 //
-// One number does still get repaired, just not in here. See the startPct and
-// targetPct rule below for an ordering fix-up that happens downstream and is
-// written back to storage.
-//
 // Dropped per field, too. safeOverrides already works this way and it is the
 // right discipline: one tampered number must not cost the user the car, the
 // currency and the gas price they legitimately saved.
@@ -131,12 +130,6 @@ function positiveNumber(v) {
   return Number.isFinite(v) && v > 0 ? v : undefined;
 }
 
-// A state of charge, on the sliders' own 0 to 100 scale. Zero IS valid here:
-// an empty battery is a real place to start from.
-function percent(v) {
-  return Number.isFinite(v) && v >= 0 && v <= 100 ? v : undefined;
-}
-
 // One rule per persisted key. A rule returns the value to use, or undefined to
 // drop the key. Every key in PERSIST_KEYS must appear here; a test pins that,
 // because a key with no rule is a key nothing checks.
@@ -166,26 +159,20 @@ const PREF_RULES = {
   units: (v) => (UNIT_SYSTEM_IDS.includes(v) ? v : undefined),
   currency: safeCurrency,
 
-  // Checked independently, and their ORDER is deliberately not checked here.
-  // A start above a target is two individually valid numbers in a surprising
-  // arrangement, not garbage, and picking one to overwrite would invent a
-  // relationship the user never expressed.
+  // startPct and targetPct have no rule here and need none: they left
+  // PERSIST_KEYS, and sanitizePrefs reads that list and nothing else, so no
+  // stored value for either one is ever looked up. A rule would be unreachable
+  // code. The test that walks PERSIST_KEYS goes red the moment either key is put
+  // back, rule or no rule, because its table of valid values has no entry for
+  // them; adding one there is what turns a missing rule into the failure.
   //
-  // That restraint ends at this function. writeDisplayValues pulls the start
-  // down to the target while hydrating the sliders, and the render right behind
-  // it reads the slider back and saves it: seed 90/20 and localStorage holds
-  // 20/20 after one load, with the 90 gone. That is the repair, read back, save
-  // loop this file argues against everywhere else, and it is the one case the
-  // rule at the top does not cover.
-  //
-  // Left alone deliberately, NOT because it is handled. It predates this branch
-  // and ships on main today, and what a start above a target should do (clamp
-  // the start, raise the target, refuse the pair, say something) is an open
-  // product question nobody has answered. chargeCurve's empty result is a real
-  // guard, but only for a crossed pair that reaches it uncorrected; on the load
-  // path the slider fix-up has already happened.
-  startPct: percent,
-  targetPct: percent,
+  // It also settles the crossed-pair question this file used to call open. A
+  // start above a target could only arrive from storage, and writeDisplayValues
+  // pulled the start down to the target and the next render saved that, losing
+  // the 90 in a seeded 90/20. Neither number loads now, so both start at the
+  // documented 0 and 100, which cannot cross. The user can still drag them into
+  // any order they like within a session; the slider handlers hold that line
+  // live, and no repaired value reaches storage because nothing is stored.
 
   // Identity on purpose. theme.js already treats anything that is not "light"
   // or "dark" as auto, in resolveTheme, nextThemeMode and themeLabel alike, so
@@ -275,14 +262,46 @@ function safeOverrides(raw) {
 // Fold freshly typed numbers into the override already saved for a car.
 // Merge, never replace: a field cleared mid-edit parses as non-finite, and
 // writing that through would erase a value the user had already saved.
+//
+// Both sides go through positiveNumber, the SAME rule safeOverrides applies on
+// the way back in and the top-level mirrors apply at the top of this file. They
+// used to disagree, and 0 lived in the gap: this function asked only whether the
+// incoming value was finite, so typing a zero into the MPG box wrote mpg: 0 into
+// carOverrides, where it sat in the visible field for the rest of the session
+// and vanished on the next load when the stricter read rule finally dropped it.
+// A number the user can enter, see accepted, and lose without being told is
+// worse than one refused up front. Refusing it here means it never exists.
+//
+// The INCOMING side is the live guard. The saved-value fallback is the same
+// expression for coherence rather than for safety, and the honest version of
+// that is: nothing can currently reach it with a bad number, because every
+// route into prefs.carOverrides is either safeOverrides or this function's own
+// output. Loosening that half alone breaks no test, and it is written this way
+// so the loop states one rule instead of two that have to be kept in step.
+//
+// This deliberately tightens a check that was argued down before, on the
+// grounds that applyCarEdit is the only caller and always feeds parseNum output,
+// which is NaN for a negative. True, and it does not cover zero: parseNum
+// returns 0 for "0" quite happily. batteryKwh settles it, because readInputs
+// reads that box with no unit conversion at all, so a typed 0 arrives here as 0
+// under every unit system. The other two fields go through a conversion whose
+// answer for 0 differs by system, which is not a guard worth leaning on.
+//
+// Refusing a value is not the same as fighting the typist. Typing 0.5 passes
+// through "0" on the way, and the keep-the-last-good-value rule above is exactly
+// what makes that safe: the 0 simply fails to update the override, nothing on
+// the typing path writes the box back, and the 0.5 lands when it arrives.
+// (writeDisplayValues does rewrite these fields, but on a unit or currency
+// change, a car selection or a reset, never in response to a keystroke.)
+//
 // Pure, so the rule is testable without a DOM or localStorage.
 export function mergeCarOverride(existing, incoming) {
   const base = existing && typeof existing === "object" ? existing : {};
   const next = incoming && typeof incoming === "object" ? incoming : {};
   const out = {};
   for (const k of OVERRIDE_KEYS) {
-    if (Number.isFinite(next[k])) out[k] = next[k];
-    else if (Number.isFinite(base[k])) out[k] = base[k];
+    const v = positiveNumber(next[k]) ?? positiveNumber(base[k]);
+    if (v !== undefined) out[k] = v;
   }
   return out;
 }
@@ -340,6 +359,13 @@ export function applyCarSelection(prefs, car) {
 // powerKw is stored EXACTLY as the user typed it. The car's onboard cap is
 // applied downstream, where the number is used; a capped value must never reach
 // this function, or the cap ratchets into storage and outlives the car.
+//
+// startPct and targetPct are still folded in, and they are NOT persisted - the
+// two facts fit together because this returns the live prefs as well as the
+// thing savePrefs reads, and savePrefs copies PERSIST_KEYS only. The in-memory
+// copy has a job: writeDisplayValues rehydrates both sliders from prefs on a
+// unit or currency change, so dropping them here would snap a user's 40% back
+// to 0 the moment they switched to metric.
 // Pure: returns new prefs, never mutates what it was given.
 export function persistableFrom(prefs, m) {
   return {

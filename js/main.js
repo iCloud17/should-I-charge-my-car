@@ -789,7 +789,12 @@ function renderCarResults(query) {
     none.setAttribute("role", "option");
     none.setAttribute("aria-disabled", "true");
     none.setAttribute("aria-selected", "false");
-    none.textContent = "No matches, try a make or model.";
+    // This used to read "No matches, try a make or model.", which sent people
+    // back to search differently for a car that is not in the dataset. The way
+    // out is the custom row, which is sitting directly above this message as
+    // the first option in the same list, so point at it instead. Same wording
+    // as the (i) note above the field, so the two agree.
+    none.textContent = "No match. Pick \u201cMy own car\u201d at the top to enter your own.";
     ul.appendChild(none);
   }
 
@@ -1055,7 +1060,37 @@ function attachEvents() {
     };
     const outside = (e) => !infoBtn.contains(e.target) && !infoNote.contains(e.target);
     const onDocDown = (e) => { if (outside(e)) setPinned(false); };
-    const onKey = (e) => { if (e.key === "Escape") { setPinned(false); infoBtn.blur(); } };
+    // Focus can move from the (i) INTO the note: it ends in a source link, and a
+    // visible link is focusable. Tab, and the browser picks that link as the next
+    // stop, which blurs the (i) - and hiding the note on that blur takes the link
+    // out of the document before the focus lands on it, so the focus lands
+    // nowhere and the browser drops it on <body>. The link's own focus event
+    // never fires at all. That was the dead Tab stop: one keypress that moves
+    // nothing and leaves a keyboard user with no position in the page.
+    //
+    // The note stays open while focus is anywhere inside the pair, so the link
+    // is reachable rather than unreachable. Making it unfocusable would also
+    // have removed the dead stop, by removing the only way to get to the one
+    // link in the note, which is not a fix.
+    const holdsFocus = () => infoBtn.contains(document.activeElement) || infoNote.contains(document.activeElement);
+    // On blur/focusout, relatedTarget is where focus is GOING (null when it
+    // leaves the page). document.activeElement is still the old element here,
+    // so it cannot answer this question.
+    const leaving = (e) => !e.relatedTarget || !(infoBtn.contains(e.relatedTarget) || infoNote.contains(e.relatedTarget));
+    const onKey = (e) => {
+      if (e.key !== "Escape") return;
+      // Escape with focus inside the note has the same problem: hide first and
+      // the focus falls to <body>. Hand it back to the (i), which is where the
+      // note was opened from. Done while still pinned so the (i)'s own focus
+      // handler stays quiet and doesn't reopen what Escape just closed.
+      if (infoNote.contains(document.activeElement)) {
+        infoBtn.focus();
+        setPinned(false);
+        return;
+      }
+      setPinned(false);
+      infoBtn.blur();
+    };
     const setPinned = (v) => {
       if (v === pinned) { show(v); return; }
       pinned = v;
@@ -1070,9 +1105,12 @@ function attachEvents() {
       }
     };
     infoBtn.addEventListener("mouseenter", () => { if (!pinned) show(true); });
-    infoBtn.addEventListener("mouseleave", () => { if (!pinned) show(false); });
+    // Moving the mouse away must not close a note the keyboard is standing in.
+    infoBtn.addEventListener("mouseleave", () => { if (!pinned && !holdsFocus()) show(false); });
     infoBtn.addEventListener("focus", () => { if (!pinned) show(true); });
-    infoBtn.addEventListener("blur", () => { if (!pinned) show(false); });
+    infoBtn.addEventListener("blur", (e) => { if (!pinned && leaving(e)) show(false); });
+    // focusout bubbles, so this covers the link and anything added to the note later.
+    infoNote.addEventListener("focusout", (e) => { if (!pinned && leaving(e)) show(false); });
     infoBtn.addEventListener("click", (e) => { e.stopPropagation(); setPinned(!pinned); });
   };
   wireInfo("carInfoBtn", "carInfoNote");

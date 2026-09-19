@@ -55,18 +55,40 @@ beforeEach(() => { seed(); });
 
 // --- mergeCarOverride: the rule that a blank field must not erase a saved one ---
 
-test("mergeCarOverride keeps the saved value when the new one isn't a finite number", () => {
+test("mergeCarOverride keeps the saved value when the new one isn't a positive number", () => {
   const existing = { mpg: 25, miPerKwh: 2.4, batteryKwh: 20 };
-  for (const bad of [NaN, null, undefined, "31", Infinity, -Infinity, {}, true]) {
+  for (const bad of [NaN, null, undefined, "31", Infinity, -Infinity, {}, true, 0, -3]) {
     const out = mergeCarOverride(existing, { ...existing, mpg: bad });
     assert.equal(out.mpg, 25, `${String(bad)} must not overwrite a saved value`);
   }
 });
 
-test("mergeCarOverride accepts a finite incoming value, including zero", () => {
+test("mergeCarOverride accepts a positive number and nothing else", () => {
   assert.equal(mergeCarOverride({ mpg: 25 }, { mpg: 31.5 }).mpg, 31.5);
-  assert.equal(mergeCarOverride({ mpg: 25 }, { mpg: 0 }).mpg, 0);
-  assert.equal(mergeCarOverride({ mpg: 25 }, { mpg: -3 }).mpg, -3);
+  assert.equal(mergeCarOverride({ mpg: 25 }, { mpg: 1e-9 }).mpg, 1e-9, "however small");
+  // The QA case, closed at the write end rather than the read end. A zero MPG
+  // used to be written, shown in the field all session, and dropped on the next
+  // load by the stricter read rule, so the user lost a number they watched the
+  // app accept. Now it never lands.
+  assert.equal(mergeCarOverride({ mpg: 25 }, { mpg: 0 }).mpg, 25);
+  assert.equal(mergeCarOverride({ mpg: 25 }, { mpg: -3 }).mpg, 25);
+  // With nothing saved to fall back to, the field is simply absent.
+  assert.deepEqual(mergeCarOverride(undefined, { mpg: 0, batteryKwh: -1 }), {});
+});
+
+test("typing a decimal that starts with zero is not fought mid-keystroke", () => {
+  // The trap in refusing 0 on the way in: "0.5" passes through "0", and parseNum
+  // reports that 0 on its own input event. Nothing may snap, clear, or revert -
+  // the intermediate value just fails to update the override, and the real one
+  // lands when it arrives. Each step below is one keystroke's readInputs.
+  const carId = "volt-2018";
+  let prefs = applyCarEdit(defaultPrefs(), carId, { mpg: 25, miPerKwh: 2.4, batteryKwh: 20 });
+  for (const typed of [NaN, 0, 0, 0.5]) { // cleared, "0", "0.", "0.5"
+    prefs = applyCarEdit(prefs, carId, { mpg: typed, miPerKwh: 2.4, batteryKwh: 20 });
+    assert.ok(prefs.carOverrides[carId].mpg > 0, `a ${String(typed)} must never leave a junk value behind`);
+  }
+  assert.equal(prefs.carOverrides[carId].mpg, 0.5, "and the value the user meant is what is saved");
+  assert.equal(prefs.carOverrides[carId].miPerKwh, 2.4, "with the untouched fields untouched");
 });
 
 test("mergeCarOverride handles having no existing override", () => {
@@ -92,6 +114,25 @@ test("mergeCarOverride returns only the known numeric fields", () => {
     { batteryKwh: 20, miPerKwh: "2.4", somethingElse: 1 },
   );
   assert.deepEqual(out, { mpg: 25, batteryKwh: 20 });
+});
+
+test("the write path and the read path accept exactly the same numbers", () => {
+  // The coherence pin, in the direction the earlier one did not cover. The read
+  // end (safeOverrides) and the write end (mergeCarOverride) are gates on the
+  // same quantity, and while they disagreed, whatever the looser one let past
+  // lived in the field until a reload quietly took it away. Let them diverge
+  // again and 0 walks back in through the same door it used the first time.
+  for (const field of ["mpg", "miPerKwh", "batteryKwh"]) {
+    for (const v of [...BAD_NUMBERS, -99, -0.5, 0, 1e-9, 42]) {
+      const written = mergeCarOverride(undefined, { [field]: v });
+      const read = sanitizePrefs({ carOverrides: { a: { [field]: v } } }).carOverrides.a;
+      assert.equal(
+        Object.hasOwn(written, field),
+        read !== undefined && Object.hasOwn(read, field),
+        `${field} = ${String(v)}`,
+      );
+    }
+  }
 });
 
 test("mergeCarOverride carries the legacy per-car powerKw through untouched", () => {
@@ -259,38 +300,44 @@ test("an outlet power past the AC ceiling falls back to the default, not to the 
   assert.equal(sanitizePrefs({ powerKw: MAX_OUTLET_KW }).powerKw, MAX_OUTLET_KW, "the ceiling itself is a real outlet");
 });
 
-test("a percentage outside 0 to 100 falls back to its default", () => {
-  for (const bad of [...BAD_NUMBERS, 101, -0.1, 1e9]) {
-    if (bad === 0) continue; // zero is a valid state of charge, covered below
-    assert.equal(sanitizePrefs({ startPct: bad }).startPct, DEFAULT_PREFS.startPct, `startPct = ${String(bad)}`);
-    assert.equal(sanitizePrefs({ targetPct: bad }).targetPct, DEFAULT_PREFS.targetPct, `targetPct = ${String(bad)}`);
-  }
-});
-
-test("a percentage keeps every value on its own scale, zero included", () => {
-  for (const ok of [0, 5, 37, 95, 100]) {
-    assert.equal(sanitizePrefs({ startPct: ok }).startPct, ok, `startPct = ${ok}`);
-    assert.equal(sanitizePrefs({ targetPct: ok }).targetPct, ok, `targetPct = ${ok}`);
+test("neither battery percentage is ever read back out of the store", () => {
+  // They left PERSIST_KEYS, and sanitizePrefs reads that list and nothing else,
+  // so a stored value for either is not dropped by a rule - it is never looked
+  // up. Valid, invalid and absurd all land on the documented default, which is
+  // the point: where the battery is and how full you want it are facts about
+  // one stop, and last week's answer restored as this week's is a plausible
+  // wrong number wearing the user's own authority.
+  for (const v of [...BAD_NUMBERS, 5, 37, 95, 100, 101, -0.1, 1e9]) {
+    assert.equal(sanitizePrefs({ startPct: v }).startPct, 0, `startPct = ${String(v)}`);
+    assert.equal(sanitizePrefs({ targetPct: v }).targetPct, 100, `targetPct = ${String(v)}`);
   }
 });
 
 test("a stored startPct of null comes back as 0, never as a made-up 50", () => {
-  // The slider runs 0 to 100. Handed null it cannot hold the value and falls
-  // back to the midpoint of its own min and max, so the app came up claiming a
-  // 50% starting charge, and the next render saved that 50 as if it were chosen.
+  // The original defect, kept as a regression pin even though what stops it has
+  // changed underneath. The slider runs 0 to 100. Handed null it cannot hold the
+  // value and falls back to the midpoint of its own min and max, so the app came
+  // up claiming a 50% starting charge and the next render saved that 50 as if it
+  // were chosen. A rule used to drop the null; now the key is not read at all.
+  // Either way the number the user sees is the documented 0.
   seed(JSON.stringify({ ...DEFAULT_PREFS, startPct: null }));
   const out = loadPrefs();
   assert.equal(out.startPct, 0);
   assert.notEqual(out.startPct, 50);
 });
 
-test("a start above the target is left alone: both numbers are the user's", () => {
-  // Two individually valid percentages in a surprising order, not garbage.
-  // Overwriting one would invent a relationship nobody expressed, and the
-  // ordering already has homes downstream, in writeDisplayValues and chargeCurve.
+test("a crossed pair in the store cannot reach the app at all", () => {
+  // This used to be an open product question: a stored start above a stored
+  // target is two individually valid numbers in a surprising order, and
+  // writeDisplayValues answered it by pulling the start down to the target,
+  // after which the render saved that - seed 90/20 and the store held 20/20
+  // with the 90 gone. Not persisting either number retires the question rather
+  // than answering it. A crossed pair can never be LOADED, so the fix-up has
+  // nothing to fix and the repair-then-save loop has no way to start.
   const out = sanitizePrefs({ startPct: 90, targetPct: 20 });
-  assert.equal(out.startPct, 90);
-  assert.equal(out.targetPct, 20);
+  assert.equal(out.startPct, 0);
+  assert.equal(out.targetPct, 100);
+  assert.ok(out.startPct < out.targetPct, "every session opens on an uncrossed pair");
 });
 
 test("a carId that isn't a usable string falls back to no car", () => {
@@ -396,7 +443,7 @@ test("every persisted key survives sanitation when its value is valid", () => {
     carId: "honda-clarity", customName: "Nellie",
     carOverrides: { "honda-clarity": { mpg: 42 } },
     mpg: 42, miPerKwh: 3.1, batteryKwh: 17, gasPrice: 3.899,
-    units: "uk", currency: "£", powerKw: 3.3, startPct: 20, targetPct: 80,
+    units: "uk", currency: "£", powerKw: 3.3,
     themeMode: "dark",
   };
   const out = sanitizePrefs(valid);
@@ -423,7 +470,7 @@ test("a valid setup round trips through storage byte for byte", () => {
     carId: "honda-clarity", customName: "Nellie",
     carOverrides: { "honda-clarity": { mpg: 42, miPerKwh: 3.1, batteryKwh: 17 } },
     mpg: 42, miPerKwh: 3.1, batteryKwh: 17, gasPrice: 3.899,
-    units: "uk", currency: "£", powerKw: 3.3, startPct: 20, targetPct: 80,
+    units: "uk", currency: "£", powerKw: 3.3,
     themeMode: "dark",
   };
   savePrefs({ ...DEFAULT_PREFS, ...saved });
@@ -441,7 +488,7 @@ test("savePrefs and loadPrefs round trip the stable fields", () => {
     ...DEFAULT_PREFS,
     carId: "honda-clarity", customName: "Nellie", mpg: 42, miPerKwh: 3.1,
     batteryKwh: 17, gasPrice: 3.899, units: "uk", currency: "£",
-    powerKw: 3.3, startPct: 20, targetPct: 80, themeMode: "dark",
+    powerKw: 3.3, themeMode: "dark",
     carOverrides: { "honda-clarity": { mpg: 42 } },
   });
   const out = loadPrefs();
@@ -451,19 +498,62 @@ test("savePrefs and loadPrefs round trip the stable fields", () => {
   assert.equal(out.units, "uk");
   assert.equal(out.currency, "£");
   assert.equal(out.powerKw, 3.3);
-  assert.equal(out.startPct, 20);
   assert.equal(out.themeMode, "dark");
   assert.deepEqual(out.carOverrides, { "honda-clarity": { mpg: 42 } });
 });
 
 test("savePrefs writes only the stable keys, not the per-stop ones", () => {
   const store = seed();
-  savePrefs({ ...DEFAULT_PREFS, mpg: 25, yourRate: 0.32, sessionFee: 2.5 });
+  savePrefs({ ...DEFAULT_PREFS, mpg: 25, yourRate: 0.32, sessionFee: 2.5, startPct: 40, targetPct: 80 });
   const saved = JSON.parse(store.map.get(KEY));
   assert.equal(saved.mpg, 25);
   assert.equal("yourRate" in saved, false);
   assert.equal("sessionFee" in saved, false);
+  assert.equal("startPct" in saved, false, "a state of charge belongs to one stop");
+  assert.equal("targetPct" in saved, false);
   assert.equal(loadPrefs().yourRate, null); // comes back as the default, not 0.32
+});
+
+test("a store written by the previous release loads clean and self-cleans on the next save", () => {
+  // The upgrade path, and it is a real population: the shipped build persisted
+  // startPct and targetPct, so every store out there holds them. PERSIST_KEYS is
+  // the whitelist in BOTH directions, which is what makes this a removal rather
+  // than a migration - sanitizePrefs never looks the keys up, and savePrefs
+  // rebuilds the stored object from the same list, so the stale pair is gone the
+  // first time anything is saved. Nothing else may shift on the way through.
+  const store = seed(JSON.stringify({
+    carId: "honda-clarity", customName: "Nellie",
+    carOverrides: { "honda-clarity": { mpg: 42, powerKw: 3.3 } },
+    mpg: 42, miPerKwh: 3.1, batteryKwh: 17, gasPrice: 3.899,
+    units: "uk", currency: "£", powerKw: 3.3, startPct: 90, targetPct: 20,
+    themeMode: "dark",
+  }));
+
+  const out = loadPrefs();
+  assert.equal(out.startPct, 0, "the stored state of charge is not restored");
+  assert.equal(out.targetPct, 100);
+  // Everything the user legitimately saved is still exactly theirs.
+  assert.equal(out.carId, "honda-clarity");
+  assert.equal(out.customName, "Nellie");
+  assert.equal(out.mpg, 42);
+  assert.equal(out.miPerKwh, 3.1);
+  assert.equal(out.batteryKwh, 17);
+  assert.equal(out.gasPrice, 3.899);
+  assert.equal(out.units, "uk");
+  assert.equal(out.currency, "£");
+  assert.equal(out.powerKw, 3.3);
+  assert.equal(out.themeMode, "dark");
+  assert.deepEqual(out.carOverrides, { "honda-clarity": { mpg: 42, powerKw: 3.3 } });
+
+  savePrefs(out);
+  const rewritten = JSON.parse(store.map.get(KEY));
+  assert.equal("startPct" in rewritten, false, "the stale key is gone, no migration step needed");
+  assert.equal("targetPct" in rewritten, false);
+  assert.deepEqual(Object.keys(rewritten).sort(), [...PERSIST_KEYS].sort());
+
+  // And a second load is stable: what came back out is what goes back in.
+  const again = loadPrefs();
+  for (const k of PERSIST_KEYS) assert.deepEqual(again[k], out[k], k);
 });
 
 // --- nothing in here may throw: the app has to keep working without storage ---
@@ -667,10 +757,20 @@ test("a render pass saves the typed values, including the raw outlet power", () 
   const back = loadPrefs();
   assert.equal(back.powerKw, 6.6, "the outlet the user typed, never a car-capped value");
   assert.equal(back.gasPrice, 3.899, "at full precision");
-  assert.equal(back.startPct, 20);
-  assert.equal(back.targetPct, 90);
   assert.equal(back.carId, "rav4-prime-2023", "a render pass must not forget which car this is");
   assert.equal(back.yourRate, null, "and the per-stop values still don't persist");
+  assert.equal(back.startPct, 0, "including where the battery was at this one stop");
+  assert.equal(back.targetPct, 100);
+});
+
+test("a render pass still carries the live percentages in memory, where the sliders read them", () => {
+  // The half of persistableFrom that is NOT about storage. Changing units or
+  // currency re-runs writeDisplayValues, which rehydrates both sliders from
+  // prefs, so dropping these from the fold would snap a user's 20/90 back to
+  // 0/100 mid-session. Not persisted and not forgotten are different things.
+  const prefs = persistableFrom(defaultPrefs(), liveModel());
+  assert.equal(prefs.startPct, 20);
+  assert.equal(prefs.targetPct, 90);
 });
 
 test("the saved outlet power survives a slow car, a render, and the next car", () => {
