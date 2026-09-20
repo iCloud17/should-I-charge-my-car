@@ -145,6 +145,92 @@ test("the remove-car control still works on engines without <dialog>", () => {
   );
 });
 
+// --- Analytics --------------------------------------------------------------
+
+// The first argument of every track() / trackWhenReady() call, read with a
+// balanced scan so a nested call or a ${} cannot end the argument early. The
+// two declarations in analytics.js are matched too, harmlessly: their parameter
+// is a plain name like any other.
+function trackArgs(src) {
+  const s = stripComments(src);
+  const args = [];
+  for (const m of s.matchAll(/\b(?:track|trackWhenReady)\s*\(/g)) {
+    const from = m.index + m[0].length;
+    let depth = 1;
+    let i = from;
+    for (; i < s.length; i++) {
+      const c = s[i];
+      if (c === "," && depth === 1) break;
+      if ("([{".includes(c)) depth++;
+      else if (")]}".includes(c) && --depth === 0) break;
+    }
+    args.push(s.slice(from, i).trim());
+  }
+  return args;
+}
+
+// A ternary BETWEEN LITERALS is safe and already used twice (the pricing mode
+// and the verdict). A backtick or a + is the other thing entirely: the only
+// reason to build a name rather than write one is to put a value in it, and the
+// values in reach here are the user's car and the user's numbers.
+const leakyTrackArgs = (src) => trackArgs(src).filter((a) => a.includes("`") || a.includes("+"));
+
+test("source guard: no analytics event name is built out of user data", () => {
+  // Guard on the guard: the two safe shapes have to pass and the two that leak
+  // have to be caught, or this scan says nothing.
+  assert.deepEqual(leakyTrackArgs('track("car-selected");'), []);
+  assert.deepEqual(leakyTrackArgs('track(rateMode === "dur" ? "mode-by-duration" : "mode-flat");'), []);
+  assert.deepEqual(leakyTrackArgs("track(`car-${name}`);"), ["`car-${name}`"]);
+  assert.deepEqual(leakyTrackArgs('track("car-" + name);'), ['"car-" + name']);
+
+  const calls = trackArgs(read("../js/main.js"));
+  assert.ok(calls.length >= 15, `only ${calls.length} track calls found in main.js: the call scan broke`);
+
+  for (const rel of moduleGraph()) {
+    assert.deepEqual(
+      leakyTrackArgs(readFileSync(new URL(rel, REPO), "utf8")),
+      [],
+      `${rel} builds an event name instead of writing one: the name is the whole of what GoatCounter is sent, so a car name inside it is a car name published`,
+    );
+  }
+});
+
+// A top-level function's body. Every function body in this build is indented,
+// so a `}` in column zero is the end of one.
+function bodyOf(src, name) {
+  const s = stripComments(src);
+  const start = s.indexOf(`function ${name}(`);
+  assert.notEqual(start, -1, `${name} moved or was renamed`);
+  return s.slice(start, s.indexOf("\n}", start));
+}
+
+test("source guard: the switch a removal performs is not counted as a user switching cars", () => {
+  // Guard on the guard: one sample proves both halves, that the scan sees
+  // inside the function it names and that it stops at the end of it.
+  const two = 'function a() {\n  const x = 1;\n}\nfunction b() {\n  t("cars-switched");\n}\n';
+  assert.match(bodyOf(two, "b"), /cars-switched/, "the body scan cannot see the call it is looking for");
+  assert.doesNotMatch(bodyOf(two, "a"), /cars-switched/, "the body scan runs past the end of the function it names");
+
+  // switchToMyCar has three callers and one of them is removeActiveCar, landing
+  // the user on the neighbouring car after a removal. That is the app choosing
+  // a car, so the event lives at the two call sites a user actually reaches.
+  assert.doesNotMatch(
+    bodyOf(read("../js/main.js"), "switchToMyCar"),
+    /cars-switched/,
+    "cars-switched moved inside switchToMyCar, so every removal now reports a switch the user never made",
+  );
+});
+
+test("source guard: the saved-cars events are all still sent", () => {
+  // A positive match, unlike the bans above, because here the literal IS the
+  // metric: a renamed event is not a broken test, it is a series that stops in
+  // GoatCounter and a new one that starts with no history.
+  const src = stripComments(read("../js/main.js"));
+  for (const name of ["cars-added", "cars-second-added", "cars-copy-added", "cars-switched", "storage-refused"]) {
+    assert.ok(src.includes(`"${name}"`), `${name} is no longer sent from main.js: the saved-cars feature lost a metric`);
+  }
+});
+
 test("every listed asset resolves on disk", () => {
   // ASSETS feeds cache.addAll, which rejects the whole install on a single 404,
   // so one typo in a non-JS path silently turns offline mode off.

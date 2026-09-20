@@ -498,10 +498,21 @@ function addCurrentCar() {
     // `next` is dropped rather than kept: myCars is left as it was, so the
     // screen and the disk still agree, and the message is true when it says
     // nothing was added.
-    sayMyCarsNote(addWriteFailedMessage(wrote.reason));
+    sayWriteRefused(addWriteFailedMessage(wrote.reason));
     return;
   }
   myCars = next;
+
+  // Counted AFTER the write, so a refused add is not reported as one. These are
+  // one-shot acts rather than part of the recalc path, so they use
+  // trackWhenReady: a track() that arrives before GoatCounter has loaded is
+  // dropped, and nothing here runs again to retry it.
+  trackWhenReady("cars-added");
+  // The 1 to 2 transition, which is the question this answers: does anyone go
+  // past one car at all. `=== 2` and not `>= 2`, or every later add re-reports
+  // a step that happens once.
+  if (next.cars.length === 2) trackWhenReady("cars-second-added");
+  if (copied) trackWhenReady("cars-copy-added");
 
   // The legacy name slot follows the active record, which is the rule
   // switchToMyCar holds: customName is the last value carSummaryLabel and
@@ -623,6 +634,15 @@ function clearMyCarsNote() {
   sayMyCarsNote("");
 }
 
+// The four refusals a WRITE can produce, counted on their way to the screen. A
+// user who quietly loses a saved car is invisible from outside the browser, and
+// storage being unavailable or holding a newer build's payload is exactly the
+// kind of failure nobody reports: this event is the only signal it happened.
+function sayWriteRefused(text) {
+  trackWhenReady("storage-refused");
+  sayMyCarsNote(text);
+}
+
 // What the name field shows: the active car's own name, because the record is
 // the source of truth for it at every car count. The rule is nameFieldValue in
 // myCarsUi.js; this binds it to the two pieces of module state it needs, and is
@@ -658,7 +678,7 @@ function repaintCarName() {
 function writeCarName(text) {
   const wrote = saveCarName(text);
   repaintCarName();
-  if (!wrote.ok) sayMyCarsNote(nameWriteFailedMessage(wrote.reason));
+  if (!wrote.ok) sayWriteRefused(nameWriteFailedMessage(wrote.reason));
 }
 
 // What LEAVING the field does: an emptied name settles back on the car's default, and never on input.
@@ -949,7 +969,7 @@ function removeActiveCar() {
   // disk still agree about what is saved.
   const wrote = saveMyCars(res.state);
   if (!wrote.ok) {
-    sayMyCarsNote(removeWriteFailedMessage(wrote.reason));
+    sayWriteRefused(removeWriteFailedMessage(wrote.reason));
     return;
   }
   myCars = res.state;
@@ -1619,7 +1639,7 @@ function attachEvents() {
     $(id).addEventListener("input", () => {
       if (!prefs.carId) return;
       const wrote = saveCarNumbers(readInputs());
-      if (!wrote.ok) sayMyCarsNote(numbersWriteFailedMessage(wrote.reason));
+      if (!wrote.ok) sayWriteRefused(numbersWriteFailedMessage(wrote.reason));
     });
   }
 
@@ -2016,6 +2036,10 @@ function attachEvents() {
     // hideCarResults samples the field on its way out and the field is not
     // settled until the switch has written to it.
     clearTimeout(carBlurTimer); // the blur this click caused; its close is now redundant
+    // Counted at the two call sites a USER reaches, not inside switchToMyCar:
+    // removeActiveCar calls that function itself to land on the neighbouring
+    // car, and counting there would report a switch on every removal.
+    trackWhenReady("cars-switched");
     switchToMyCar(chip.dataset.myCarId);
     hideCarResults();
   });
@@ -2033,6 +2057,7 @@ function attachEvents() {
     const next = nextChipIndex(at, chips.length, e.key);
     if (next === at || next < 0) return;
     e.preventDefault(); // Left/Right would otherwise scroll the page sideways
+    trackWhenReady("cars-switched"); // the keyboard half of the chip click above
     switchToMyCar(chips[next].dataset.myCarId);
     // The row was rebuilt by the switch, so the element just focused is gone.
     // Re-find by position: list order is stable across a repaint, only the
