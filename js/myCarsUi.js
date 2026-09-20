@@ -465,6 +465,15 @@ export function numbersWriteFailedMessage(reason) {
   return `Those numbers were not saved to this car. ${writeRefusalCause(reason)}`;
 }
 
+// The selection's pair, and the only one of the five that does NOT report that
+// nothing happened: the car is on screen, and it has to stay there, because a
+// chip checked beside another car's numbers is the state selectMyCar's deselect
+// branch exists to prevent. What the disk refused is which car the app opens on
+// next time, and that is all this claims.
+export function selectionWriteFailedMessage(reason) {
+  return `That car is shown, but was not saved as your selection. ${writeRefusalCause(reason)}`;
+}
+
 // WHY the store would not write, which saveMyCars reports and the two messages
 // above share. TOTAL over its reasons, the way addRefusalMessage is: an unknown
 // reason falls to the blocked-storage sentence, which is the one that names

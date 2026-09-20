@@ -10,6 +10,10 @@ const sent = new Set();
 // isn't ready yet so the caller can decide to retry. Never throws - analytics
 // must never break the app.
 export function track(path) {
+  // The name is the whole of what GoatCounter is sent, so a name that was
+  // built rather than written is refused here instead of published. True, not
+  // false: a dropped name must not be retried every 300ms forever.
+  if (!/^[a-z0-9-]{1,40}$/.test(path)) return true;
   if (sent.has(path)) return true;
   try {
     const gc = globalThis.goatcounter;

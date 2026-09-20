@@ -21,7 +21,7 @@ import {
   nextChipIndex, addRefusalMessage, addWriteFailedMessage, addedMessage, carSummaryLabel, carTileSource,
   newCarName, defaultCarName, withDefaultNames,
   legacyNameSlot, nameFieldValue, removedMessage, removeWriteFailedMessage, removeConfirmQuestion,
-  removeGoneMessage, nameWriteFailedMessage, numbersWriteFailedMessage,
+  removeGoneMessage, nameWriteFailedMessage, numbersWriteFailedMessage, selectionWriteFailedMessage,
 } from "./myCarsUi.js";
 import { $, parseNum, money, formatDuration, escapeHtml, nextOptionIndex, enterAction } from "./ui.js";
 import { applyTheme, nextThemeMode, themeLabel } from "./theme.js";
@@ -391,7 +391,9 @@ function initMyCars() {
     // onboard maximum. Skipping leaves the key absent and the next load with a
     // working fetch migrates properly.
     if (!getCars().length) return;
-    migrateIfNeeded(prefs, labelForCarId, getCar);
+    // Counted, not spoken: boot()'s repaint below clears this note before anyone
+    // could read it, and the event is the only sign the numbers are stranded.
+    if (migrateIfNeeded(prefs, labelForCarId, getCar).reason === "write-refused") countWriteRefused();
     myCars = namedState(loadMyCars());
     myCarsLive = true;
   } catch {
@@ -424,13 +426,23 @@ function activeSavedCar() {
 // estimate capped against another car's onboard charger. Nothing selected is a
 // state this store can hold, so it is held rather than left stale.
 function selectMyCar(carId) {
-  if (!myCarsLive) return null;
+  if (!myCarsLive) return { saved: null, wrote: NO_REFUSAL };
   // The record is re-found rather than carried in, because two records may
   // share a carId and the store's own rule is that the first of them answers.
   const found = findMyCarByCarId(myCars, carId);
   myCars = setActiveMyCar(myCars, found?.id ?? null).state;
-  saveMyCars(myCars);
-  return activeMyCar(myCars);
+  // A REFUSED SELECTION IS SPOKEN, NOT OBEYED, which is where this parts
+  // company with the four content writes. They drop their new state, because an
+  // add can simply not add; a selection cannot un-show the car the user is
+  // looking at, and leaving the store on the previous car is the checked-chip
+  // mismatch the deselect branch above exists to prevent. What it used to do
+  // instead was neither: the answer was discarded, savePrefs moved carId on its
+  // own, and the next reload read a saved car as unsaved and offered to add it
+  // again. The refusal is handed BACK because the caller's repaint clears the
+  // note, so the caller is the only thing that can say it in an order that
+  // survives.
+  const wrote = saveMyCars(myCars);
+  return { saved: activeMyCar(myCars), wrote };
 }
 
 // Put the car on screen into the list, and say what happened either way. THE
@@ -639,8 +651,15 @@ function clearMyCarsNote() {
 // storage being unavailable or holding a newer build's payload is exactly the
 // kind of failure nobody reports: this event is the only signal it happened.
 function sayWriteRefused(text) {
-  trackWhenReady("storage-refused");
+  countWriteRefused();
   sayMyCarsNote(text);
+}
+
+// Split out because the migration is the one refusal with nobody to tell: it
+// runs at boot, ahead of the repaint that clears the note. One name for the
+// event either way.
+function countWriteRefused() {
+  trackWhenReady("storage-refused");
 }
 
 // What the name field shows: the active car's own name, because the record is
@@ -817,7 +836,10 @@ function switchToMyCar(id) {
   const res = setActiveMyCar(myCars, id);
   if (!res.ok) return;
   myCars = res.state;
-  saveMyCars(myCars);
+  // Spoken, not obeyed, for the reason selectMyCar gives: this car is on screen
+  // by the end of this function either way. Said after the repaint below, which
+  // is what clears the note.
+  const wrote = saveMyCars(myCars);
 
   const saved = activeMyCar(myCars);
   if (!saved) return;
@@ -845,6 +867,7 @@ function switchToMyCar(id) {
   writeDisplayValues();
   renderMyCars();
   render();
+  if (!wrote.ok) sayWriteRefused(selectionWriteFailedMessage(wrote.reason));
 }
 
 // --- Removing a car ---------------------------------------------------------
@@ -936,7 +959,11 @@ function askRemoveCar() {
   // the double-tap swallow, and it asks the SAME question and spends the answer
   // on the SAME removal, so there is one act here and not two.
   if (typeof dlg.showModal !== "function") {
-    if (window.confirm(question)) removeActiveCar();
+    if (!window.confirm(question)) return;
+    // confirm blocks the task queue, so another tab's storage event has not run
+    // yet, and the reconcile below is gated on dlg.open and never reaches here.
+    refreshMyCarsFromStore();
+    removeActiveCar();
     return;
   }
 
@@ -1415,7 +1442,7 @@ function setCar(car) {
   // numbers below come from the record when there is one and from the dataset
   // row applyCarSelection just read when there is not. Growing the list is
   // addCurrentCar's job and no part of this one.
-  const saved = selectMyCar(car.id);
+  const { saved, wrote } = selectMyCar(car.id);
   if (saved) prefs = { ...prefs, ...savedCarNumbers(saved, getCar) };
   savePrefs(prefs);
   $("carName").textContent = carSummaryText(saved, car);
@@ -1427,6 +1454,9 @@ function setCar(car) {
   // field ends up visible for a car that has no name to put in it.
   renderMyCars();
   render();
+  // After the repaint, which clears the note. The same order the add and the
+  // removal use.
+  if (!wrote.ok) sayWriteRefused(selectionWriteFailedMessage(wrote.reason));
 }
 
 // Switch to a user-defined car: keep the current numbers, drive the label from
@@ -1441,7 +1471,7 @@ function setCustomCar() {
   // That is the same silence carOverrides gives in the same situation, which is
   // what makes swapping the source here invisible. The override stays the
   // fallback for a selection the store could not represent.
-  const saved = selectMyCar(CUSTOM_CAR_ID);
+  const { saved, wrote } = selectMyCar(CUSTOM_CAR_ID);
   const ov = saved ? savedCarNumbers(saved, getCar) : (prefs.carOverrides ? prefs.carOverrides[CUSTOM_CAR_ID] : null);
   if (ov) {
     if (Number.isFinite(ov.mpg)) prefs.mpg = ov.mpg;
@@ -1456,6 +1486,8 @@ function setCustomCar() {
   writeDisplayValues();
   renderMyCars(); // reveals nicknameField: a custom car always gets a name field
   render();
+  // After the repaint, which clears the note, and before focus moves.
+  if (!wrote.ok) sayWriteRefused(selectionWriteFailedMessage(wrote.reason));
   $("mpg").focus();
 }
 

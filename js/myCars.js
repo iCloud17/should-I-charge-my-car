@@ -92,7 +92,10 @@ const RESERVED_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 // and compare unequal, which is the cost; a name the user cannot spell is the
 // higher one. Neither reorders text, and a name is painted with textContent and
 // never put in a URL, so what is left is display-only.
-const INVISIBLE_CHARS = /[\u00AD\u200B\u200E\u200F\u202A-\u202E\u2060-\u2064\u2066-\u2069\uFEFF]/g;
+//
+// U+061C is named for Arabic and is NOT that case: it is a pure bidi control
+// with no orthographic role, so it is stripped with the rest of them.
+const INVISIBLE_CHARS = /[\u00AD\u061C\u200B\u200E\u200F\u202A-\u202E\u2060-\u2064\u2066-\u2069\uFEFF]/g;
 
 // A user-facing car name, narrowed rather than dropped, the same way the prefs
 // sanitizer narrows text: each step takes something away, none invents a value

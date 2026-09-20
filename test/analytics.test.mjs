@@ -40,6 +40,24 @@ test("track never throws if GoatCounter.count blows up", () => {
   assert.equal(track("pwa-standalone"), true); // swallowed, treated as handled
 });
 
+test("track refuses a name that was built rather than written, and never retries it", () => {
+  // The source guard in assets.test.mjs bans a backtick and a + in the
+  // argument, which `track(name)` and `[a, b].join("-")` both walk past. The
+  // allowlist is what makes the rule structural rather than a lint.
+  const gc = fakeCounter();
+  globalThis.goatcounter = gc;
+  const nickname = "Priya's Volt";
+  assert.equal(track(`car-${nickname}`), true, "a refused name must read as handled, not as not-yet-loaded");
+  assert.equal(track("car-" + nickname), true);
+  assert.equal(track(["car", nickname].join("-")), true);
+  assert.deepEqual(gc.calls, [], "a user's car name reached GoatCounter");
+
+  // `true` is what stops trackWhenReady polling for a name it will never send.
+  let scheduled = 0;
+  trackWhenReady(`car-${nickname}`, 30, () => { scheduled++; });
+  assert.equal(scheduled, 0, "a refused name is retried, so a dropped event costs a timer every 300ms");
+});
+
 test("trackWhenReady fires immediately when GoatCounter is already loaded", () => {
   const gc = fakeCounter();
   globalThis.goatcounter = gc;

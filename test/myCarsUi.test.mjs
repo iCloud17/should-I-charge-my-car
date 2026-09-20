@@ -11,7 +11,7 @@ import {
   carTileSource, carSummaryLabel, legacyNameSlot, nameFieldValue,
   nextChipIndex, atCapMessage, addRefusalMessage, addWriteFailedMessage, addedMessage,
   removedMessage, removeWriteFailedMessage, removeConfirmQuestion, removeGoneMessage,
-  nameWriteFailedMessage, numbersWriteFailedMessage,
+  nameWriteFailedMessage, numbersWriteFailedMessage, selectionWriteFailedMessage,
 } from "../js/myCarsUi.js";
 import { CUSTOM_CAR_ID, MAX_MY_CARS, addMyCar, emptyCarsState } from "../js/myCars.js";
 import { MAX_CUSTOM_NAME_LEN } from "../js/storage.js";
@@ -954,6 +954,7 @@ test("the cause is total over the store's reasons, and an unknown one still says
     for (const say of [
       addWriteFailedMessage(reason), removeWriteFailedMessage(reason),
       nameWriteFailedMessage(reason), numbersWriteFailedMessage(reason),
+      selectionWriteFailedMessage(reason),
     ]) {
       assert.match(say, /\S\. \S/, `reason "${String(reason)}" lost its cause: ${say}`);
     }
@@ -1062,6 +1063,70 @@ test("a refused rename and a refused number edit explain themselves the same way
   assert.match(numbersWriteFailedMessage("read-only"), /to this car/);
 });
 
+test("a refused selection does not claim the car is off the screen", () => {
+  // QA M1's pair. The other four refusals report that nothing happened, which
+  // they can: an add can simply not add. A selection has already moved the
+  // screen by the time this is read, so "that car was not selected" would be
+  // contradicted by the car sitting above the note.
+  for (const reason of ["read-only", "unavailable"]) {
+    const said = selectionWriteFailedMessage(reason);
+    assert.match(said, /shown/, `nothing says the car in front of the user is still the car: ${said}`);
+    assert.doesNotMatch(said, /not (added|removed)/, `the selection borrowed another act's outcome: ${said}`);
+    assert.ok(!said.includes("?"), `a refusal is not a question: ${said}`);
+    assert.ok(
+      said.endsWith(addWriteFailedMessage(reason).replace("That car was not added. ", "")),
+      `${reason} is explained differently from a refused add: ${said}`,
+    );
+  }
+});
+
+test("source guard: a refused selection is spoken, not discarded", () => {
+  // QA M1. Both selection writes threw saveMyCars' answer away while savePrefs
+  // below them succeeded, so prefs.carId moved and cars.activeId did not. After
+  // a reload a saved car read as unsaved: no remove link, no chip checked, and
+  // an add control offering to save a car that was already saved, which mints a
+  // duplicate and burns a cap slot.
+  //
+  // NOT the ordering guard the four content writes get, and deliberately so.
+  // Those drop their new state on a refusal because they can. A selection
+  // cannot un-show the car the user is looking at, so the state is adopted
+  // ahead of the write ON PURPOSE here and only the speaking is pinned.
+  const src = readFileSync(new URL("../js/main.js", import.meta.url), "utf8");
+  const bodyOf = (name) => {
+    const start = src.indexOf(`function ${name}(`);
+    assert.notEqual(start, -1, `${name} moved or was renamed`);
+    return src.slice(start, src.indexOf("\n}", start))
+      .split("\n").filter((l) => !l.trim().startsWith("//")).join("\n");
+  };
+
+  // selectMyCar does not repaint, so it cannot speak: its caller's renderMyCars
+  // clears the note. The answer has to leave the function instead.
+  const select = bodyOf("selectMyCar");
+  const writeLine = select.split("\n").find((l) => l.includes("saveMyCars("));
+  assert.ok(writeLine, "selectMyCar stopped writing at all");
+  assert.match(writeLine, /\bwrote\b/, "selectMyCar swallows the write's answer again, so a refused selection is silent");
+  // And the dead-store bail has to answer in the same shape, or the caller's
+  // own wrote.ok throws on the one path where saved cars were never live.
+  assert.match(select, /!myCarsLive\) return \{[^}]*\bwrote\b/, "the dead-store bail hands the caller nothing to check");
+
+  for (const fn of ["setCar", "setCustomCar", "switchToMyCar"]) {
+    const body = bodyOf(fn);
+    const spoke = body.indexOf("selectionWriteFailedMessage(");
+    assert.notEqual(spoke, -1, `${fn} moves the selection and says nothing when the disk refuses it`);
+    assert.match(body, /!wrote\.ok/, `${fn} speaks unconditionally instead of checking the write`);
+    const painted = body.lastIndexOf("renderMyCars()");
+    assert.notEqual(painted, -1, `${fn} stopped repainting the list`);
+    assert.ok(painted < spoke, `${fn} says the refusal before the repaint that clears the note`);
+  }
+
+  // switchToMyCar does its own write, so its own check cannot come first.
+  const switched = bodyOf("switchToMyCar");
+  assert.ok(
+    switched.indexOf("saveMyCars(") < switched.indexOf("!wrote.ok"),
+    "switchToMyCar reads an answer it has not asked for yet",
+  );
+});
+
 test("source guard: a rename and a number edit are kept only once the write has happened", () => {
   // The removal's guard one file over, applied to the other two writers. Both
   // reassigned myCars and then threw saveMyCars' answer away, which is the
@@ -1107,6 +1172,7 @@ test("no copy in this module uses an em dash", () => {
     removeWriteFailedMessage("unavailable"), removeWriteFailedMessage("read-only"),
     nameWriteFailedMessage("unavailable"), nameWriteFailedMessage("read-only"),
     numbersWriteFailedMessage("unavailable"), numbersWriteFailedMessage("read-only"),
+    selectionWriteFailedMessage("unavailable"), selectionWriteFailedMessage("read-only"),
     removeConfirmQuestion("Volt"), removeConfirmQuestion(""),
     removeGoneMessage("Volt"), removeGoneMessage(""),
     // The words this module invents when no car, row or record supplies any.
@@ -1267,6 +1333,48 @@ test("source guard: a removal is announced only once the write has happened", ()
   // before it is the original defect with a guard bolted on after the fact.
   const adopted = body.indexOf("myCars = res.state");
   assert.notEqual(adopted, -1, "removeActiveCar stopped adopting the new state at all");
+  assert.ok(checked < adopted, "the screen moves on before the disk does, which is the divergence this guards");
+});
+
+test("source guard: an add is counted and announced only once the write has happened", () => {
+  // The removal's guard, applied to the other act that changes what is on disk.
+  // addMyCar is pure, so `res.ok` says only that the add was legal; saveMyCars
+  // is what refuses when storage is unavailable or a newer build's payload is
+  // there. Lifting trackWhenReady("cars-added") or `myCars = next` above that
+  // check leaves every test in this repo green while the app paints a chip, says
+  // the car is saved and reports the add to GoatCounter, for a car the next
+  // reload will not have.
+  //
+  // Pinned as an ORDER plus a ban, the same way the removal's is: the check
+  // comes before the count, the announcement and the adoption, and how it is
+  // spelled is not this test's business. Comments are dropped first, because
+  // the ones in this body name the very calls being ordered.
+  const src = readFileSync(new URL("../js/main.js", import.meta.url), "utf8");
+  const start = src.indexOf("function addCurrentCar(");
+  assert.notEqual(start, -1, "addCurrentCar moved or was renamed");
+  const body = src.slice(start, src.indexOf("\n}", start))
+    .split("\n").filter((l) => !l.trim().startsWith("//")).join("\n");
+
+  assert.match(body, /addWriteFailedMessage\(/, "a refused add says nothing, so the user reads the success note");
+
+  const checked = body.indexOf("saveMyCars(");
+  assert.notEqual(checked, -1, "addCurrentCar stopped writing at all");
+  assert.match(
+    body.slice(checked, checked + 120),
+    /\.ok\)/,
+    "the add write is unchecked again, so a refusal reports as a success",
+  );
+  assert.ok(
+    checked < body.indexOf('trackWhenReady("cars-added")'),
+    "an add that never reached disk is counted as one that did, and the count is the only thing this feature is measured by",
+  );
+  assert.ok(checked < body.indexOf("addedMessage("), "the add is announced before the write is known to have happened");
+
+  // And the state must not be adopted ahead of the check, for the reason the
+  // removal gives: `next` is dropped on a refusal so the screen and the disk
+  // still agree about what is saved.
+  const adopted = body.indexOf("myCars = next");
+  assert.notEqual(adopted, -1, "addCurrentCar stopped adopting the new state at all");
   assert.ok(checked < adopted, "the screen moves on before the disk does, which is the divergence this guards");
 });
 

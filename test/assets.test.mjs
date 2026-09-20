@@ -119,29 +119,67 @@ test("no module calls Array.prototype.at", () => {
   }
 });
 
+// A top-level function's body. Every function body in this build is indented,
+// so a `}` in column zero is the end of one.
+function bodyOf(src, name) {
+  const s = stripComments(src);
+  const start = s.indexOf(`function ${name}(`);
+  assert.notEqual(start, -1, `${name} moved or was renamed`);
+  return s.slice(start, s.indexOf("\n}", start));
+}
+
 // <dialog> is Firefox 98 and Safari 15.4. showModal() is only reached from a
 // click, so a missing method costs one control rather than the page, but it
 // cost it SILENTLY: no question asked, no car removed, no reason given. The
 // feature test alone is not the fix, because bailing out is that same silence.
 // The confirm is what keeps the control working, so both halves are pinned.
+//
+// Read as a GATE inside askRemoveCar, not as two substrings anywhere in the
+// file. Unscoped, any unrelated window.confirm( in main.js stood in for this
+// one, and a confirm whose answer was taken and then ignored counted as a
+// working fallback.
 function dialogFallback(src) {
-  const s = stripComments(src);
-  return /typeof\s+\w+\.showModal\s*!==\s*["']function["']/.test(s) && /window\.confirm\(/.test(s);
+  const body = bodyOf(src, "askRemoveCar");
+  if (!/typeof\s+\w+\.showModal\s*!==\s*["']function["']/.test(body)) return false;
+  // The answer has to be SPENT: asked in a condition, with the removal hanging
+  // off it. Either way round, because the refusal may be the early return.
+  return /if\s*\(\s*!?\s*window\.confirm\(/.test(body) && body.includes("removeActiveCar()");
 }
 
 test("the remove-car control still works on engines without <dialog>", () => {
+  const ask = (lines) => `function askRemoveCar() {\n${lines}\n}\n`;
+
   // Guard on the guard: a bare call, and a feature test that bails rather than asks.
-  assert.equal(dialogFallback("dlg.showModal();"), false);
-  assert.equal(dialogFallback('if (typeof dlg.showModal !== "function") return;'), false);
+  assert.equal(dialogFallback(ask("  dlg.showModal();")), false);
+  assert.equal(dialogFallback(ask('  if (typeof dlg.showModal !== "function") return;')), false);
+
+  // One that ASKS and throws the answer away, which the old substring pair
+  // passed: the question is drawn, "Keep it" is pressed, the car goes anyway.
   assert.equal(
-    dialogFallback('if (typeof dlg.showModal !== "function") { if (window.confirm(q)) removeActiveCar(); return; }\ndlg.showModal();'),
+    dialogFallback(ask('  if (typeof dlg.showModal !== "function") {\n    window.confirm(q);\n    removeActiveCar();\n  }')),
+    false,
+  );
+
+  // And a confirm belonging to a different control, which is exactly what an
+  // unscoped scan could not tell from this one.
+  const elsewhere = "function resetEverything() {\n  if (window.confirm(q)) removeActiveCar();\n}\n";
+  assert.equal(dialogFallback(elsewhere + ask('  if (typeof dlg.showModal !== "function") return;')), false);
+
+  // Both gating shapes pass: the answer spent where it is taken, and the
+  // refusal taken as an early return.
+  assert.equal(
+    dialogFallback(ask('  if (typeof dlg.showModal !== "function") {\n    if (window.confirm(q)) removeActiveCar();\n  }')),
+    true,
+  );
+  assert.equal(
+    dialogFallback(ask('  if (typeof dlg.showModal !== "function") {\n    if (!window.confirm(q)) return;\n    removeActiveCar();\n  }')),
     true,
   );
 
   assert.equal(
     dialogFallback(read("../js/main.js")),
     true,
-    "js/main.js calls showModal() with no confirm fallback: below Firefox 98 / Safari 15.4 the remove control does nothing at all",
+    "askRemoveCar reaches showModal() with no confirm gating the removal: below Firefox 98 / Safari 15.4 the remove control does nothing at all",
   );
 });
 
@@ -194,15 +232,6 @@ test("source guard: no analytics event name is built out of user data", () => {
     );
   }
 });
-
-// A top-level function's body. Every function body in this build is indented,
-// so a `}` in column zero is the end of one.
-function bodyOf(src, name) {
-  const s = stripComments(src);
-  const start = s.indexOf(`function ${name}(`);
-  assert.notEqual(start, -1, `${name} moved or was renamed`);
-  return s.slice(start, s.indexOf("\n}", start));
-}
 
 test("source guard: the switch a removal performs is not counted as a user switching cars", () => {
   // Guard on the guard: one sample proves both halves, that the scan sees
@@ -277,5 +306,52 @@ test("the two lists agree with each other about everything but the shell", () =>
     cached.filter((u) => !SHELL_ONLY.includes(u)).sort(),
     [...fingerprint].sort(),
     "an asset is cached offline but never fingerprinted, or fingerprinted but not cached",
+  );
+});
+
+// The 1 to 2 transition, not the "has two cars" state. A range re-fires on
+// every later add, so the count only ever rises and real adoption cannot be
+// told from accumulated state after the fact. One character is the whole
+// difference, and the presence guard above cannot see it.
+const secondCarLine = (src) =>
+  bodyOf(src, "addCurrentCar").split("\n").find((l) => l.includes("cars-second-added")) ?? "";
+
+test("source guard: the second-car event counts the act, not the state", () => {
+  // Guard on the guard: the two spellings have to be told apart, or this passes
+  // the one case it exists to catch.
+  const wrap = (cond) => `function addCurrentCar() {\n  if (next.cars.length ${cond}) t("cars-second-added");\n}\n`;
+  assert.match(secondCarLine(wrap("=== 2")), /===\s*2/);
+  assert.doesNotMatch(secondCarLine(wrap(">= 2")), /===\s*2/);
+
+  const line = secondCarLine(read("../js/main.js"));
+  assert.notEqual(line, "", "cars-second-added left addCurrentCar");
+  assert.match(
+    line,
+    /===\s*2/,
+    "cars-second-added is hung on a range rather than the 1 to 2 transition, so it re-fires on every later add and the series stops meaning what it says",
+  );
+});
+
+// Below Firefox 98 and Safari 15.4 a <dialog> is an unknown INLINE element, so
+// it never picks up the UA stylesheet's display:none and the question and both
+// its buttons are drawn down the page at all times. Hung off [open], which
+// showModal sets and close removes, so an engine that HAS <dialog> reads back
+// exactly what the UA already applied. A blanket rule would outrank that UA one
+// and hide the modal while it is open, so the shape is pinned and not just the
+// property.
+const hidesClosedDialog = (css) =>
+  /dialog:not\(\[open\]\)\s*\{[^}]*display:\s*none/.test(stripComments(css).replace(/\s+/g, " "));
+
+test("source guard: a closed dialog is hidden even where <dialog> is unknown", () => {
+  // Guard on the guard: the conditional form passes, the blanket form and the
+  // class selector do not.
+  assert.equal(hidesClosedDialog("dialog:not([open]) { display: none; }"), true);
+  assert.equal(hidesClosedDialog("dialog { display: none; }"), false);
+  assert.equal(hidesClosedDialog(".dialog { border: none; }"), false);
+
+  assert.equal(
+    hidesClosedDialog(read("../css/styles.css")),
+    true,
+    "the remove question and both its buttons are drawn permanently down the page on every pre-2022 Safari and Firefox",
   );
 });

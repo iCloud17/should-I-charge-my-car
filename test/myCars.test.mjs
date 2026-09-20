@@ -238,7 +238,11 @@ test("cleanName strips bidi overrides, which is the one that matters here", () =
   // These reorder rendered text, so two cars can be made to paint identically
   // while holding different numbers. This feature exists to tell near-identical
   // cars apart.
-  for (const ch of ["\u202A", "\u202B", "\u202C", "\u202D", "\u202E", "\u2066", "\u2067", "\u2068", "\u2069"]) {
+  //
+  // U+061C is in the set for that reason and no other. Its Arabic name puts it
+  // next to the two joiners this file deliberately KEEPS, and unlike them it
+  // spells nothing: it only reorders.
+  for (const ch of ["\u061C", "\u202A", "\u202B", "\u202C", "\u202D", "\u202E", "\u2066", "\u2067", "\u2068", "\u2069"]) {
     assert.equal(cleanName(`Out${ch}lander`, 40), "Outlander", `${escape(ch)} must not survive`);
   }
 });
@@ -1627,7 +1631,7 @@ test("source guard: main.js writes both car stores from exactly one place", () =
 
   // And nothing may write the store before the one-shot migration has had its
   // chance, because the key's own presence is what records that it ran.
-  assert.match(bodyOf("function selectMyCar("), /if \(!myCarsLive\) return null;/, "a selection can now create the store ahead of the migration");
+  assert.match(bodyOf("function selectMyCar("), /if \(!myCarsLive\) return\b/, "a selection can now create the store ahead of the migration");
   assert.equal(code.filter((l) => /myCarsLive = true/.test(l)).length, 1, "more than one thing can declare the store live");
   assert.match(bodyOf("function initMyCars("), /myCarsLive = true/, "and it is not initMyCars that does");
 
@@ -1687,9 +1691,18 @@ test("source guard: the estimate caps against the SAVED car, and the migration w
   const guard = init.indexOf("if (!getCars().length) return;");
   assert.notEqual(guard, -1, "the migration can now run with no dataset loaded");
   assert.ok(guard < init.indexOf("migrateIfNeeded("), "the dataset guard no longer runs before the migration");
+
+  // And its answer is not thrown away. A refused migration leaves the user's
+  // numbers in the rollback store and says nothing, at boot, before they have
+  // done anything: the event is the only sign from outside that it happened.
+  assert.match(
+    init,
+    /countWriteRefused\(\)/,
+    "a refused migration is counted nowhere, so the one failure nobody reports is invisible",
+  );
 });
 
-test("source guard: a stale tab re-reads the store, from two triggers and one function", () => {
+test("source guard: a stale tab re-reads the store, from three triggers and one function", () => {
   // The rule is pinned properly above (reconcileMyCars, refreshMyCars). What no
   // test in this repo can reach is whether main.js ever CALLS it: deleting both
   // listeners leaves all 376 tests green and puts the defect back whole, with a
@@ -1709,7 +1722,7 @@ test("source guard: a stale tab re-reads the store, from two triggers and one fu
   const triggers = [...src.matchAll(/refreshMyCarsFromStore\(\)/g)]
     .map((m) => src.slice(Math.max(0, m.index - 400), m.index))
     .filter((before) => !before.endsWith("function ")); // the declaration itself
-  assert.equal(triggers.length, 2, `the re-read has ${triggers.length} call sites, not the two listeners`);
+  assert.equal(triggers.length, 3, `the re-read has ${triggers.length} call sites, not the two listeners and the confirm fallback`);
   assert.ok(
     triggers.some((t) => t.includes('addEventListener("storage"')),
     "nothing re-reads when another tab writes, so a foreground tab stays stale until it is hidden and shown",
@@ -1717,6 +1730,21 @@ test("source guard: a stale tab re-reads the store, from two triggers and one fu
   assert.ok(
     triggers.some((t) => t.includes('addEventListener("visibilitychange"')),
     "nothing re-reads when the tab returns, so a tab frozen with its storage events dropped never catches up",
+  );
+
+  // The third caller, and the one no listener can stand in for. window.confirm
+  // blocks the task queue by spec, so the other tab's storage event is still
+  // queued when the answer arrives and the removal writes this tab's stale list
+  // back: the car that tab added is destroyed and the one it removed returns.
+  // The <dialog> path's own reconcile is gated on dlg.open and never gets here.
+  const askAt = src.indexOf("function askRemoveCar(");
+  assert.notEqual(askAt, -1, "askRemoveCar moved or was renamed");
+  const ask = src.slice(askAt, src.indexOf("\n}", askAt));
+  const reread = ask.indexOf("refreshMyCarsFromStore()");
+  assert.notEqual(reread, -1, "the confirm fallback acts on a list the blocked storage event has not reached yet");
+  assert.ok(
+    reread < ask.indexOf("removeActiveCar()"),
+    "the confirm fallback removes before it re-reads, which is the stale write it exists to prevent",
   );
 
   // The storage listener has to know its own store, and only its own.

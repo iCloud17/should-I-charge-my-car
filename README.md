@@ -18,12 +18,12 @@ A PHEV runs on either electricity or gasoline, so every charge is a real choice,
 
 ## How to use it
 
-1. **Pick your car.** Search 400+ plug-in hybrids, or choose &ldquo;My own car&rdquo; to enter your own MPG and efficiency.
+1. **Pick your car.** Search 441 plug-in hybrids, or choose &ldquo;My own car&rdquo; to enter your own MPG and efficiency.
 2. **Enter the local gas price.** What you&rsquo;d pay at the pump right now.
 3. **Enter what the charger costs.** The $/kWh shown on the charger. Not a flat rate? Switch to time-of-day or by-duration pricing, and add any session, per-hour, or tax fees the screen lists.
 4. **Read the verdict.** Charge it, Toss-up, Use gas, or Charge briefly, with the break-even price and how much you save or overpay per mile.
 
-That&rsquo;s it. Your car and settings save on your device, so next time it&rsquo;s glance-and-go, even offline.
+That&rsquo;s it. Your cars, the gas price and your settings save on your device, so next time it&rsquo;s glance-and-go, even offline. The charger&rsquo;s rate and the battery sliders start fresh each visit, since those are facts about the stop you&rsquo;re at rather than about you.
 
 ## What it does
 
@@ -34,8 +34,9 @@ That&rsquo;s it. Your car and settings save on your device, so next time it&rsqu
 - Handles real charger pricing: flat, time-of-day (peak/off-peak), or by-duration tiers, plus one-time session fees, per-hour connected-time fees, and percentage sales taxes.
 - Finds the **sweet spot** when charging gets pricier the longer you go: how long to charge for the best deal, with a "Charge for" slider to price partial charges.
 - Includes 441 plug-in hybrids from the US EPA (2012 to 2026), searchable, or enter your own numbers.
+- **Saves up to 5 cars**, each with its own nickname and its own numbers. Useful for a two-car household, or for one car you drive two very different ways.
 - Supports US, UK, and metric units (L/100km or km/L), and any currency.
-- Saves your car on your device and works offline (installable PWA).
+- Saves your cars on your device and works offline (installable PWA).
 
 ## How it works
 
@@ -83,7 +84,7 @@ MPG and electric-efficiency figures come from the US DOE/EPA at [fueleconomy.gov
 
 ## Privacy
 
-Your inputs stay on your device (`localStorage`); nothing you enter is sent anywhere. The hosted version uses [GoatCounter](https://www.goatcounter.com) for anonymous, cookieless analytics: page views plus a few categorical usage events (e.g. which verdict was shown, which pricing mode was used), never your actual numbers. No personal data, no cross-site tracking, and it never counts local dev.
+Your inputs stay on your device (`localStorage`); nothing you enter is sent anywhere. The hosted version uses [GoatCounter](https://www.goatcounter.com) for anonymous, cookieless analytics: page views plus a few categorical usage events (e.g. which verdict was shown, which pricing mode was used, whether a car was saved), never your actual numbers and never the names you give your cars. No personal data, no cross-site tracking, and it never counts local dev.
 
 ## License
 
