@@ -80,7 +80,11 @@ document.addEventListener("click", (e) => {
   }
 });
 document.addEventListener("keydown", (e) => {
-  const d = [...openMenus].at(-1);
+  // Index arithmetic, not .at(-1): this runs on EVERY keypress on the page and
+  // is reached before the bail-out below, so on Safari < 15.4 or Firefox < 90
+  // every keystroke threw here even with no dropdown open.
+  const open = [...openMenus];
+  const d = open[open.length - 1];
   if (!d) return;
   const items = [...d.menu.querySelectorAll(".combo__item")];
   if (!items.length) return;

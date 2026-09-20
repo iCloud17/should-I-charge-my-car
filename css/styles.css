@@ -1036,6 +1036,14 @@ output { font-weight: 800; color: var(--text); }
 .app__foot .link:hover { text-decoration: underline; text-underline-offset: 3px; }
 
 /* --- Dialog --- */
+/* The UA rule, restated for engines that do not have it. Below Firefox 98 and
+   Safari 15.4 a <dialog> is an unknown INLINE element, so it never gets the UA
+   stylesheet's display:none and "Keep it" and "Remove" are drawn down the page
+   at all times. Hung off [open], which showModal sets and close removes, so on
+   an engine that does have <dialog> this says exactly what the UA already said
+   and showModal still paints. An unconditional display:none here would outrank
+   the UA rule and hide the open modal too. */
+dialog:not([open]) { display: none; }
 .dialog {
   border: none;
   border-radius: var(--radius);

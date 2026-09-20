@@ -97,6 +97,54 @@ test("no module builds an Intl.Segmenter at evaluation time", () => {
   }
 });
 
+const atCalls = (src) => stripComments(src).match(/\.at\(/g) ?? [];
+
+// Array.prototype.at is Firefox 90 and Safari 15.4, both newer than this build
+// supports. A missing method throws where it is CALLED, so unlike the Segmenter
+// there is no scope that makes it safe and the ban is whole-file. The one use
+// sat in the shared keydown handler AHEAD of that handler's own bail-out, so on
+// an older engine every keystroke anywhere on the page threw, open menu or not.
+test("no module calls Array.prototype.at", () => {
+  // Guard on the guard: the dot is what tells the method from a name ending in it.
+  assert.equal(atCalls("const d = [...openMenus].at(-1);").length, 1);
+  assert.equal(atCalls("const n = items.concat(rest);").length, 0);
+  assert.equal(atCalls("// index arithmetic, not .at(-1)").length, 0);
+
+  for (const rel of moduleGraph()) {
+    assert.deepEqual(
+      atCalls(readFileSync(new URL(rel, REPO), "utf8")),
+      [],
+      `${rel} calls .at(), which throws on Safari < 15.4 and Firefox < 90: index from length instead`,
+    );
+  }
+});
+
+// <dialog> is Firefox 98 and Safari 15.4. showModal() is only reached from a
+// click, so a missing method costs one control rather than the page, but it
+// cost it SILENTLY: no question asked, no car removed, no reason given. The
+// feature test alone is not the fix, because bailing out is that same silence.
+// The confirm is what keeps the control working, so both halves are pinned.
+function dialogFallback(src) {
+  const s = stripComments(src);
+  return /typeof\s+\w+\.showModal\s*!==\s*["']function["']/.test(s) && /window\.confirm\(/.test(s);
+}
+
+test("the remove-car control still works on engines without <dialog>", () => {
+  // Guard on the guard: a bare call, and a feature test that bails rather than asks.
+  assert.equal(dialogFallback("dlg.showModal();"), false);
+  assert.equal(dialogFallback('if (typeof dlg.showModal !== "function") return;'), false);
+  assert.equal(
+    dialogFallback('if (typeof dlg.showModal !== "function") { if (window.confirm(q)) removeActiveCar(); return; }\ndlg.showModal();'),
+    true,
+  );
+
+  assert.equal(
+    dialogFallback(read("../js/main.js")),
+    true,
+    "js/main.js calls showModal() with no confirm fallback: below Firefox 98 / Safari 15.4 the remove control does nothing at all",
+  );
+});
+
 test("every listed asset resolves on disk", () => {
   // ASSETS feeds cache.addAll, which rejects the whole install on a single 404,
   // so one typo in a non-JS path silently turns offline mode off.

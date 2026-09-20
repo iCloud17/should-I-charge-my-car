@@ -907,7 +907,19 @@ function askRemoveCar() {
   removingCarId = saved.id;
   // The chip's words, suffix and all. The full year-make-model would name the
   // car that is about to survive whenever two records share a model.
-  $("removeCarPrompt").textContent = removeConfirmQuestion(chipLabelFor(myCars.cars, saved.id, getCar));
+  const question = removeConfirmQuestion(chipLabelFor(myCars.cars, saved.id, getCar));
+  $("removeCarPrompt").textContent = question;
+
+  // <dialog> is Firefox 98 and Safari 15.4. Below those, showModal threw inside
+  // this handler and the control did nothing at all: no question, no removal,
+  // no way to tell the user why. The native confirm loses the focus trap and
+  // the double-tap swallow, and it asks the SAME question and spends the answer
+  // on the SAME removal, so there is one act here and not two.
+  if (typeof dlg.showModal !== "function") {
+    if (window.confirm(question)) removeActiveCar();
+    return;
+  }
+
   // Cleared rather than trusted: not every engine resets it on show.
   dlg.returnValue = "";
   dlg.showModal();
