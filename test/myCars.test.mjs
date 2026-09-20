@@ -12,11 +12,12 @@ import {
   sanitizeCarsPayload, payloadVersion, cleanName,
   migrateCars, migrateIfNeeded, CUSTOM_CAR_ID,
   addMyCar, removeMyCar, setActiveMyCar, newMyCarId,
-  savedCarCeilingKw, savedCarNumbers,
-  activeMyCar, findMyCarByCarId, applyMyCarEdit,
+  reconcileMyCars, refreshMyCars,
+  savedCarCeilingKw, savedCarNumbers, savedCarDraft,
+  activeMyCar, findMyCarByCarId, applyMyCarEdit, renameMyCar,
   CARS_V, MAX_MY_CARS,
 } from "../js/myCars.js";
-import { defaultPrefs, applyCarSelection, applyCarEdit, CAR_EDIT_FIELDS } from "../js/storage.js";
+import { defaultPrefs, applyCarSelection, applyCarEdit, CAR_EDIT_FIELDS, MAX_CUSTOM_NAME_LEN, MAX_STORED_NUMBER } from "../js/storage.js";
 import { carCeilingKw } from "../js/cars.js";
 
 const CARS_KEY = "sicc.cars.v1";
@@ -58,7 +59,7 @@ test("an empty store loads as zero cars and no selection, not a phantom car", ()
 test("a valid payload round trips byte-identically", () => {
   const state = { v: CARS_V, cars: [car(), car({ id: "c2", name: "Spare" })], activeId: "c2" };
   seed();
-  assert.equal(saveMyCars(state), true);
+  assert.equal(saveMyCars(state).ok, true);
   const written = globalThis.localStorage.getItem(CARS_KEY);
 
   // Load it back, save it again, and the stored string must not have moved. A
@@ -66,7 +67,7 @@ test("a valid payload round trips byte-identically", () => {
   const back = loadMyCars();
   assert.deepEqual(back.cars, state.cars);
   assert.equal(back.activeId, "c2");
-  assert.equal(saveMyCars(back), true);
+  assert.equal(saveMyCars(back).ok, true);
   assert.equal(globalThis.localStorage.getItem(CARS_KEY), written, "a load-save cycle must not change one byte");
 });
 
@@ -126,28 +127,79 @@ test("an id outside the charset is refused, including __proto__", () => {
   assert.equal({}.mpg, undefined, "nothing reached Object.prototype");
 });
 
-test("a prototype-polluting carId is dropped, and the car survives on its numbers", () => {
-  for (const bad of ["__proto__", "constructor", "prototype"]) {
+test("a record whose carId does not survive narrowing goes with it", () => {
+  // L-3. The carId used to be narrowed to null and the record kept on the
+  // strength of its numbers, which left a car nothing on screen could reach:
+  // the tile said "Select your car", the search box was empty and both list
+  // controls were hidden, while the chip row still showed it checked. Tapping
+  // that chip set prefs.carId to the custom sentinel while the record kept
+  // carId null, so activeSavedCar could never match again and the car could
+  // only be cleared with "Reset everything".
+  for (const bad of ["__proto__", "constructor", "prototype", "", undefined, null, 42, {}, "\u0000\u0001"]) {
     const out = sanitizeCarsPayload({ v: 1, cars: [car({ carId: bad })], activeId: "c1" });
-    assert.equal(out.cars.length, 1, "the car has real numbers, so it is still a car");
-    assert.equal(out.cars[0].carId, null, `${bad} must not survive as a carId`);
-    assert.equal(Object.getPrototypeOf(out.cars[0]), Object.prototype);
+    assert.deepEqual(out.cars, [], `${String(bad)} must not leave an unaddressable record`);
+    assert.equal(out.activeId, null, "and nothing is left selected");
   }
-  assert.equal({}.mpg, undefined);
+  // And nothing was reparented on the way past.
+  const out = sanitizeCarsPayload({ v: 1, cars: [car({ carId: "__proto__", mpg: 99 })] });
+  assert.deepEqual(out.cars, []);
+  assert.equal({}.mpg, undefined, "nothing reached Object.prototype");
+});
+
+test("the custom car's sentinel is a legitimate carId, not a failed one", () => {
+  // The distinction the rule above turns on. __custom__ is the app's own
+  // pointer for a car with no dataset row, and it passes safeCarId, so it must
+  // keep loading exactly as it did.
+  const out = sanitizeCarsPayload({
+    v: 1,
+    cars: [car({ id: "c1", carId: CUSTOM_CAR_ID, label: "", name: "Van" }), car({ id: "c2", carId: "__proto__" })],
+    activeId: "c1",
+  });
+  assert.deepEqual(out.cars.map((c) => c.carId), [CUSTOM_CAR_ID], "the custom car stays, the unreachable one goes");
+  assert.equal(out.cars[0].name, "Van");
+  assert.equal(out.cars[0].mpg, 42, "with the numbers the user typed into it");
+  assert.equal(out.activeId, "c1", "and the selection still points at it");
+});
+
+test("a legitimate car in the same payload as an unaddressable one survives", () => {
+  const out = sanitizeCarsPayload({
+    v: 1,
+    cars: [car({ id: "c1", carId: "__proto__", mpg: 39 }), car({ id: "c2", carId: "volt-2019" })],
+    activeId: "c1",
+  });
+  assert.deepEqual(out.cars.map((c) => c.id), ["c2"], "one tampered entry does not cost the others");
+  assert.equal(out.activeId, "c2", "and a selection pointing at the dropped one re-points");
 });
 
 test("numbers go through the same positive rule as every other copy of them", () => {
-  for (const bad of [0, -3, NaN, Infinity, -Infinity, "42", null, {}, true]) {
+  for (const bad of [0, -3, NaN, Infinity, -Infinity, "42", null, {}, true, MAX_STORED_NUMBER + 1, 1e308]) {
     const out = sanitizeCarsPayload({ v: 1, cars: [car({ mpg: bad })], activeId: "c1" });
     assert.equal(out.cars[0].mpg, undefined, `${String(bad)} is not a saved mpg`);
     assert.equal(out.cars[0].miPerKwh, 3.4, "and the fields beside it are untouched");
   }
+  assert.equal(
+    sanitizeCarsPayload({ v: 1, cars: [car({ mpg: MAX_STORED_NUMBER })] }).cars[0].mpg,
+    MAX_STORED_NUMBER,
+    "the bound itself is still a number",
+  );
 });
 
-test("a car with no carId and no numbers describes no car", () => {
+test("a battery past the bound is dropped rather than clamped, so no field renders Infinity", () => {
+  // L-2. positiveNumber accepted 1e308 because it was finite, and the 2 dp
+  // display rounding then overflowed into the literal word Infinity.
+  const out = sanitizeCarsPayload({ v: 1, cars: [car({ batteryKwh: 1e308 })], activeId: "c1" });
+  assert.equal(out.cars[0].batteryKwh, undefined, "dropped, not held at a maximum");
+  assert.equal(out.cars.length, 1, "and the rest of the car survives it");
+  assert.equal(savedCarCeilingKw({ carId: null, maxKw: 1e308 }, () => null), Infinity, "a bogus snapshot is no ceiling");
+});
+
+test("a car with no carId describes no car, numbers or not", () => {
   const out = sanitizeCarsPayload({ v: 1, cars: [{ id: "c1", name: "Ghost" }], activeId: "c1" });
   assert.deepEqual(out.cars, []);
   assert.equal(out.activeId, null);
+  // Numbers do not rescue it: there is still nothing to select, edit or remove.
+  const withNumbers = sanitizeCarsPayload({ v: 1, cars: [{ id: "c1", mpg: 42 }], activeId: "c1" });
+  assert.deepEqual(withNumbers.cars, []);
 });
 
 test("a car with a carId and no numbers is kept, because it inherits the dataset row", () => {
@@ -192,10 +244,26 @@ test("cleanName strips bidi overrides, which is the one that matters here", () =
 });
 
 test("cleanName strips zero-width and soft hyphen, so two names cannot look equal and compare unequal", () => {
-  for (const ch of ["\u200B", "\u200C", "\u200D", "\u200E", "\u200F", "\u2060", "\uFEFF", "\u00AD"]) {
+  for (const ch of ["\u200B", "\u200E", "\u200F", "\u2060", "\uFEFF", "\u00AD"]) {
     assert.equal(cleanName(`My${ch}Car`, 40), "MyCar", `${escape(ch)} must not survive`);
   }
   assert.equal(cleanName("\u200B\u202E\uFEFF", 40), "", "a name made only of invisibles collapses to empty, not to whitespace");
+});
+
+test("cleanName keeps the two joiners, which carry meaning rather than hiding it", () => {
+  // U+200D builds one emoji out of several. Stripped, the family came apart
+  // into the people it is made of.
+  const family = "\u{1F697}\u{1F468}\u200D\u{1F469}\u200D\u{1F467}\u{1F3FD}";
+  assert.equal(cleanName(family, 40), family, "the ZWJ sequence was taken apart");
+
+  // U+200C is orthographic in Persian and Arabic. Stripped, this is a
+  // different and incorrect spelling of the word.
+  const persian = "\u0645\u06CC\u200C\u062E\u0648\u0627\u0647\u0645";
+  assert.equal(cleanName(persian, 40), persian, "the ZWNJ was stripped, which respells the word");
+
+  // The reason the rest of the set is still stripped, next to the two that are
+  // not: these reorder what is rendered, and the joiners do not.
+  assert.equal(cleanName(`\u202Emy\u200Dcar`, 40), "my\u200Dcar", "a bidi override survived alongside the joiner");
 });
 
 test("cleanName NFC normalizes, so one name has one spelling", () => {
@@ -237,7 +305,7 @@ test("a payload from a newer build is readable and not writable", () => {
   assert.equal(state.cars.length, 1, "and what it could read, it read");
 
   const before = globalThis.localStorage.getItem(CARS_KEY);
-  assert.equal(saveMyCars(state), false, "and do not write");
+  assert.deepEqual(saveMyCars(state), { ok: false, reason: "read-only" }, "and do not write");
   assert.equal(globalThis.localStorage.getItem(CARS_KEY), before, "not one byte");
 });
 
@@ -249,12 +317,32 @@ test("the version is re-read at write time, not trusted from load time", () => {
   assert.equal(state.readOnly, false);
 
   globalThis.localStorage.setItem(CARS_KEY, JSON.stringify({ v: 99, cars: [], activeId: null }));
-  assert.equal(saveMyCars(state), false, "the newer payload wins even though our load said writable");
+  assert.deepEqual(saveMyCars(state), { ok: false, reason: "read-only" }, "the newer payload wins even though our load said writable");
+});
+
+test("the store says WHICH refusal it hit, because they need different sentences", () => {
+  // A blocked store is the browser's doing and the user can go and look at it.
+  // A newer build's payload is this build being out of date and comes right on
+  // a reload. One boolean made the second read as the first, and the user was
+  // sent to their privacy settings for a problem they did not have.
+  seed(JSON.stringify({ v: CARS_V + 1, cars: [], activeId: null }));
+  const readOnly = saveMyCars(emptyCarsState());
+
+  globalThis.localStorage = {
+    getItem() { return null; },
+    setItem() { throw new Error("private mode"); },
+    removeItem() {},
+  };
+  const unavailable = saveMyCars(emptyCarsState());
+
+  assert.equal(readOnly.ok, false);
+  assert.equal(unavailable.ok, false);
+  assert.notEqual(readOnly.reason, unavailable.reason, "two conditions, one word: the caller cannot tell them apart");
 });
 
 test("an unparseable store is replaced rather than protected", () => {
   seed("{ not json");
-  assert.equal(saveMyCars({ v: CARS_V, cars: [car()], activeId: "c1" }), true);
+  assert.equal(saveMyCars({ v: CARS_V, cars: [car()], activeId: "c1" }).ok, true);
   assert.equal(JSON.parse(globalThis.localStorage.getItem(CARS_KEY)).cars.length, 1);
 });
 
@@ -297,7 +385,7 @@ test("a store that throws on every call leaves the app working", () => {
     removeItem() { throw new Error("private mode"); },
   };
   assert.deepEqual(loadMyCars(), { ...emptyCarsState(), readOnly: false });
-  assert.equal(saveMyCars({ v: CARS_V, cars: [car()], activeId: "c1" }), false);
+  assert.deepEqual(saveMyCars({ v: CARS_V, cars: [car()], activeId: "c1" }), { ok: false, reason: "unavailable" });
   assert.doesNotThrow(() => clearMyCars());
 });
 
@@ -646,7 +734,7 @@ test("minted ids are unique, constrained, and never collide with a migrated id",
 test("a minted id survives a save and load round trip", () => {
   seed();
   const state = fill(3);
-  assert.equal(saveMyCars(state), true);
+  assert.equal(saveMyCars(state).ok, true);
   assert.deepEqual(loadMyCars().cars.map((c) => c.id), state.cars.map((c) => c.id));
 });
 
@@ -670,17 +758,54 @@ test("minted ids stay distinct with the clock and the random source held still",
   }
 });
 
-test("removing the selected car re-points the selection by the loader's own rule", () => {
+test("removing the selected car selects the one BEFORE it, the way a tab bar does", () => {
+  // Deleting the last chip used to jump the user back to the first car, which
+  // is the far end of the row from where they were looking.
   const state = fill(3);
-  const [first, , third] = state.cars;
-  const res = removeMyCar(state, first.id);
+  const [a, b, c] = state.cars;
+  const onC = setActiveMyCar(state, c.id).state;
+  const res = removeMyCar(onC, c.id);
   assert.equal(res.ok, true);
-  assert.equal(res.state.cars.length, 2);
-  assert.equal(res.state.activeId, res.state.cars[0].id, "never an id that resolves to nothing");
+  assert.deepEqual(res.state.cars.map((x) => x.name), [a.name, b.name]);
+  assert.equal(res.state.activeId, b.id, "B, not A");
 
-  // Removing an unselected car leaves the selection alone.
-  const other = removeMyCar(res.state, third.id);
-  assert.equal(other.state.activeId, res.state.activeId);
+  // And again from there: removing B lands on A.
+  assert.equal(removeMyCar(res.state, res.state.cars[1].id).state.activeId, res.state.cars[0].id);
+});
+
+test("removing the selected middle car selects its predecessor", () => {
+  const state = fill(3);
+  const onB = setActiveMyCar(state, state.cars[1].id).state;
+  const res = removeMyCar(onB, state.cars[1].id);
+  assert.equal(res.state.activeId, res.state.cars[0].id, "A");
+  assert.equal(res.state.cars[0].name, "Car 1");
+});
+
+test("removing the selected FIRST car selects the new first car", () => {
+  // There is no car before the head, so the neighbour is the one that takes its
+  // place. max(0, removedIndex - 1) is what says so.
+  const state = fill(3);
+  const onA = setActiveMyCar(state, state.cars[0].id).state;
+  const res = removeMyCar(onA, state.cars[0].id);
+  assert.equal(res.state.activeId, res.state.cars[0].id);
+  assert.equal(res.state.cars[0].name, "Car 2", "B");
+});
+
+test("removing a car that is NOT the selected one leaves the selection alone", () => {
+  // The selection only moves when the car under it goes. Removing from either
+  // side of the selected car is not an invitation to move the user.
+  const state = fill(3);
+  const onB = setActiveMyCar(state, state.cars[1].id).state;
+  assert.equal(removeMyCar(onB, state.cars[2].id).state.activeId, state.cars[1].id, "removing C after it");
+  assert.equal(removeMyCar(onB, state.cars[0].id).state.activeId, state.cars[1].id, "removing A before it");
+});
+
+test("a removal that finds an already-dangling selection still falls back to the first car", () => {
+  // The loader's rule, untouched: a pointer that resolves to nothing is broken
+  // rather than chosen, and there is no neighbour to a car that is not there.
+  const state = { ...fill(3), activeId: "gone" };
+  const res = removeMyCar(state, state.cars[2].id);
+  assert.equal(res.state.activeId, res.state.cars[0].id);
 });
 
 test("removing the last car leaves no selection rather than a dangling one", () => {
@@ -746,6 +871,106 @@ test("the cap holds through save and load, so a full list stays a full list", ()
   const back = loadMyCars();
   assert.equal(back.cars.length, MAX_MY_CARS);
   assert.equal(addMyCar(back, draft()).reason, "full");
+});
+
+// --- Re-reading a store another tab has written -----------------------------
+//
+// The defect these hold: every tab keeps the whole list in memory and
+// saveMyCars writes all of it, so a tab that has not looked at the disk since
+// another tab wrote to it saves that other tab's cars away on its next
+// ordinary act. The payload cannot defend itself; the stale tab has to read
+// again, and reconcileMyCars is the rule for what it does with what it finds.
+
+test("a refresh takes the DISK's list, so a car another tab added arrives", () => {
+  const mine = fill(2);
+  const theirs = addMyCar(mine, draft({ name: "Weekend" })).state;
+  const next = reconcileMyCars(theirs, mine.activeId);
+  assert.deepEqual(next.cars.map((c) => c.name), ["Car 1", "Car 2", "Weekend"]);
+  assert.equal(next.activeId, mine.activeId, "and my selection is still mine");
+});
+
+test("a car another tab REMOVED does not come back", () => {
+  const mine = fill(3);
+  const theirs = removeMyCar(mine, mine.cars[2].id).state;
+  const next = reconcileMyCars(theirs, mine.activeId);
+  assert.equal(next.cars.length, 2, "a merge here would resurrect a deliberate deletion");
+  assert.equal(next.cars.some((c) => c.id === mine.cars[2].id), false);
+});
+
+test("the disk's own activeId is ignored: the selection belongs to this tab", () => {
+  // The selection is what THIS tab's screen is showing. Another tab switching
+  // chips must not move it, or a background tab drags the foreground one to a
+  // car nobody asked for.
+  const mine = fill(3);
+  const theirs = setActiveMyCar(mine, mine.cars[2].id).state;
+  assert.equal(reconcileMyCars(theirs, mine.cars[0].id).activeId, mine.cars[0].id);
+});
+
+test("a selection another tab removed DESELECTS rather than pointing at a different car", () => {
+  // Where this parts company with the loader's rule. resolveActiveId repairs a
+  // dangling pointer found on disk by falling back to the first car, which is
+  // right at load time and wrong here: promoting a car would check a chip for a
+  // car that is not the one on screen, and the open remove question would go on
+  // to name it.
+  const mine = fill(3);
+  const wanted = mine.cars[1].id;
+  const theirs = removeMyCar(setActiveMyCar(mine, wanted).state, wanted).state;
+  assert.notEqual(theirs.activeId, null, "the OTHER tab did pick a successor for itself");
+  assert.equal(reconcileMyCars(theirs, wanted).activeId, null, "but this tab must not inherit it");
+});
+
+test("no selection stays no selection, even once another tab has saved a car", () => {
+  const theirs = fill(1);
+  assert.equal(reconcileMyCars(theirs, null).activeId, null);
+  assert.equal(reconcileMyCars(theirs, undefined).activeId, null);
+});
+
+test("an emptied store leaves nothing selected rather than throwing", () => {
+  assert.deepEqual(reconcileMyCars(emptyCarsState(), "c1"), { v: CARS_V, cars: [], activeId: null });
+  for (const bad of [undefined, null, 42, "x", {}, { cars: "nope" }]) {
+    assert.deepEqual(reconcileMyCars(bad, "c1"), { v: CARS_V, cars: [], activeId: null }, `disk: ${JSON.stringify(bad)}`);
+  }
+});
+
+test("a refresh never mutates the state it was handed", () => {
+  const theirs = fill(2);
+  const snapshot = JSON.stringify(theirs);
+  reconcileMyCars(theirs, theirs.cars[0].id);
+  assert.equal(JSON.stringify(theirs), snapshot);
+});
+
+test("refreshMyCars reads the store and WRITES NOTHING", () => {
+  // The contract, not a detail. A refresh that wrote would fire a storage event
+  // in the tab it was refreshing from, and two tabs answering each other's
+  // writes never stop.
+  const store = seed();
+  saveMyCars(fill(2));
+  const before = store.getItem(CARS_KEY);
+  let writes = 0;
+  store.setItem = () => { writes += 1; };
+  store.removeItem = () => { writes += 1; };
+
+  const back = refreshMyCars(null);
+  assert.equal(writes, 0, "the refresh path wrote to storage");
+  assert.equal(store.map.get(CARS_KEY), before, "and the payload is byte-identical");
+  assert.deepEqual(back.cars.map((c) => c.name), ["Car 1", "Car 2"]);
+});
+
+test("refreshMyCars keeps the read-only flag, so a newer build's payload stays unwritable", () => {
+  seed(JSON.stringify({ v: CARS_V + 1, cars: [{ id: "c1", carId: "volt-2018" }], activeId: "c1" }));
+  const back = refreshMyCars("c1");
+  assert.equal(back.readOnly, true);
+  assert.equal(back.activeId, "c1");
+});
+
+test("a refresh survives a store that throws on every call", () => {
+  globalThis.localStorage = {
+    getItem() { throw new Error("nope"); },
+    setItem() { throw new Error("nope"); },
+    removeItem() { throw new Error("nope"); },
+  };
+  assert.doesNotThrow(() => refreshMyCars("c1"));
+  assert.deepEqual(refreshMyCars("c1").cars, []);
 });
 
 // --- The onboard maximum: snapshot in, live dataset out ---------------------
@@ -893,16 +1118,47 @@ test("a lookup that throws or answers with junk costs the snapshot, never the ca
   }
 });
 
-test("maxKw is a function of the DATASET alone: nothing a caller sends moves it", () => {
+test("maxKw is the DATASET's answer whenever the dataset has a row to answer with", () => {
   const base = addMyCar(emptyCarsState(), draft(), getCar).state.cars[0].maxKw;
   assert.equal(base, 3.6);
   for (const noise of [{ powerKw: 9.9 }, { maxKw: 9.9 }, { chargeKw: 9.9 }, { mpg: 9.9 }, { label: "9.9" }, { name: "9.9 kW" }]) {
     const got = addMyCar(emptyCarsState(), draft(noise), getCar).state.cars[0].maxKw;
     assert.equal(got, base, `${JSON.stringify(noise)} moved the ceiling`);
   }
+  // A row that resolves and carries no figure still answers for itself: no
+  // ceiling is the dataset's answer, not a reason to ask the draft.
+  const noFigure = (id) => (id === "volt-2018" ? { id, mpg: 42 } : null);
+  assert.equal(addMyCar(emptyCarsState(), draft({ maxKw: 9.9 }), noFigure).state.cars[0].maxKw, undefined);
+
   // And the one thing that is allowed to move it, does.
   const reseeded = (id) => (id === "volt-2018" ? { ...DATASET[id], chargeKw: 7.4 } : null);
   assert.equal(addMyCar(emptyCarsState(), draft(), reseeded).state.cars[0].maxKw, 7.4);
+});
+
+test("COPYING AN ORPHAN KEEPS THE CEILING, because nothing else can supply it", () => {
+  // H-4's orphan variant. A reseed dropped the row, so the record's own
+  // snapshot is the last thing that knows this car charges at 3.6 kW. The copy
+  // used to be created with no ceiling at all, so it estimated faster than the
+  // car it was copied from, in the app's own voice, with nothing on screen
+  // saying the two differed.
+  const orphan = { id: "c1", carId: "gone-2019", label: "2019 Ghost", name: "", mpg: 44, miPerKwh: 3.1, batteryKwh: 12, maxKw: 3.6 };
+  assert.equal(savedCarCeilingKw(orphan, getCar), 3.6);
+
+  const copy = addMyCar(emptyCarsState(), { ...savedCarDraft(orphan), carId: orphan.carId, label: orphan.label }, getCar).state.cars[0];
+  assert.equal(copy.maxKw, 3.6, "the snapshot survived the copy");
+  assert.equal(savedCarCeilingKw(copy, getCar), savedCarCeilingKw(orphan, getCar), "so the copy caps where the original does");
+
+  // And the numbers came too, which for an orphan is the only way it has any:
+  // there is no row to inherit from, so a copy with none shows whatever car was
+  // on screen before it.
+  assert.deepEqual(savedCarNumbers(copy, getCar), { mpg: 44, miPerKwh: 3.1, batteryKwh: 12 });
+
+  // The fallback is narrowed like every other stored number, so a tampered
+  // record cannot copy a junk ceiling into a fresh one.
+  for (const bad of [0, -3, NaN, Infinity, "3.6", null, {}]) {
+    const got = addMyCar(emptyCarsState(), { carId: "gone-2019", mpg: 44, maxKw: bad }, getCar).state.cars[0].maxKw;
+    assert.equal(got, undefined, `${String(bad)} is not a ceiling to carry across`);
+  }
 });
 
 test("NO OUTLET VALUE CAN REACH maxKw, through either writer", () => {
@@ -939,11 +1195,21 @@ test("NO OUTLET VALUE CAN REACH maxKw, through either writer", () => {
   assert.equal(JSON.stringify(added.state).includes(String(OUTLET)), false);
   assert.equal(added.state.cars[0].maxKw, 3.6, "the dataset wrote it, not the draft");
 
-  // And with no dataset row to answer, the draft's own figure is not the
-  // fallback: absent beats an outlet wearing the ceiling's name.
-  const orphan = addMyCar(emptyCarsState(), draft({ carId: "gone-2019", maxKw: OUTLET, powerKw: OUTLET }), getCar);
-  assert.equal(orphan.state.cars[0].maxKw, undefined);
-  assert.equal(savedCarCeilingKw(orphan.state.cars[0], getCar), Infinity, "uncapped is the honest answer, not 7.77");
+  // With NO dataset row the draft's own maxKw IS the fallback, so the guard
+  // that keeps an outlet out has to be the NAME rather than the absence of a
+  // fallback. powerKw is what a legacy override carries, and nothing narrows a
+  // powerKw into this key: an override spread into a draft brings the outlet
+  // under its own name, where safeCar never looks.
+  const legacy = { carId: "gone-2019", mpg: 44, powerKw: OUTLET };
+  const fromOverride = addMyCar(emptyCarsState(), legacy, getCar).state.cars[0];
+  assert.equal(fromOverride.maxKw, undefined);
+  assert.equal(JSON.stringify(fromOverride).includes(String(OUTLET)), false, "the outlet is nowhere in the record");
+  assert.equal(savedCarCeilingKw(fromOverride, getCar), Infinity, "uncapped is the honest answer, not 7.77");
+
+  // And the route that DOES carry a maxKw across cannot carry an outlet, because
+  // it reads a record, and a record has never held one.
+  assert.equal("powerKw" in savedCarDraft({ id: "c1", carId: "gone-2019", powerKw: OUTLET, maxKw: 3.6 }), false);
+  assert.deepEqual(savedCarDraft({ id: "c1", carId: "gone-2019", powerKw: OUTLET, maxKw: 3.6 }), { maxKw: 3.6 });
 });
 
 test("source guard: the outlet has no name inside the saved-cars module", () => {
@@ -964,10 +1230,22 @@ test("source guard: the outlet has no name inside the saved-cars module", () => 
   assert.deepEqual(defines.map((l) => l.trim()), ["const snapshot = positiveNumber(raw.maxKw);"], "the stored field is narrowed in exactly one place");
 
   const writes = code.split("\n").filter((l) => /maxKw\s*[:=](?!=)/.test(l));
-  assert.equal(writes.length, 3, "three writers: the sanitizer, addMyCar, migrateCars");
+  assert.equal(writes.length, 4, "four writers: the sanitizer, addMyCar, migrateCars, savedCarDraft");
   for (const line of writes) {
-    assert.match(line, /datasetChargeKw\(|= snapshot;/, `an unaccounted writer of maxKw: ${line.trim()}`);
+    assert.match(line, /datasetChargeKw\(|newRecordCeilingKw\(|= snapshot;/, `an unaccounted writer of maxKw: ${line.trim()}`);
   }
+});
+
+test("source guard: a car's name and its label are capped at the same number", () => {
+  // They hold the same kind of string. The label is a snapshot of "year make
+  // model"; the default name is the make and model out of that same row. Two
+  // caps for one quantity is this project's recorded defect shape, and the 40
+  // this cap used to carry was sized for a hand-typed nickname on the one
+  // custom car that existed then.
+  const src = readFileSync(new URL("../js/myCars.js", import.meta.url), "utf8");
+  const label = src.match(/const MAX_LABEL_LEN = (\d+)/);
+  assert.ok(label, "MAX_LABEL_LEN moved or was renamed");
+  assert.equal(Number(label[1]), MAX_CUSTOM_NAME_LEN, "a name and a label disagree about how long a car's words may be");
 });
 
 // --- Wiring the store in: selection, editing, and the dual write ------------
@@ -1026,6 +1304,78 @@ test("a car with no dataset row answers only what it holds, so the fields keep w
   assert.deepEqual(savedCarNumbers({ id: "c1", carId: "gone-2019", mpg: 44 }, getCar), { mpg: 44 });
 });
 
+// --- What a COPY starts from ------------------------------------------------
+//
+// H-4. "Add a copy" is the route to two records of one model, which is the case
+// this feature was asked for, and it used to seed the new record from
+// prefs.carOverrides. That store has ONE SLOT PER MODEL, so with two records of
+// one model it holds whichever was edited last.
+
+test("savedCarDraft answers only what the record holds, so an unedited car stays on the live row", () => {
+  const fresh = { id: "c1", carId: "volt-2018", label: "2018 Chevrolet Volt", name: "", maxKw: 3.6 };
+  assert.deepEqual(savedCarDraft(fresh), { maxKw: 3.6 }, "no numbers of its own, so none travel");
+  // The copy therefore inherits the same live row the original does, and a
+  // reseed that corrects a figure reaches both.
+  const copy = addMyCar(emptyCarsState(), { ...savedCarDraft(fresh), carId: fresh.carId, label: fresh.label }, getCar).state.cars[0];
+  assert.deepEqual(savedCarNumbers(copy, getCar), savedCarNumbers(fresh, getCar));
+
+  const edited = { ...fresh, mpg: 39, batteryKwh: 17 };
+  assert.deepEqual(savedCarDraft(edited), { mpg: 39, batteryKwh: 17, maxKw: 3.6 }, "miPerKwh stays absent, not undefined");
+  assert.equal("miPerKwh" in savedCarDraft(edited), false);
+});
+
+test("savedCarDraft narrows what it copies and never invents a record\u2019s numbers", () => {
+  assert.deepEqual(savedCarDraft(null), {});
+  assert.deepEqual(savedCarDraft(undefined), {});
+  assert.deepEqual(savedCarDraft(42), {});
+  // The same positive rule every other read applies, because this can be handed
+  // a record that did not come through the loader.
+  for (const bad of [0, -3, NaN, Infinity, "42", null, {}]) {
+    assert.deepEqual(savedCarDraft({ id: "c1", mpg: bad, maxKw: bad }), {}, `${String(bad)} is not a number to copy`);
+  }
+  // And it copies NUMBERS, not identity: a copy is a different car with a
+  // different id, and its label and name are the caller's to decide.
+  const seeded = savedCarDraft({ id: "c1", carId: "volt-2018", label: "2018 Chevrolet Volt", name: "Van", mpg: 42 });
+  assert.deepEqual(Object.keys(seeded).sort(), ["mpg"]);
+});
+
+test("A COPY TAKES THE NUMBERS OF THE RECORD ON SCREEN, not the one-slot-per-model override", () => {
+  // THE DEFECT, with the two records this feature exists for. Add a Prius,
+  // copy it, edit the copy: both stores are written from the same call, so the
+  // override now answers for the MODEL with the second record's numbers, and
+  // the first record still holds its own. Copying the first used to mint a car
+  // carrying the second one's numbers, under the first one's heading, and
+  // nothing said so until the user switched chips and came back.
+  let state = emptyCarsState();
+  for (const name of ["A", "B"]) {
+    const res = addMyCar(state, { carId: "prius-2021", label: "2021 Toyota Prius Prime", name }, getCar);
+    assert.equal(res.ok, true);
+    state = res.state;
+  }
+  const [a, b] = state.cars;
+  assert.equal(a.carId, b.carId, "two records of one model is the case this feature exists for");
+
+  const typed = { mpg: 11, miPerKwh: 2.1, batteryKwh: 9 };
+  state = applyMyCarEdit(state, b.id, typed).state;
+  const prefs = applyCarEdit(defaultPrefs(), "prius-2021", typed);
+  assert.equal(prefs.carOverrides["prius-2021"].mpg, 11, "the one slot per model holds whichever record was edited last");
+
+  // Now copy A, which is the record whose chip is checked.
+  const onScreen = state.cars.find((c) => c.id === a.id);
+  assert.equal(onScreen.mpg, undefined, "A was never edited");
+  const copy = addMyCar(state, { ...savedCarDraft(onScreen), carId: onScreen.carId, label: onScreen.label }, getCar).state.cars[2];
+
+  assert.equal(copy.mpg, undefined, "the other record's 11 did not travel");
+  assert.equal(savedCarNumbers(copy, getCar).mpg, DATASET["prius-2021"].mpg, "the copy answers 54, the number on screen");
+  assert.deepEqual(savedCarNumbers(copy, getCar), savedCarNumbers(onScreen, getCar), "the copy and its original are the same car");
+  assert.notDeepEqual(savedCarNumbers(copy, getCar), savedCarNumbers(state.cars[1], getCar), "and neither of them is B");
+
+  // The other direction: copying B carries B's typed numbers, so the rule is
+  // "the record on screen" and not "ignore the numbers".
+  const copyOfB = addMyCar(state, { ...savedCarDraft(state.cars[1]), carId: b.carId, label: b.label }, getCar).state.cars[2];
+  assert.deepEqual(savedCarNumbers(copyOfB, getCar), { mpg: 11, miPerKwh: 2.1, batteryKwh: 9 });
+});
+
 test("an edit keeps the last good value, and the outlet cannot get into a car", () => {
   const state = addMyCar(emptyCarsState(), draft({ carId: "volt-2018" }), getCar).state;
   const id = state.cars[0].id;
@@ -1051,6 +1401,162 @@ test("an edit keeps the last good value, and the outlet cannot get into a car", 
   assert.equal(miss.ok, false);
   assert.equal(miss.reason, "not-found");
   assert.deepEqual(miss.state, state, "a miss hands back what it was given");
+});
+
+// --- Renaming ---------------------------------------------------------------
+//
+// Next to the edit tests because renameMyCar exists to hold the OPPOSITE merge
+// rule: a number cleared mid-edit keeps its last good value, a name cleared
+// clears. Nothing above this line observes the rename path at all.
+
+test("a rename lands on the target and leaves every other car untouched", () => {
+  const state = fill(3);
+  const [first, target, last] = state.cars;
+
+  const res = renameMyCar(state, target.id, "Renamed");
+  assert.equal(res.ok, true);
+  assert.equal(res.reason, "ok");
+  assert.equal(res.state.cars[1].name, "Renamed");
+  assert.equal(res.state.cars.length, 3, "a rename is not an add and not a remove");
+
+  // Identity, not deep equality: the map rewrites exactly one slot, so the
+  // other two must come back as the very objects that went in.
+  assert.equal(res.state.cars[0], first, "the car before the target was rebuilt");
+  assert.equal(res.state.cars[2], last, "the car after the target was rebuilt");
+  assert.equal(res.state.cars[0].name, "Car 1");
+  assert.equal(res.state.cars[2].name, "Car 3");
+
+  // And on the target itself, name is the only field that moved.
+  assert.deepEqual({ ...res.state.cars[1], name: target.name }, target, "the rename touched a field other than name");
+
+  assert.notEqual(res.state.cars[1], target, "pure: the input state is not mutated");
+  assert.equal(state.cars[1].name, "Car 2");
+});
+
+test("renaming a car that is not there says so and changes nothing", () => {
+  const state = fill(3);
+  const before = structuredClone(state);
+
+  for (const id of ["nope", undefined, null, "", "__proto__"]) {
+    const res = renameMyCar(state, id, "Renamed");
+    assert.equal(res.ok, false, `${JSON.stringify(id) ?? "undefined"} resolved to a car`);
+    assert.equal(res.reason, "not-found");
+    assert.deepEqual(res.state, before, "a miss hands back what it was given");
+  }
+  assert.deepEqual(state, before, "and renamed nothing on the way past");
+  assert.equal(state.cars.map((c) => c.name).join(","), "Car 1,Car 2,Car 3");
+});
+
+test("renameMyCar tolerates a state that is not one", () => {
+  // The rename is reachable from a tampered store, so it has to answer rather
+  // than throw into the app the way the loader does.
+  for (const bad of [null, undefined, 42, "str", true]) {
+    const res = renameMyCar(bad, "c1", "Renamed");
+    assert.equal(res.ok, false, `${JSON.stringify(bad) ?? "undefined"} was accepted as a state`);
+    assert.equal(res.reason, "not-found");
+    assert.deepEqual(res.state, emptyCarsState(), "a state that is not one reads as no cars, never as a crash");
+  }
+
+  // An object carrying no usable cars list is the tamper case rather than the
+  // crash case: it is handed straight back, because there is nothing to fix.
+  assert.deepEqual(renameMyCar({}, "c1", "x").state, {});
+  assert.equal(renameMyCar({ cars: "not-a-list" }, "c1", "x").ok, false);
+  assert.equal(renameMyCar({ cars: null }, "c1", "x").ok, false);
+});
+
+test("a new name is narrowed by cleanName, not stored as typed", () => {
+  const state = fill(1);
+  const id = state.cars[0].id;
+  const rename = (n) => renameMyCar(state, id, n).state.cars[0].name;
+
+  // Every step cleanName owns, observed THROUGH the rename rather than assumed
+  // from the fact that the call is written there.
+  assert.equal(rename("x".repeat(99)).length, MAX_CUSTOM_NAME_LEN, "an over-long name is not truncated at the cap");
+  assert.equal(rename("My\u0000Car\u009F"), "MyCar", "control characters are stored raw");
+  assert.equal(rename("Out\u202Elander"), "Outlander", "a bidi override reached a car name");
+  assert.equal(rename("My\u200BCar"), "MyCar", "zero width can make two names look equal and compare unequal");
+  assert.equal(rename("  My   \t Outlander \n "), "My Outlander", "padding is not trimmed, or runs do not collapse");
+  assert.equal(rename("Citro\u0065\u0308n"), "Citro\u00ebn", "one name still has two spellings");
+
+  // Not-a-string becomes empty rather than being stored or thrown on, which is
+  // the same move that lets a user take a name back off.
+  for (const bad of [undefined, null, 42, {}, [], true]) {
+    assert.equal(rename(bad), "", `${JSON.stringify(bad) ?? "undefined"} was stored instead of narrowed to empty`);
+  }
+  assert.equal(rename(""), "", "a blank name is one the user is allowed to choose");
+
+  // And it is cleanName's rule, not a second spelling of it that agrees by
+  // inspection today and drifts later.
+  for (const n of ["x".repeat(99), "Out\u202Elander", "  a  \t b  ", "My\u0000Car", 42, null]) {
+    assert.equal(rename(n), cleanName(n, MAX_CUSTOM_NAME_LEN), `the rename applied a different rule than the read path: ${JSON.stringify(n) ?? "undefined"}`);
+  }
+});
+
+test("a rename moves neither the selection nor the payload version", () => {
+  const state = fill(3);
+  const selected = state.activeId;
+  assert.equal(selected, state.cars[0].id, "precondition: the first car added is the selected one");
+
+  // Renaming a car the user is not looking at must not move them, and renaming
+  // the one they ARE looking at must not drop them out of it.
+  const other = renameMyCar(state, state.cars[2].id, "Renamed");
+  assert.equal(other.state.activeId, selected, "renaming another car moved the selection");
+  assert.equal(other.state.v, CARS_V);
+
+  const active = renameMyCar(state, selected, "Renamed");
+  assert.equal(active.state.activeId, selected, "renaming the selected car deselected it");
+  assert.equal(active.state.v, CARS_V);
+
+  // A deliberate no-selection stays that way rather than being repaired into a
+  // pick the user never made.
+  const none = renameMyCar({ ...state, activeId: null }, state.cars[0].id, "Renamed");
+  assert.equal(none.state.activeId, null, "a null selection was repaired into one the user did not make");
+  assert.equal(none.state.v, CARS_V);
+
+  // And a version from somewhere else is rewritten to the one this build
+  // writes, rather than carried along.
+  assert.equal(renameMyCar({ ...state, v: 99 }, state.cars[0].id, "x").state.v, CARS_V);
+  assert.equal(renameMyCar({ ...state, v: undefined }, state.cars[0].id, "x").state.v, CARS_V);
+});
+
+test("a renamed name is a FIXED POINT, so renaming to an already-cleaned name is idempotent", () => {
+  const state = fill(1);
+  const id = state.cars[0].id;
+
+  // This is the claim renameMyCar's comment makes and the reason main.js may
+  // mirror the result into prefs.customName instead of sanitizing the text a
+  // second time: what is written is already narrowed the way the READ path
+  // narrows, so it survives the round trip unchanged.
+  for (const raw of ["Outlander", "x".repeat(99), "  My   \t Outlander \n ", "My\u0000Car\u009F", "Out\u202Elander", "My\u200BCar", "Citro\u0065\u0308n", "", 42]) {
+    const why = JSON.stringify(raw) ?? "undefined";
+    const once = renameMyCar(state, id, raw).state;
+    const twice = renameMyCar(once, id, once.cars[0].name).state;
+    assert.equal(twice.cars[0].name, once.cars[0].name, `renaming to the stored name changed it: ${why}`);
+
+    const loaded = sanitizeCarsPayload(structuredClone(once));
+    assert.equal(loaded.cars[0].name, once.cars[0].name, `the read path re-narrowed a name the rename had already narrowed: ${why}`);
+  }
+
+  // ONE INPUT IS NOT A FIXED POINT, and it is the cap's edge rather than a
+  // missing rule. cleanText trims BEFORE it slices, so a cut that lands on a
+  // space leaves a trailing one that a second pass would take off. Pinned
+  // because the comment above renameMyCar states the fixed point without this
+  // qualifier: if the cap is ever changed to trim after slicing, this is the
+  // line that says the claim got stronger.
+  const cut = renameMyCar(state, id, `${"a".repeat(MAX_CUSTOM_NAME_LEN - 1)} b`).state.cars[0].name;
+  assert.equal(cut, `${"a".repeat(MAX_CUSTOM_NAME_LEN - 1)} `, `the cap sliced somewhere other than the ${MAX_CUSTOM_NAME_LEN}th character`);
+  assert.equal(cleanName(cut, MAX_CUSTOM_NAME_LEN), "a".repeat(MAX_CUSTOM_NAME_LEN - 1), "a cut-at-the-cap trailing space no longer survives to a second narrowing");
+});
+
+test("a rename at the cap stores a name the browser can still encode", () => {
+  // The save path's half of the clip the copy path already had. 63 characters
+  // then an emoji is ordinary typing, and it stored half a surrogate pair.
+  const state = fill(1);
+  const id = state.cars[0].id;
+  const name = renameMyCar(state, id, `${"a".repeat(MAX_CUSTOM_NAME_LEN - 1)}\u{1F600}`).state.cars[0].name;
+  assert.ok(name.isWellFormed(), `a lone surrogate survived: ${JSON.stringify(name)}`);
+  assert.doesNotThrow(() => encodeURIComponent(name));
+  assert.equal(name, "a".repeat(MAX_CUSTOM_NAME_LEN - 1));
 });
 
 test("DIVERGENCE PIN: the two stores hold the same numbers after every keystroke", () => {
@@ -1181,6 +1687,95 @@ test("source guard: the estimate caps against the SAVED car, and the migration w
   const guard = init.indexOf("if (!getCars().length) return;");
   assert.notEqual(guard, -1, "the migration can now run with no dataset loaded");
   assert.ok(guard < init.indexOf("migrateIfNeeded("), "the dataset guard no longer runs before the migration");
+});
+
+test("source guard: a stale tab re-reads the store, from two triggers and one function", () => {
+  // The rule is pinned properly above (reconcileMyCars, refreshMyCars). What no
+  // test in this repo can reach is whether main.js ever CALLS it: deleting both
+  // listeners leaves all 376 tests green and puts the defect back whole, with a
+  // rename in one tab destroying a car saved in another and no page error to
+  // show for it. A failure here means "go read main.js", not "a bug is proven".
+  const src = readFileSync(new URL("../js/main.js", import.meta.url), "utf8");
+  const code = src.split("\n").filter((l) => !l.trim().startsWith("//"));
+  const start = src.indexOf("function refreshMyCarsFromStore(");
+  assert.notEqual(start, -1, "the re-read is gone from main.js");
+  const refresh = src.slice(start, src.indexOf("\n}", start));
+
+  assert.match(refresh, /refreshMyCars\(myCars\.activeId\)/, "the refresh stopped re-reading the store, or stopped keeping this tab's selection");
+
+  // BOTH triggers, reaching the SAME function. Two implementations of "reload
+  // from disk" is the two-writers defect this project has already been bitten
+  // by, one layer up.
+  const triggers = [...src.matchAll(/refreshMyCarsFromStore\(\)/g)]
+    .map((m) => src.slice(Math.max(0, m.index - 400), m.index))
+    .filter((before) => !before.endsWith("function ")); // the declaration itself
+  assert.equal(triggers.length, 2, `the re-read has ${triggers.length} call sites, not the two listeners`);
+  assert.ok(
+    triggers.some((t) => t.includes('addEventListener("storage"')),
+    "nothing re-reads when another tab writes, so a foreground tab stays stale until it is hidden and shown",
+  );
+  assert.ok(
+    triggers.some((t) => t.includes('addEventListener("visibilitychange"')),
+    "nothing re-reads when the tab returns, so a tab frozen with its storage events dropped never catches up",
+  );
+
+  // The storage listener has to know its own store, and only its own.
+  const at = src.indexOf('window.addEventListener("storage"');
+  const listener = src.slice(at, src.indexOf("});", at));
+  assert.match(listener, /e\.key !== CARS_KEY/, "the storage listener stopped filtering on the saved-cars key");
+  assert.match(listener, /e\.key !== null/, "a cleared store no longer reaches the refresh");
+  assert.equal(code.filter((l) => l.includes('"sicc.cars.v1"')).length, 0, "main.js is spelling the store key itself again");
+
+  // And deliberately NOT the prefs key. render() persists on every keystroke,
+  // and render() is also what a prefs refresh would have to call to be worth
+  // anything, so a prefs listener is a write answering a write in both
+  // directions, forever.
+  assert.equal(code.filter((l) => l.includes('"sicc.prefs.v1"')).length, 0, "main.js can now listen for the store that render() writes on every keystroke");
+
+  // A REFRESH IS A READ. Any write here fires a storage event back at the tab
+  // that caused it, and the two tabs never settle.
+  const body = refresh.split("\n").filter((l) => !l.trim().startsWith("//")).join("\n");
+  for (const write of ["saveMyCars(", "savePrefs(", "clearMyCars(", "switchToMyCar(", "setActiveMyCar(", "render()"]) {
+    assert.ok(!body.includes(write), `${write} is on the refresh path, so a refresh answers a write with a write`);
+  }
+
+  // The name field is the one thing on screen the user can be holding when a
+  // refresh lands, and the refresh may not take a keystroke back. That rule now
+  // sits in the repaint both the refresh and the name field's own blur go
+  // through, so the guard follows it there rather than pinning a copy of it.
+  assert.match(body, /repaintCarName\(\)/, "the refresh names the active car its own way again");
+  const paintAt = src.indexOf("function repaintCarName(");
+  assert.notEqual(paintAt, -1, "repaintCarName moved or was renamed");
+  const repaint = src.slice(paintAt, src.indexOf("\n}", paintAt));
+  assert.match(repaint, /document\.activeElement !== field/, "the refresh overwrites the name field while the user is typing in it");
+
+  // And a question about a car another tab has already removed must not simply
+  // sit there waiting to do nothing. askRemoveCar pins which car it is about;
+  // this is the other half, closing the question once that car is gone.
+  assert.match(body, /dlg\.close\(/, "a question about a car another tab removed stays open");
+  assert.match(body, /removeGoneMessage\(/, "and it closes without saying why");
+});
+
+test("source guard: the remove question is answered about the car it named", () => {
+  // Tab A opens the question about one car, tab B removes that car, tab A
+  // confirms: re-finding the ACTIVE record on the way back found the successor
+  // the removal had selected, and the answer the user gave about one car was
+  // spent on another. The store went from three cars to one.
+  const src = readFileSync(new URL("../js/main.js", import.meta.url), "utf8");
+  const bodyOf = (decl) => {
+    const start = src.indexOf(decl);
+    assert.notEqual(start, -1, `${decl} moved or was renamed`);
+    return src.slice(start, src.indexOf("\n}", start));
+  };
+
+  assert.match(bodyOf("function askRemoveCar("), /removingCarId = saved\.id/, "the question no longer records which car it is about");
+
+  // The lookup line specifically, not the function: reading the successor back
+  // AFTER the removal is still activeMyCar's job and always was.
+  const act = bodyOf("function removeActiveCar(");
+  const found = act.split("\n").find((l) => l.includes("const saved ="));
+  assert.ok(found, "removeActiveCar stopped finding a record at all");
+  assert.match(found, /removingCarId/, "the act is back on whatever is selected when the answer arrives");
 });
 
 

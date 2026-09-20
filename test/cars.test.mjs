@@ -146,7 +146,7 @@ test("source guard: the preset click handler writes the preset's own kW, uncappe
     .filter((line) => !line.trim().startsWith("//"))
     .join("\n");
 
-  const write = body.split("\n").find((line) => line.includes('$("powerKw").value'));
+  const write = body.split("\n").find((line) => line.includes('"powerKw"'));
   assert.ok(write, "the handler no longer writes the power field");
   assert.match(write, /btn\.dataset\.kw/, "the value written must be the preset's own");
   assert.doesNotMatch(

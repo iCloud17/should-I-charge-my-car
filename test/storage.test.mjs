@@ -9,7 +9,8 @@ import { readFileSync } from "node:fs";
 import {
   loadPrefs, savePrefs, mergeCarOverride, defaultPrefs, DEFAULT_PREFS,
   applyCarEdit, applyCarSelection, persistableFrom, resetPrefs,
-  sanitizePrefs, PERSIST_KEYS,
+  sanitizePrefs, PERSIST_KEYS, positiveNumber, MAX_STORED_NUMBER, MIN_STORED_NUMBER, MAX_CUSTOM_NAME_LEN,
+  cleanText,
 } from "../js/storage.js";
 import { chargeDrawKw, MAX_OUTLET_KW } from "../js/cars.js";
 // Imported to prove a point rather than to test theme.js: sanitizePrefs
@@ -65,7 +66,8 @@ test("mergeCarOverride keeps the saved value when the new one isn't a positive n
 
 test("mergeCarOverride accepts a positive number and nothing else", () => {
   assert.equal(mergeCarOverride({ mpg: 25 }, { mpg: 31.5 }).mpg, 31.5);
-  assert.equal(mergeCarOverride({ mpg: 25 }, { mpg: 1e-9 }).mpg, 1e-9, "however small");
+  assert.equal(mergeCarOverride({ mpg: 25 }, { mpg: 0.05 }).mpg, 0.05, "small is not the same as absurd");
+  assert.equal(mergeCarOverride({ mpg: 25 }, { mpg: 1e-9 }).mpg, 25, "but absurd is refused at both ends now");
   // The QA case, closed at the write end rather than the read end. A zero MPG
   // used to be written, shown in the field all session, and dropped on the next
   // load by the stricter read rule, so the user lost a number they watched the
@@ -282,13 +284,116 @@ test("an override field and its top-level mirror accept exactly the same numbers
   // one place it has to keep in the other, and whatever it drops it has to drop
   // in both. Let these diverge again and the looser one becomes the way in.
   for (const field of ["mpg", "miPerKwh", "batteryKwh"]) {
-    for (const v of [...BAD_NUMBERS, -99, -3, -0.5, 1e-9, 42]) {
+    for (const v of [...BAD_NUMBERS, -99, -3, -0.5, 1e-9, 42, MAX_STORED_NUMBER, MAX_STORED_NUMBER + 1, 1e308]) {
       const keptAtTop = sanitizePrefs({ [field]: v })[field] !== DEFAULT_PREFS[field];
       const perCar = sanitizePrefs({ carOverrides: { a: { [field]: v } } }).carOverrides.a;
       const keptPerCar = perCar !== undefined && Object.hasOwn(perCar, field);
       assert.equal(keptPerCar, keptAtTop, `${field} = ${String(v)}`);
     }
   }
+});
+
+// --- The upper bound ---------------------------------------------------------
+//
+// positiveNumber used to ask only "finite and above zero", so 1e308 was a legal
+// battery. The 2 dp display rounding then overflowed and the field rendered the
+// literal word Infinity, which savePrefs dropped, leaving the screen and the
+// store disagreeing. Rejected rather than clamped, per the rule at the top.
+
+test("the display rounding is what a huge value overflows, so the bound catches it first", () => {
+  assert.equal(Math.round(1e308 * 100) / 100, Infinity, "this is what painted the word Infinity");
+  assert.equal(positiveNumber(1e308), undefined, "so it never reaches the field");
+  assert.equal(String(Math.round(MAX_STORED_NUMBER * 100) / 100), "1000000", "the bound itself still renders");
+});
+
+test("the bound accepts its own value and rejects the very next number above it", () => {
+  assert.equal(positiveNumber(MAX_STORED_NUMBER), MAX_STORED_NUMBER);
+  const justOver = MAX_STORED_NUMBER * (1 + Number.EPSILON);
+  assert.ok(justOver > MAX_STORED_NUMBER, "the test needs a genuinely larger double");
+  assert.equal(positiveNumber(justOver), undefined);
+  assert.equal(positiveNumber(MAX_STORED_NUMBER + 1), undefined);
+});
+
+test("every number in the bundled dataset is comfortably inside the bound", () => {
+  // The anchor for the values chosen. A bound that refuses a car this app ships
+  // with is the wrong bound, and this goes red rather than the user finding out.
+  const { cars } = JSON.parse(readFileSync(new URL("../data/phevs.json", import.meta.url), "utf8"));
+  assert.ok(cars.length > 400, "the dataset did not load");
+  let worst = 0;
+  let smallest = Infinity;
+  for (const row of cars) {
+    for (const k of ["mpg", "miPerKwh", "batteryKwh", "chargeKw"]) {
+      assert.equal(positiveNumber(row[k]), row[k], `${row.id} ${k} = ${row[k]} must survive`);
+      if (row[k] > worst) worst = row[k];
+      if (row[k] < smallest) smallest = row[k];
+    }
+  }
+  assert.ok(worst * 1000 < MAX_STORED_NUMBER, `slack is thin: the dataset peaks at ${worst}`);
+  assert.ok(smallest > MIN_STORED_NUMBER * 1000, `slack is thin: the dataset bottoms out at ${smallest}`);
+});
+
+// --- The lower bound ---------------------------------------------------------
+//
+// The ceiling had no opposite number, so 1e308 was refused and 1e-308 was not.
+// Seeded as a car's mpg and batteryKwh it painted "0" in both fields, hid the
+// charge time, blanked the verdict and propagated into sicc.prefs.v1. The rule
+// at the top of storage.js is that a bad value is DROPPED, and that held at one
+// end of the range only.
+
+test("a vanishingly small number is dropped the way a vast one is", () => {
+  assert.equal(positiveNumber(1e-308), undefined, "the value that painted 0 in both fields");
+  assert.equal(positiveNumber(Number.MIN_VALUE), undefined, "including the smallest double there is");
+  assert.equal(positiveNumber(0), undefined, "and the floor still subsumes zero");
+  assert.equal(positiveNumber(-1e-308), undefined);
+  assert.equal(Math.round(1e-308 * 100) / 100, 0, "this is what painted the field as 0");
+});
+
+test("the floor accepts its own value and rejects the very next number below it", () => {
+  assert.equal(positiveNumber(MIN_STORED_NUMBER), MIN_STORED_NUMBER);
+  const justUnder = MIN_STORED_NUMBER * (1 - Number.EPSILON);
+  assert.ok(justUnder < MIN_STORED_NUMBER, "the test needs a genuinely smaller double");
+  assert.equal(positiveNumber(justUnder), undefined);
+});
+
+test("a small but real tariff is not what the floor is for", () => {
+  // This predicate also guards the gas price, which is typed in whatever
+  // currency the user picked. A cheap off-peak rate is 0.05, and a household
+  // tariff in a high-denomination currency (Kuwaiti dinar, roughly 0.002 per
+  // kWh) is smaller still. The floor sits three decades below even that one.
+  for (const real of [0.05, 0.002, 0.01, 1.16, 3.2]) {
+    assert.equal(positiveNumber(real), real, `${real} is a number someone actually has`);
+    assert.equal(sanitizePrefs({ gasPrice: real }).gasPrice, real);
+  }
+});
+
+test("the floor reaches every store that shares the predicate", () => {
+  // One predicate, so no call site is left with a weaker second definition.
+  const tiny = 1e-308;
+  assert.equal(sanitizePrefs({ batteryKwh: tiny }).batteryKwh, DEFAULT_PREFS.batteryKwh);
+  assert.equal(sanitizePrefs({ mpg: tiny }).mpg, DEFAULT_PREFS.mpg);
+  assert.equal(sanitizePrefs({ gasPrice: tiny }).gasPrice, DEFAULT_PREFS.gasPrice);
+  assert.deepEqual(sanitizePrefs({ carOverrides: { a: { mpg: tiny } } }).carOverrides, {});
+  assert.deepEqual(mergeCarOverride({ mpg: 42 }, { mpg: tiny }), { mpg: 42 }, "and it keeps the last good one");
+});
+
+test("there is still exactly one definition of the bound", () => {
+  // A second predicate is how the top-level mirrors and the per-car overrides
+  // came to disagree about zero. The floor must not be the next thing to get a
+  // private copy somewhere.
+  const src = readFileSync(new URL("../js/storage.js", import.meta.url), "utf8");
+  const defines = src.match(/^export function positiveNumber\(/gm) ?? [];
+  assert.equal(defines.length, 1, "positiveNumber is defined more than once");
+  const floors = src.match(/MIN_STORED_NUMBER/g) ?? [];
+  assert.equal(floors.length, 2, "the floor is read somewhere other than the one predicate");
+});
+
+test("the bound reaches every store that shares the predicate", () => {
+  // One predicate, so no call site is left with a weaker second definition.
+  const huge = 1e308;
+  assert.equal(sanitizePrefs({ batteryKwh: huge }).batteryKwh, DEFAULT_PREFS.batteryKwh);
+  assert.equal(sanitizePrefs({ gasPrice: huge }).gasPrice, DEFAULT_PREFS.gasPrice);
+  assert.deepEqual(sanitizePrefs({ carOverrides: { a: { mpg: huge } } }).carOverrides, {});
+  assert.deepEqual(mergeCarOverride({ mpg: 42 }, { mpg: huge }), { mpg: 42 }, "and it keeps the last good one");
 });
 
 test("an outlet power past the AC ceiling falls back to the default, not to the ceiling", () => {
@@ -362,9 +467,59 @@ test("a customName that isn't a string falls back to empty", () => {
 
 test("a customName is stripped of control characters and capped", () => {
   assert.equal(sanitizePrefs({ customName: "Nel\u0000lie\u001b\u009f" }).customName, "Nellie");
-  assert.equal(sanitizePrefs({ customName: "x".repeat(500) }).customName.length, 40);
+  assert.equal(sanitizePrefs({ customName: "x".repeat(500) }).customName.length, MAX_CUSTOM_NAME_LEN);
   assert.equal(sanitizePrefs({ customName: "Nellie" }).customName, "Nellie");
 });
+
+// The cap counts UTF-16 units and this runs on every name write, so a slice to
+// it minted lone surrogates out of ordinary typing.
+test("the cap cuts between characters, never inside one", () => {
+  const cap = MAX_CUSTOM_NAME_LEN;
+  const a = "A".repeat(cap - 1);
+
+  // 63 characters then an emoji: the reported repro.
+  const emoji = cleanText(`${a}\u{1F600}`, cap);
+  assert.ok(emoji.isWellFormed(), `a lone surrogate survived: ${JSON.stringify(emoji)}`);
+  assert.doesNotThrow(() => encodeURIComponent(emoji));
+  assert.equal(emoji, a, "the emoji does not fit in the one unit left, so it goes whole");
+
+  // A combining accent goes with the letter it sits on rather than orphaning it.
+  assert.equal(cleanText(`${a}e\u0301`, cap), a);
+
+  // A ZWJ sequence is one character and is dropped as one.
+  const family = "A".repeat(60);
+  assert.equal(cleanText(`${family}\u{1F468}\u200D\u{1F469}\u200D\u{1F467}`, cap), family);
+
+  // Nothing at the boundary means nothing changes.
+  assert.equal(cleanText("A".repeat(200), cap).length, cap);
+  assert.equal(cleanText("Nellie", cap), "Nellie");
+});
+
+// Both ways an engine can fail to segment. A typeof guard covers only the
+// first: a constructor that EXISTS and throws sails past it and straight out of
+// cleanText, which is the read path for every stored name, not just a new one.
+const SEGMENTER_MASKS = [
+  ["no Intl.Segmenter", () => { delete Intl.Segmenter; }],
+  ["an Intl.Segmenter that throws", () => { Intl.Segmenter = function () { throw new Error("no segmenter here"); }; }],
+];
+
+for (const [what, mask] of SEGMENTER_MASKS) {
+  test(`the cap still cuts safely with ${what}`, async () => {
+    const real = Intl.Segmenter;
+    mask();
+    try {
+      assert.notEqual(Intl.Segmenter, real, "the mask did not take");
+      // Cache-busted so the module EVALUATES again while the mask is on.
+      const m = await import(`../js/storage.js?segmenter=${encodeURIComponent(what)}`);
+      const cut = m.cleanText(`${"A".repeat(MAX_CUSTOM_NAME_LEN - 1)}\u{1F600}`, MAX_CUSTOM_NAME_LEN);
+      assert.ok(cut.isWellFormed(), `a lone surrogate survived: ${JSON.stringify(cut)}`);
+      assert.doesNotThrow(() => encodeURIComponent(cut));
+      assert.equal(cut, "A".repeat(MAX_CUSTOM_NAME_LEN - 1));
+    } finally {
+      Intl.Segmenter = real;
+    }
+  });
+}
 
 test("source guard: the nickname cap matches the input's own maxlength", () => {
   // maxlength is a DOM hint a tampered store walks straight past, so storage
@@ -372,7 +527,11 @@ test("source guard: the nickname cap matches the input's own maxlength", () => {
   const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
   const input = html.split("\n").find((l) => l.includes('id="carNickname"'));
   assert.ok(input, "the nickname input moved or was renamed");
-  assert.match(input, /maxlength="40"/, "storage caps the nickname at 40; keep the markup in step");
+  assert.match(
+    input,
+    new RegExp(`maxlength="${MAX_CUSTOM_NAME_LEN}"`),
+    `storage caps the nickname at ${MAX_CUSTOM_NAME_LEN}; keep the markup in step`,
+  );
 });
 
 test("themeMode is passed through, because theme.js is the one place that rule lives", () => {
@@ -792,6 +951,64 @@ test("persistableFrom does not mutate the prefs it was given", () => {
   const after = persistableFrom(before, liveModel({ powerKw: 1.4 }));
   assert.equal(before.powerKw, 6.6, "the caller's prefs are untouched");
   assert.equal(after.powerKw, 1.4);
+});
+
+// --- The write side is a gate too -------------------------------------------
+
+test("a number the store will not keep never becomes the session's setting", () => {
+  const prefs = persistableFrom(defaultPrefs(), liveModel({
+    gasPrice: 2e6, mpg: 1e-308, batteryKwh: 1e308, powerKw: MAX_OUTLET_KW + 1,
+  }));
+  assert.equal(prefs.gasPrice, DEFAULT_PREFS.gasPrice, "over the ceiling");
+  assert.equal(prefs.mpg, DEFAULT_PREFS.mpg, "under the floor");
+  assert.equal(prefs.batteryKwh, DEFAULT_PREFS.batteryKwh, "far over the ceiling");
+  assert.equal(prefs.powerKw, DEFAULT_PREFS.powerKw, "past the outlet ceiling, and not clamped to it");
+});
+
+test("what a render pass writes is exactly what the next load reads back", () => {
+  // The property itself: anything the write side lets through must survive the
+  // round trip, or the screen and the store describe different setups.
+  for (const m of [
+    liveModel(),
+    liveModel({ gasPrice: 2e6, mpg: 1e-308, miPerKwh: 0, batteryKwh: 1e308 }),
+    liveModel({ gasPrice: 0.05, yourRate: 0.05 }),
+    liveModel({ gasPrice: 0.002, mpg: MIN_STORED_NUMBER, batteryKwh: MAX_STORED_NUMBER }),
+    liveModel({ powerKw: 500 }),
+  ]) {
+    const written = persistableFrom(defaultPrefs(), m);
+    savePrefs(written);
+    const back = loadPrefs();
+    for (const k of ["gasPrice", "mpg", "miPerKwh", "batteryKwh", "powerKw"]) {
+      assert.equal(back[k], written[k], `${k} was accepted for the session and dropped on the next load`);
+    }
+  }
+});
+
+test("a small but real rate is not what the gate is for", () => {
+  // A cheap off-peak tariff is 0.05, three decades clear of the floor.
+  const prefs = persistableFrom(defaultPrefs(), liveModel({ gasPrice: 0.05, yourRate: 0.05 }));
+  assert.equal(prefs.gasPrice, 0.05, "a small gas price was refused");
+  assert.equal(prefs.yourRate, 0.05, "the volatile energy rate was touched");
+  savePrefs(prefs);
+  assert.equal(loadPrefs().gasPrice, 0.05, "and it did not survive the reload");
+});
+
+test("a blank field is left blank rather than answered with a default", () => {
+  // A cleared field reads as NaN, and 6.6 is a real answer to the question the
+  // user just wiped, so only a finite value is judged.
+  const prefs = persistableFrom(defaultPrefs(), liveModel({ powerKw: NaN, gasPrice: NaN, mpg: NaN }));
+  for (const k of ["powerKw", "gasPrice", "mpg"]) {
+    assert.equal(Number.isFinite(prefs[k]), false, `${k} was filled in for the user`);
+  }
+  assert.notEqual(prefs.powerKw, DEFAULT_PREFS.powerKw, "an outlet the user cleared was answered with the default");
+});
+
+test("the values that legitimately hold zero are not put through a rule", () => {
+  const prefs = persistableFrom(defaultPrefs(), liveModel({ sessionFee: 0, startPct: 0, yourRate: 0 }));
+  assert.equal(prefs.sessionFee, 0);
+  assert.equal(prefs.startPct, 0);
+  assert.equal(prefs.yourRate, 0);
+  assert.equal(prefs.targetPct, 90, "and the live percentages still reach the sliders");
 });
 
 // --- resetPrefs: "Reset everything" really has to reach everything ---

@@ -412,7 +412,7 @@ body {
 .unit-item[aria-selected="true"] { background: var(--field); color: var(--accent); }
 .unit-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
-/* "Adjust numbers" mini-disclosure inside the car tile */
+/* "Adjust details" mini-disclosure inside the car tile */
 .tweak { margin-top: 6px; }
 .tweak > summary {
   list-style: none;
@@ -809,10 +809,63 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 .preset:active { transform: scale(0.98); }
-.preset.is-active {
+/* The saved-car chips share this selector rather than copying the three
+   declarations, so the "selected" look has one definition. They drive it off
+   aria-checked instead of a class: the attribute a screen reader reads and the
+   styling everyone else sees are then the same fact, and cannot drift. */
+.preset.is-active,
+.my-cars__chip[aria-checked="true"] {
   border-color: var(--accent);
   color: var(--accent);
   background: color-mix(in srgb, var(--accent) 12%, var(--field));
+}
+
+/* --- My cars: the saved-car chip row --- */
+/* Wraps rather than scrolls. Five chips at the cap have to fit a 390px screen
+   without taking the page sideways, and a horizontally scrolling row hides
+   cars off-screen with nothing to say they are there. */
+.my-cars { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
+/* flex:0 1 auto, against .preset's flex:1: a chip is as wide as its name, not
+   an equal share of the row. min-width:0 is what lets it shrink far enough for
+   the label below to ellipsis instead of overflowing. */
+.my-cars__chip { flex: 0 1 auto; min-width: 0; max-width: 100%; padding-left: 14px; padding-right: 14px; }
+.my-cars__chip-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+/* The add and remove controls on one row. space-between spends whatever width
+   is left on holding them apart, and the column gap is the floor that survives
+   when there is none left to spend. It wraps rather than shrinks, because
+   neither label may be clipped at 390px, and the row gap is what stops a wrap
+   from stacking two 44px targets flush against each other. */
+.my-cars__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 16px;
+  margin-top: 2px;
+}
+/* Gone when neither control is on screen, so a first-run tile is not charged
+   .field's 6px gap for a row with nothing in it. */
+.my-cars__actions:not(:has(> :not([hidden]))) { display: none; }
+/* Empty is the resting state, and the note stays RENDERED through it. It used
+   to be collapsed by `:empty { display: none }`, which takes an element out of
+   the accessibility tree: the region and its first message then arrive in the
+   same frame, and a live region that arrives already holding text is the thing
+   a screen reader is least reliable about reading out. Hidden that way it was
+   not a live region at all until the moment it was too late to be one.
+
+   Out of flow rather than zero-height, because .field is a flex column with a
+   6px gap and a rendered child is charged that gap whether it has height or
+   not. Absolutely positioned and clipped to 1px is the one shape that is in
+   the tree and in nobody's layout at the same time. */
+.my-cars__note { margin: 6px 0 0; }
+.my-cars__note:empty {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
 }
 
 /* --- Disclosure --- */
@@ -971,6 +1024,13 @@ output { font-weight: 800; color: var(--text); }
   padding: 0;
 }
 .link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--radius-sm); }
+/* Two tones on the one link pattern rather than two new components. Muted for
+   an offer the user can ignore, --gas for the one that takes something away.
+   The tone is there so the control is never mistaken for its neighbour; the
+   confirm is what stands between it and the act. */
+.link--muted { color: var(--muted); }
+.link--danger { color: var(--gas); }
+.link--danger:focus-visible { outline-color: var(--gas); }
 /* Footer links sit on --bg, not --card, where plain --accent is only 4.46:1. */
 .app__foot .link { color: var(--accent-ink); text-decoration: none; }
 .app__foot .link:hover { text-decoration: underline; text-underline-offset: 3px; }
@@ -988,7 +1048,9 @@ output { font-weight: 800; color: var(--text); }
 }
 .dialog::backdrop { background: rgba(2, 6, 23, 0.5); backdrop-filter: blur(2px); }
 .dialog__inner { padding: 18px; }
-.dialog__title { margin: 0 0 12px; font-size: 18px; font-weight: 800; }
+/* A car name is user-typed and capped at 64 characters, which is wider than a
+   288px dialog at 320px if none of them is a space. */
+.dialog__title { margin: 0 0 12px; font-size: 18px; font-weight: 800; overflow-wrap: anywhere; }
 .dialog__hint { margin: 0 0 12px; font-size: 13px; color: var(--muted); }
 .dialog__select {
   width: 100%;
@@ -1001,7 +1063,8 @@ output { font-weight: 800; color: var(--text); }
   outline: none;
 }
 .dialog__select option { padding: 8px 6px; }
-.dialog__actions { display: flex; gap: 10px; margin-top: 14px; }
+/* Reversed, so the source order can put the harmless answer first. */
+.dialog__actions { display: flex; flex-direction: row-reverse; gap: 10px; margin-top: 14px; }
 .btn {
   flex: 1;
   border-radius: var(--radius-sm);
@@ -1013,6 +1076,10 @@ output { font-weight: 800; color: var(--text); }
 }
 .btn--ghost { background: var(--card-2); color: var(--text); }
 .btn--primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+/* Filled rather than tinted like .link--danger, because this is the only
+   control in the app that destroys something no other control puts back. */
+.btn--danger { background: var(--gas); color: #fff; border-color: var(--gas); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .btn:active { transform: scale(0.98); }
 
 /* Update toast - a small, dismissable "new version available" prompt pinned to

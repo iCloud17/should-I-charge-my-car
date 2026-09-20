@@ -3,17 +3,26 @@
 import { breakevenKwhPrice, chargeCurve, verdict, rateAtTime, rateAtElapsed, cheapestPeriod } from "./calc.js";
 import * as U from "./units.js";
 import {
-  loadPrefs, savePrefs, resetPrefs,
-  applyCarEdit, applyCarSelection, persistableFrom, CAR_EDIT_FIELDS,
+  loadPrefs, savePrefs, resetPrefs, defaultPrefs,
+  applyCarEdit, applyCarSelection, persistableFrom, CAR_EDIT_FIELDS, MAX_CUSTOM_NAME_LEN,
 } from "./storage.js";
 import {
   loadCars, getCar, getCars, carLabel, maxLabelLength,
   chargeDrawKw, presetMatchesKw,
 } from "./cars.js";
-import { CUSTOM_CAR_ID, loadMyCars, saveMyCars, clearMyCars, emptyCarsState, migrateIfNeeded,
-  addMyCar, setActiveMyCar, applyMyCarEdit,
-  activeMyCar, findMyCarByCarId, savedCarNumbers, savedCarCeilingKw,
+import { CUSTOM_CAR_ID, MAX_MY_CARS, CARS_KEY, loadMyCars, saveMyCars, clearMyCars, emptyCarsState, migrateIfNeeded,
+  addMyCar, removeMyCar, setActiveMyCar, applyMyCarEdit, renameMyCar, refreshMyCars,
+  activeMyCar, findMyCarByCarId, savedCarNumbers, savedCarDraft, savedCarCeilingKw,
 } from "./myCars.js";
+import {
+  showsAddControl, addControlLabel, showsChipRow, showsRemoveLink, showsCarListActions,
+  showsNameField, buildChips, chipBaseLabel, chipLabelFor, checkedChipId,
+  copyBaseName, takenCarNames, nextCopyName, pickerOpenQuery,
+  nextChipIndex, addRefusalMessage, addWriteFailedMessage, addedMessage, carSummaryLabel, carTileSource,
+  newCarName, defaultCarName, withDefaultNames,
+  legacyNameSlot, nameFieldValue, removedMessage, removeWriteFailedMessage, removeConfirmQuestion,
+  removeGoneMessage, nameWriteFailedMessage, numbersWriteFailedMessage,
+} from "./myCarsUi.js";
 import { $, parseNum, money, formatDuration, escapeHtml, nextOptionIndex, enterAction } from "./ui.js";
 import { applyTheme, nextThemeMode, themeLabel } from "./theme.js";
 import { track, trackWhenReady } from "./analytics.js";
@@ -47,19 +56,18 @@ const BRIEF_MAX_MIN = 60;
 // --- Read canonical model values from the DOM (converting from display units) ---
 function readInputs() {
   const system = prefs.units;
-  const gasDisplay = parseNum($("gasPrice").value);
-  const rateDisplay = parseNum($("yourRate").value);
-  const mpgDisplay = parseNum($("mpg").value);
-  const effDisplay = parseNum($("miPerKwh").value);
+  const read = (id, toCanonical) =>
+    U.canonicalFromField($(id).value, painted.get(id), (text) => toCanonical(parseNum(text)));
+  const asTyped = (v) => v;
 
   return {
-    gasPrice: U.gasPriceToCanonical(gasDisplay, system),
-    yourRate: rateDisplay, // $/kWh is universal
-    mpg: U.economyToCanonical(mpgDisplay, system),
-    miPerKwh: U.efficiencyToCanonical(effDisplay, system),
-    batteryKwh: parseNum($("batteryKwh").value),
-    sessionFee: parseNum($("sessionFee").value) || 0,
-    powerKw: parseNum($("powerKw").value),
+    gasPrice: read("gasPrice", (v) => U.gasPriceToCanonical(v, system)),
+    yourRate: read("yourRate", asTyped), // $/kWh is universal
+    mpg: read("mpg", (v) => U.economyToCanonical(v, system)),
+    miPerKwh: read("miPerKwh", (v) => U.efficiencyToCanonical(v, system)),
+    batteryKwh: read("batteryKwh", asTyped),
+    sessionFee: read("sessionFee", asTyped) || 0,
+    powerKw: read("powerKw", asTyped),
     startPct: parseNum($("startPct").value),
     targetPct: parseNum($("targetPct").value),
   };
@@ -346,29 +354,17 @@ function currentCar() {
 // carOverrides keep being written exactly as they are today, for one release,
 // as the rollback: either store alone can drive the app.
 //
-// main.js importing both stores does not cross the boundary myCars.js draws.
-// That boundary is that nothing in the PREFS read/write path imports it and it
-// never touches sicc.prefs.v1, which is what stops a cached old build from
-// deleting saved cars through savePrefs. This file is the wiring layer above
-// both, and it is the one place allowed to know they exist together.
+// This file is the one place allowed to import both. myCars.js never touches
+// sicc.prefs.v1, which is what stops a cached old build from deleting saved
+// cars through savePrefs.
 //
-// The risk the dual write carries is divergence. If the two disagree, rolling
-// back hands the user numbers they never entered, and nothing says so, because
-// each store is internally consistent. Three things hold them in step, and all
-// three are structural rather than remembered:
-//
-//   ONE WRITER. saveCarNumbers is the only place either store's car numbers
-//   change. It writes both from the same readInputs() object in the same call,
-//   and applyMyCarEdit applies the same merge rule mergeCarOverride does.
-//
-//   ONE SELECTOR. selectMyCar runs on the same event as applyCarSelection, so
-//   the two stores cannot end up disagreeing about which car is chosen.
-//
-//   A MISMATCH READS AS ABSENT. activeSavedCar refuses to answer when the
-//   record it found points at a different car than prefs does. That is the one
-//   case the first two rules cannot cover, because the five-car cap can refuse
-//   a car prefs has already accepted, and an active record answering for the
-//   wrong vehicle would cap the estimate against the wrong onboard charger.
+// Each store is internally consistent, so divergence would be silent. Three
+// structural rules keep them level: saveCarNumbers is the ONE WRITER of either
+// store's car numbers, from the same readInputs() object in the same call;
+// selectMyCar runs on the same event as applyCarSelection, so there is ONE
+// SELECTOR; and a MISMATCH READS AS ABSENT, because the five-car cap can refuse
+// a car prefs has already accepted, and an active record answering for the
+// wrong vehicle would cap the estimate against the wrong onboard charger.
 
 // A dataset label for a carId, for the migration's snapshot. Empty when the
 // dataset cannot answer, which migrateCars reads as a missing label and never
@@ -376,6 +372,13 @@ function currentCar() {
 function labelForCarId(carId) {
   const car = getCar(carId);
   return car ? carLabel(car) : "";
+}
+
+// A saved-cars state with a name on every car. The fill is part of READING the
+// payload, so it costs no write: the names reach disk with the next real one,
+// and a load that wrote would set two tabs answering each other forever.
+function namedState(state) {
+  return { ...state, cars: withDefaultNames(state.cars, getCar) };
 }
 
 // Bring the store up, once, at boot. Silent either way: this is plumbing, and
@@ -389,7 +392,7 @@ function initMyCars() {
     // working fetch migrates properly.
     if (!getCars().length) return;
     migrateIfNeeded(prefs, labelForCarId, getCar);
-    myCars = loadMyCars();
+    myCars = namedState(loadMyCars());
     myCarsLive = true;
   } catch {
     // Both calls above are already total, so this is the outer boundary rather
@@ -410,34 +413,131 @@ function activeSavedCar() {
   return saved && saved.carId === prefs.carId ? saved : null;
 }
 
-// Make the record for `carId` the active one, adding it the first time that car
-// is picked. Returns the record, or null when the store cannot represent the
-// selection.
+// Point the store at the record for `carId`, or at nothing when no record holds
+// that car. It NEVER creates one: addCurrentCar is the only thing that grows
+// the list, because a picker that saves whatever you looked at fills a five-car
+// cap with cars nobody chose and then refuses the one that was wanted.
 //
-// FIND, DO NOT ADD. Decision 6: the typeahead replaces rather than appends, so
-// picking the same car twice, or mis-tapping through five of them, still leaves
-// one record. A refusal is not worth surfacing: the list is capped, so a sixth
-// car simply has no record, activeSavedCar sees the mismatch, and the reads
-// fall back to prefs, which still holds that car's numbers.
-function selectMyCar(carId, draft) {
+// THE DESELECT IS THE WHOLE NO-RECORD BRANCH, and returning early instead is
+// the defect it replaces. The previous car's record stayed active while the
+// screen moved on, so its chip stayed lit beside another car's numbers and the
+// estimate capped against another car's onboard charger. Nothing selected is a
+// state this store can hold, so it is held rather than left stale.
+function selectMyCar(carId) {
   if (!myCarsLive) return null;
-  let state = myCars;
-  if (!findMyCarByCarId(state, carId)) {
-    const added = addMyCar(state, { ...draft, carId }, getCar);
-    if (!added.ok) return null;
-    state = added.state;
-  }
-  // Re-found rather than carried across, because safeCar narrows what it was
-  // handed: the record that landed is the one to point at, not the draft that
-  // went in. A carId that did not survive that narrowing finds nothing and
-  // deselects, which is the same fall-back-to-prefs path as the cap.
-  const target = findMyCarByCarId(state, carId);
-  const res = setActiveMyCar(state, target ? target.id : null);
-  if (!res.ok) return null;
-  myCars = res.state;
+  // The record is re-found rather than carried in, because two records may
+  // share a carId and the store's own rule is that the first of them answers.
+  const found = findMyCarByCarId(myCars, carId);
+  myCars = setActiveMyCar(myCars, found?.id ?? null).state;
   saveMyCars(myCars);
   return activeMyCar(myCars);
 }
+
+// Put the car on screen into the list, and say what happened either way. THE
+// ONLY CALLER OF addMyCar in the app: picking shows a car and this saves one,
+// and keeping those two apart is the whole of the redesign.
+//
+// Gated on myCarsLive like every other write, because the key's own presence is
+// what records that the one-shot migration already ran.
+//
+// EVERY REFUSAL IS SPOKEN, including the ones the old implicit add dropped. The
+// store says no for a reason it names, and a refusal flattened to nothing is
+// how a user came to be shown a car that had never been saved. A refused WRITE
+// is the same shape one layer down: saveMyCars answers false when storage is
+// unavailable or a newer build's payload is on disk, and painting a fresh chip
+// over that would tell the user their car is in a list it never reached.
+function addCurrentCar() {
+  if (!myCarsLive) return;
+
+  const car = currentCar();
+  const saved = activeSavedCar();
+  // Already saved means this is a COPY, and a copy is given a name of its own
+  // rather than left to the chip suffix: that suffix is computed from position,
+  // so removing a car in the middle renumbers every car after it.
+  const copied = saved
+    ? nextCopyName(copyBaseName(saved, getCar), takenCarNames(myCars.cars, getCar), MAX_CUSTOM_NAME_LEN)
+    : "";
+  const label = car ? carLabel(car) : saved?.label ?? "";
+  const name = newCarName(
+    copied,
+    legacyNameSlot(prefs.carId === CUSTOM_CAR_ID, prefs.customName),
+    defaultCarName({ carId: prefs.carId, label }, getCar),
+  );
+  const draft = prefs.carId === CUSTOM_CAR_ID ? { name } : { name, label };
+
+  // The numbers the user is looking at travel with the car. The record used to
+  // be minted at pick time, ahead of every edit, with saveCarNumbers keeping it
+  // in step from there; it is minted AFTER those edits now, so an empty draft
+  // would hand this car the dataset's numbers back the next time it is switched
+  // to.
+  //
+  // THE ACTIVE RECORD IS WHAT IS ON SCREEN, and prefs.carOverrides is not. That
+  // store has one slot per MODEL, so with two records of one model it holds
+  // whichever of them was edited last: copying the Prius whose chip is checked
+  // minted a record carrying the OTHER Prius's numbers, under this one's
+  // heading, invisibly until the user switched chips and came back.
+  //
+  // The override stays the fallback for a car with NO record, where it is
+  // unambiguous by construction: a saved car is always switched to rather than
+  // shown unsaved, so an unsaved car on screen is the only car of its model
+  // this user has.
+  const seed = saved ? savedCarDraft(saved) : prefs.carOverrides?.[prefs.carId];
+  const res = addMyCar(myCars, { ...seed, ...draft, carId: prefs.carId }, getCar);
+  if (!res.ok) {
+    sayMyCarsNote(addRefusalMessage(res.reason, MAX_MY_CARS));
+    return;
+  }
+
+  // addMyCar appends, so the new record is the last one. Named by position
+  // rather than looked up, because findMyCarByCarId answers the FIRST record
+  // carrying this carId, which under "Add a copy" is the car being copied.
+  const added = res.state.cars[res.state.cars.length - 1];
+  const next = setActiveMyCar(res.state, added.id).state;
+  const wrote = saveMyCars(next);
+  if (!wrote.ok) {
+    // `next` is dropped rather than kept: myCars is left as it was, so the
+    // screen and the disk still agree, and the message is true when it says
+    // nothing was added.
+    sayMyCarsNote(addWriteFailedMessage(wrote.reason));
+    return;
+  }
+  myCars = next;
+
+  // The legacy name slot follows the active record, which is the rule
+  // switchToMyCar holds: customName is the last value carSummaryLabel and
+  // carNameForField consult, so leaving it on the car this one was copied from
+  // names the copy after it, on this paint and on every reload after it.
+  if (prefs.carId === CUSTOM_CAR_ID) {
+    prefs.customName = added.name;
+    savePrefs(prefs);
+  }
+
+  // The same repaint a switch does, because that is what this is: the active
+  // record has changed.
+  $("carName").textContent = carSummaryText(added, car);
+  writeDisplayValues();
+  renderMyCars();
+  render(); // a copy of an orphaned car carries no ceiling snapshot, so the estimate can move
+  // After the repaint, which clears the note. Same order removeActiveCar uses,
+  // and for the same reason: this live region is the whole of what a screen
+  // reader gets for either act.
+  sayMyCarsNote(addedMessage(chipBaseLabel(added, getCar)));
+
+  // A copy arrives carrying a name the app chose, so hand the user the field
+  // it is in: the panel is shut by default, and a suggestion nobody sees is a
+  // suggestion nobody edits. SELECTED, not appended to, so one keystroke
+  // replaces the whole thing rather than landing on the end of it.
+  if (copied) {
+    $("tweak").open = true;
+    $("carNickname").focus();
+    $("carNickname").select();
+  }
+}
+
+// What these two answer when nothing refused them, including when there was
+// nothing to refuse: a caller reads `.ok` to decide whether to speak, and a
+// write that never happened is not something to complain to the user about.
+const NO_REFUSAL = { ok: true, reason: "ok" };
 
 // The one writer of a car's numbers. Both stores are written here, from the
 // same inputs, in the same call. Keeping them in step is therefore not
@@ -446,16 +546,463 @@ function selectMyCar(carId, draft) {
 //
 // carOverrides goes first and unconditionally. It is the rollback, so it is
 // written exactly as it is today whether or not the cars layer can answer.
+//
+// Answers `{ ok, reason }` the way saveMyCars does, because the write can be
+// refused and the caller is the only thing that can say so.
 function saveCarNumbers(inputs) {
   prefs = applyCarEdit(prefs, prefs.carId, inputs);
   savePrefs(prefs);
 
   const saved = activeSavedCar();
-  if (!saved) return;
+  if (!saved) return NO_REFUSAL;
   const res = applyMyCarEdit(myCars, saved.id, inputs);
+  if (!res.ok) return NO_REFUSAL;
+  // THE WRITE DECIDES, the shape addCurrentCar and removeActiveCar already use.
+  const wrote = saveMyCars(res.state);
+  if (wrote.ok) myCars = res.state;
+  return wrote;
+}
+
+// The one writer of a car's NAME, the same shape saveCarNumbers uses for a
+// car's numbers: both stores written from one value in one call, so keeping
+// them in step is structural rather than remembered.
+//
+// THE SAVED RECORD IS THE SOURCE OF TRUTH. It is the only store that can hold
+// a name PER CAR; prefs.customName is one slot, so at two cars it can only
+// ever answer for one of them. That is why it is written second here and from
+// the record's own value rather than from the text: it is the rollback mirror,
+// the same role carOverrides plays for the numbers, and a mirror that
+// re-derives its value is a second source waiting to disagree.
+//
+// customName is written ONLY for the custom car, because that is the only car
+// it has ever described (migrateCars carries it into that car's name and no
+// other). A name typed on a Volt at two cars must not land in the slot that
+// answers for "My own car".
+//
+// With no saved record - a dead store, or the mismatch guard refusing to
+// answer - the text goes straight to customName and savePrefs narrows it,
+// which is exactly the single-car path that shipped before this feature.
+//
+// A REFUSED WRITE RETURNS WITHOUT MIRRORING. customName is the record's
+// rollback copy, so writing it over a record the disk would not take is the
+// divergence the mismatch rule exists to prevent.
+function saveCarName(text) {
+  const saved = activeSavedCar();
+  let name = text;
+  if (saved) {
+    const res = renameMyCar(myCars, saved.id, text);
+    if (res.ok) {
+      // THE WRITE DECIDES. The rename used to show on the chip and the heading
+      // over a disk that still held the old name, and was gone on reload.
+      const wrote = saveMyCars(res.state);
+      if (!wrote.ok) return wrote;
+      myCars = res.state;
+      name = activeMyCar(myCars)?.name ?? "";
+    }
+  }
+  if (prefs.carId === CUSTOM_CAR_ID) prefs.customName = name;
+  savePrefs(prefs);
+  return NO_REFUSAL;
+}
+
+// --- The saved-cars UI ------------------------------------------------------
+//
+// ONE PAINTER and ONE SWITCHER. Everything this feature shows is rebuilt by
+// renderMyCars - the note, the add link, the remove link, the name field and
+// the chip row - so a later call site cannot repaint four of the five and leave
+// the fifth stale. Every switch goes through switchToMyCar, so the
+// charger-inputs rule stated there has exactly one place to hold.
+
+// The status line under the picker. One writer, so "pick the car to add" and a
+// cap refusal cannot both be on screen at once saying different things.
+function sayMyCarsNote(text) {
+  $("myCarsNote").textContent = text;
+}
+
+function clearMyCarsNote() {
+  sayMyCarsNote("");
+}
+
+// What the name field shows: the active car's own name, because the record is
+// the source of truth for it at every car count. The rule is nameFieldValue in
+// myCarsUi.js; this binds it to the two pieces of module state it needs, and is
+// the only reader, so the two writers of the field both fill it from here.
+function carNameForField() {
+  return nameFieldValue(activeSavedCar(), prefs.carId === CUSTOM_CAR_ID, prefs.customName);
+}
+
+// Does the car on screen carry a name? Read through the same mismatch guard the
+// summary uses, so the field and the summary cannot disagree about whether
+// there is a name in play.
+function activeCarHasName() {
+  return Boolean(activeSavedCar()?.name?.trim());
+}
+
+// The two things that read a car's name, repainted together. The chips go
+// through the one painter rather than being reached into directly, so this does
+// not become a second place that knows how a chip is named.
+//
+// The field is skipped while the user is standing in it: a repaint may not take
+// back a keystroke, which is why writeDisplayValues stays the one
+// unconditional writer of it.
+function repaintCarName() {
+  $("carName").textContent = carSummaryText(activeSavedCar(), currentCar());
+  const field = $("carNickname");
+  if (document.activeElement !== field) field.value = carNameForField();
+  renderMyCars();
+}
+
+// saveCarName's two callers, which both repaint. The refusal is said AFTER that
+// repaint, because the repaint is what clears the note: the same order
+// addCurrentCar and removeActiveCar already use.
+function writeCarName(text) {
+  const wrote = saveCarName(text);
+  repaintCarName();
+  if (!wrote.ok) sayMyCarsNote(nameWriteFailedMessage(wrote.reason));
+}
+
+// What LEAVING the field does: an emptied name settles back on the car's default, and never on input.
+function settleCarName() {
+  const saved = activeSavedCar();
+  if (!saved || saved.name?.trim()) return;
+  writeCarName(defaultCarName(saved, getCar));
+}
+
+function renderMyCars() {
+  const cars = myCarsLive ? myCars.cars : [];
+  // Asked ONCE and fed to all four visibility rules. Whether the car on screen
+  // is in the list now decides four separate things, and four call sites each
+  // asking for themselves is four chances to answer differently within one
+  // repaint.
+  const saved = activeSavedCar();
+  const isSaved = Boolean(saved);
+
+  // Cleared on EVERY repaint, not only the ones that follow a selection. boot()
+  // paints on load and the name field repaints on every keystroke, and in both
+  // the note is already empty, so clearing it costs nothing. What the line is
+  // for is the other kind of repaint: a cap refusal from the previous
+  // interaction, still sitting next to a car tile that has moved on, reads as a
+  // live error. The two messages meant to outlive a repaint are the add and
+  // removal announcements, and both are said AFTER it for exactly this reason.
+  clearMyCarsNote();
+
+  // The add control follows the CAR, not the count: there has to be one on
+  // screen to add, and carTileSource is already the rule for whether there is.
+  // It stays visible at the cap, where a tap answers with atCapMessage.
+  const add = $("addCarBtn");
+  add.hidden = !showsAddControl(myCarsLive, carTileSource(prefs.carId, currentCar(), saved) !== "none");
+  add.textContent = addControlLabel(isSaved);
+
+  // Never an act with nothing selected. Hidden on the BUTTON, not on a wrapper
+  // around it: focusCarListAction skips a control by reading this exact flag,
+  // and a wrapper carrying it left the button's own flag false forever.
+  $("removeCarBtn").hidden = !showsRemoveLink(cars.length, isSaved);
+
+  // The name field is not the chrome's to hide. It was the custom car's alone
+  // before this feature, and it now also belongs to any car already carrying a
+  // name, at any count: see showsNameField for why a name the user cannot reach
+  // is worse than a field they do not need.
+  //
+  // The focus clause is the DOM half of that rule and stays here rather than in
+  // the pure one, because it is about a caret and not about a car. Clearing the
+  // last character of a name at one car makes showsNameField answer false on
+  // the very keystroke that did it, and a field that vanishes mid-edit takes
+  // the user's focus and their chance to type it again with it.
+  const naming = document.activeElement === $("carNickname");
+  $("nicknameField").hidden =
+    !naming && !showsNameField(cars.length, prefs.carId === CUSTOM_CAR_ID, activeCarHasName(), isSaved);
+
+  // On screen from the first saved car, whether or not the user is standing on
+  // one: it is what an add produces, and the way back to a deselected car.
+  const row = $("myCarsRow");
+  const chips = showsChipRow(cars.length);
+  row.hidden = !chips;
+  row.innerHTML = "";
+  if (!chips) return;
+
+  const activeId = checkedChipId(saved);
+  for (const chip of buildChips(cars, getCar)) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "preset my-cars__chip";
+    b.dataset.myCarId = chip.id;
+    b.setAttribute("role", "radio");
+    b.setAttribute("aria-checked", chip.id === activeId ? "true" : "false");
+    // The full year-make-model, with the visible text as its prefix so a
+    // voice-control user can say the words they can actually see.
+    b.setAttribute("aria-label", chip.accessibleName);
+    // Roving tabindex: the group is ONE tab stop, and Tab lands on the selected
+    // chip. A keyboard user passing through the page steps over the row, not
+    // over five buttons inside it.
+    b.tabIndex = chip.id === activeId ? 0 : -1;
+    const label = document.createElement("span");
+    label.className = "my-cars__chip-label";
+    label.textContent = chip.label;
+    b.appendChild(label);
+    row.appendChild(b);
+  }
+
+  // Nothing selected is a real state, not a broken one: the store answers null
+  // rather than choosing a car on the user's behalf, and checkedChipId answers
+  // the same when the two stores point at different cars. A group whose every
+  // chip is tabIndex -1 cannot be entered by Tab at all, so park the tab stop
+  // on the first chip and leave all of them unchecked.
+  if (!cars.some((c) => c.id === activeId)) {
+    const first = row.querySelector(".my-cars__chip");
+    if (first) first.tabIndex = 0;
+  }
+}
+
+function myCarChipEls() {
+  return [...$("myCarsRow").querySelectorAll(".my-cars__chip")];
+}
+
+// The car tile's collapsed summary. The rule is carSummaryLabel in myCarsUi.js,
+// where a test can reach it; this binds it to the one piece of module state it
+// needs, so every call site asks the same question with the same arguments and
+// none of them has to know that customName is still in the chain.
+//
+// The slot is handed over only for the CUSTOM car, because that is the only car
+// it has ever described. An orphan that carries no stored label used to reach
+// it too and come out wearing the custom car's name.
+function carSummaryText(saved, car) {
+  return carSummaryLabel(
+    saved,
+    car,
+    legacyNameSlot(prefs.carId === CUSTOM_CAR_ID, prefs.customName),
+  );
+}
+
+// Switch to a saved car.
+//
+// THE CHARGER INPUTS SURVIVE THIS, and that requirement is the entire reason
+// this function exists instead of a call to boot(). The energy rate, the
+// session fee, the time-of-use and duration rows, the fee and tax rows, the
+// rate mode and the "charge for" slider all describe the CHARGER the user is
+// standing at, not the car they are standing next to. Switching cars must leave
+// every one of them exactly where it was.
+//
+// What makes that true is the narrowness of what this writes: prefs.carId, the
+// three fields in CAR_EDIT_FIELDS, and customName for a custom car.
+// writeDisplayValues then repaints the whole form from prefs, which is safe
+// precisely because no charger value in prefs was touched. The charger state
+// that is NOT in prefs (the schedule rows, the tier rows, the slider, the rate
+// mode) lives in the DOM and in module variables and is never rebuilt here.
+//
+// boot() DOES rebuild all of it, which is why this is not a call to boot():
+// doing so would empty a time-of-use schedule the user had just typed in, at
+// the exact moment they were comparing two cars against it.
+function switchToMyCar(id) {
+  if (!myCarsLive) return;
+  const res = setActiveMyCar(myCars, id);
   if (!res.ok) return;
   myCars = res.state;
   saveMyCars(myCars);
+
+  const saved = activeMyCar(myCars);
+  if (!saved) return;
+
+  const car = saved.carId && saved.carId !== CUSTOM_CAR_ID ? getCar(saved.carId) : null;
+  if (car) {
+    prefs = applyCarSelection(prefs, car);
+    $("carSearch").value = carLabel(car);
+  } else {
+    // A custom car, or one whose carId the dataset no longer has. Either way
+    // there is no row to fill from, so the saved numbers below are all there is.
+    prefs.carId = saved.carId || CUSTOM_CAR_ID;
+    // Kept in step with the legacy field for the rollback window, the same way
+    // saveCarNumbers writes both stores from one call.
+    if (prefs.carId === CUSTOM_CAR_ID) prefs.customName = saved.name || "";
+    $("carSearch").value = saved.carId === CUSTOM_CAR_ID ? "My own car" : (saved.label || "");
+  }
+  prefs = { ...prefs, ...savedCarNumbers(saved, getCar) };
+  savePrefs(prefs);
+
+  $("carName").textContent = carSummaryText(saved, car);
+  // Deliberately NOT touching $("tweak").open or $("carTile").open. Switching is
+  // not picking: the user is comparing two cars they already saved, and folding
+  // the panel they are reading out from under them is not a help.
+  writeDisplayValues();
+  renderMyCars();
+  render();
+}
+
+// --- Removing a car ---------------------------------------------------------
+//
+// ASKED FIRST, and in a modal. A removal throws away the numbers the user typed
+// for that car and nothing in the app puts them back.
+//
+// showModal() brings the focus trap, Escape, the backdrop and the focus restore
+// with it, and it swallows the second press of a double tap.
+
+// Drop the legacy per-car override for a removed car, keeping the two stores in
+// step the same way saveCarNumbers does on the way in.
+//
+// Only once NO saved car points at that dataset row any more. Two saved cars
+// may share a carId, which is the whole point of adding a second of one model,
+// and clearing on the first removal would take the survivor's numbers with it.
+function forgetCarOverride(carId) {
+  const all = prefs.carOverrides;
+  if (!carId || !all || typeof all !== "object" || !(carId in all)) return;
+  if (myCars.cars.some((c) => c.carId === carId)) return;
+  const rest = { ...all };
+  delete rest[carId];
+  prefs = { ...prefs, carOverrides: rest };
+  savePrefs(prefs);
+}
+
+// Removing the LAST car puts the app back on the screen a first-time visitor
+// gets, by clearing the car-shaped prefs and running the same boot() the reset
+// button ends on. Anything less leaves "Select your car" next to a battery size
+// and an MPG the user can no longer see a car for.
+//
+// The charger is deliberately untouched, which is where this parts company with
+// "Reset everything". The rate, the fees, the tax and the schedule rows describe
+// the charger the user is standing at, and they were standing at it a moment
+// ago. boot() rebuilds the car tile and the display values only; the rows live
+// in the DOM and the rate mode in a module variable, and the reset button
+// clears those itself, ahead of the call, precisely because boot does not.
+function resetToFirstRunCar() {
+  const d = defaultPrefs();
+  prefs = {
+    ...prefs,
+    carId: d.carId, customName: d.customName,
+    mpg: d.mpg, miPerKwh: d.miPerKwh, batteryKwh: d.batteryKwh,
+  };
+  savePrefs(prefs);
+  boot();
+}
+
+// Where focus goes once a removal has repainted the tile. The dialog hands
+// focus back to the control that opened it, and a removal can take that control
+// off the screen: at one car left the chrome rule hides it. Letting focus fall
+// to <body> loses a keyboard user their place at the one moment they most need
+// the list sitting next to it.
+//
+// The nearest surviving list action, preferring the one the user just pressed,
+// and deliberately not a chip: the note that announces the removal sits
+// directly below these two, and the chip row sits above the picker.
+function focusCarListAction() {
+  const at = [$("removeCarBtn"), $("addCarBtn")].find((el) => !el.hidden);
+  // Nothing left of this feature on screen means the list is empty, and a
+  // first-run screen has one thing to do on it.
+  (at ?? $("carSearch")).focus();
+}
+
+// Which car the open question is about, pinned when it is asked and checked
+// again before it is acted on. Another tab removing this car re-points the
+// selection while the modal is open, so re-finding the ACTIVE car on the way
+// back would remove a different car than the one the question named.
+let removingCarId = null;
+
+// Ask. Only the id and the name are taken; everything else is re-read when the
+// answer comes back.
+function askRemoveCar() {
+  if (!myCarsLive) return;
+  const saved = activeMyCar(myCars);
+  if (!saved) return;
+
+  const dlg = $("removeCarDialog");
+  if (dlg.open) return;
+  removingCarId = saved.id;
+  // The chip's words, suffix and all. The full year-make-model would name the
+  // car that is about to survive whenever two records share a model.
+  $("removeCarPrompt").textContent = removeConfirmQuestion(chipLabelFor(myCars.cars, saved.id, getCar));
+  // Cleared rather than trusted: not every engine resets it on show.
+  dlg.returnValue = "";
+  dlg.showModal();
+}
+
+function removeActiveCar() {
+  if (!myCarsLive) return;
+  // THE CAR THE QUESTION NAMED, and it may be gone: another tab can remove it
+  // while the modal is open.
+  const saved = myCars.cars.find((c) => c.id === removingCarId) ?? null;
+  if (!saved) return;
+
+  // Read BEFORE the removal, because a moment later there is no record left to
+  // build the announcement from.
+  const label = chipBaseLabel(saved, getCar);
+
+  const res = removeMyCar(myCars, saved.id);
+  if (!res.ok) return;
+
+  // THE WRITE DECIDES, not the list operation, which is the shape addCurrentCar
+  // already uses one function away. saveMyCars refuses when storage is
+  // unavailable or a newer build's payload is on disk, and the return used to
+  // be discarded over an already-mutated myCars: the chip vanished, the note
+  // said the car was gone, the disk still held it, and the next reload brought
+  // it back. On a shared device that sentence is a false assurance that data
+  // was deleted. `res.state` is dropped rather than kept, so the screen and the
+  // disk still agree about what is saved.
+  const wrote = saveMyCars(res.state);
+  if (!wrote.ok) {
+    sayMyCarsNote(removeWriteFailedMessage(wrote.reason));
+    return;
+  }
+  myCars = res.state;
+  // Only once the removal is real. The legacy override is the rollback, so
+  // clearing it for a car that is still on disk would take that car's numbers
+  // with it and leave nothing to roll back to.
+  forgetCarOverride(saved.carId);
+
+  // The successor is READ BACK, not chosen here: removeMyCar owns which car is
+  // selected after a removal, and a second opinion at this call site would
+  // drift from it the first time either one changed.
+  const next = activeMyCar(myCars);
+  if (next) switchToMyCar(next.id);
+  else resetToFirstRunCar();
+
+  // After the repaint, which clears the note. The chip row vanishing is not
+  // feedback a screen reader gets, so this line is the whole of what it hears.
+  sayMyCarsNote(removedMessage(label));
+  focusCarListAction();
+}
+
+// --- Two tabs ---------------------------------------------------------------
+//
+// Every tab holds the whole list in memory and saveMyCars writes all of it, so
+// a tab that has not read the disk since another tab wrote to it saves that
+// tab's cars away on its next ordinary act: a rename in a stale tab silently
+// destroyed a car added in a fresh one, and an open remove question answered in
+// a stale tab took two cars instead of the one it named.
+//
+// ONE function, reached from both triggers. Two implementations of "reload from
+// disk" is the same two-writers defect one layer up.
+
+// Re-read the store and repaint. A READ, and that is the contract: a write from
+// here would fire a `storage` event in the tab that caused the refresh, and two
+// tabs answering each other's writes never stop.
+//
+// It repaints the LIST and the two places the active car is NAMED, and nothing
+// else. The number fields are deliberately left alone: they hold what this
+// tab's user is editing, this tab is their last writer, and repainting them
+// would refill a field cleared mid-edit with the value that was just deleted.
+// A cross-tab edit of the same car's numbers is therefore last-write-wins per
+// field, which is a keystroke, where this defect was a whole car.
+function refreshMyCarsFromStore() {
+  if (!myCarsLive) return;
+
+  // Read against the OLD list, which is the only one that still holds the car
+  // if this refresh is the one that takes it away.
+  const dlg = $("removeCarDialog");
+  const asked = dlg.open ? chipLabelFor(myCars.cars, removingCarId, getCar) : "";
+
+  myCars = namedState(refreshMyCars(myCars.activeId));
+
+  // The question named a car that is now gone. Closed rather than re-pointed:
+  // an answer given about one car must not be spent on another.
+  const questionGone = dlg.open && !myCars.cars.some((c) => c.id === removingCarId);
+  if (questionGone) dlg.close("");
+
+  repaintCarName();
+
+  // After the repaint, which clears the note, and focus after that: close()
+  // hands it back to a control the repaint above may have just hidden.
+  if (questionGone) {
+    sayMyCarsNote(removeGoneMessage(asked));
+    focusCarListAction();
+  }
 }
 
 // What the estimate caps against: a car-shaped carrier whose chargeKw is the
@@ -658,13 +1205,13 @@ function writeDisplayValues() {
   // Prices show at up to 6 decimals (trailing zeros trimmed) so switching
   // currency/units or picking a car never rounds away what the user typed
   // (e.g. 3.899, 0.257). Results are still rounded to 2 dp by money().
-  $("gasPrice").value = round(U.gasPriceForDisplay(prefs.gasPrice, s), 6);
-  $("yourRate").value = round(prefs.yourRate, 6);
-  $("mpg").value = round(U.economyForDisplay(prefs.mpg, s), 2);
-  $("miPerKwh").value = round(U.efficiencyForDisplay(prefs.miPerKwh, s), 2);
-  $("batteryKwh").value = round(prefs.batteryKwh, 2);
-  $("sessionFee").value = round(prefs.sessionFee, 2);
-  $("powerKw").value = round(prefs.powerKw, 2);
+  paint("gasPrice", U.gasPriceForDisplay(prefs.gasPrice, s), 6, prefs.gasPrice);
+  paint("yourRate", prefs.yourRate, 6);
+  paint("mpg", U.economyForDisplay(prefs.mpg, s), 2, prefs.mpg);
+  paint("miPerKwh", U.efficiencyForDisplay(prefs.miPerKwh, s), 2, prefs.miPerKwh);
+  paint("batteryKwh", prefs.batteryKwh, 2);
+  paint("sessionFee", prefs.sessionFee, 2);
+  paint("powerKw", prefs.powerKw, 2);
   $("startPct").value = prefs.startPct;
   $("targetPct").value = prefs.targetPct;
   // Keep the invariant even if a stored/edge value has start > target.
@@ -673,7 +1220,7 @@ function writeDisplayValues() {
   }
   $("startPctOut").textContent = `${$("startPct").value}%`;
   $("targetPctOut").textContent = `${$("targetPct").value}%`;
-  $("carNickname").value = prefs.customName || "";
+  $("carNickname").value = carNameForField();
   for (const id of ["curSym1", "curSym2", "curSym3"]) $(id).textContent = prefs.currency;
   // Dynamic pricing rows bake the symbol in at creation; refresh them too on a currency change.
   for (const el of document.querySelectorAll("#touRows .input-money__sym, #durRows .input-money__sym, #timeFeeRows .input-money__sym")) {
@@ -687,6 +1234,17 @@ function round(n, d) {
   if (!Number.isFinite(n)) return "";
   const f = Math.pow(10, d);
   return String(Math.round(n * f) / f);
+}
+
+// What each field was last painted with: { text, value }, read back by
+// readInputs to tell an untouched field from a typed one.
+const painted = new Map();
+
+// Write one value into its field, remembering the canonical value behind it.
+function paint(id, display, digits, canonical = display) {
+  const text = round(display, digits);
+  $(id).value = text;
+  painted.set(id, { text, value: canonical });
 }
 
 // --- Time-of-day helpers ---
@@ -820,19 +1378,22 @@ function setCar(car) {
   // applyCarSelection owns which fields a car fills in, and which it must leave
   // alone, powerKw above all.
   prefs = applyCarSelection(prefs, car);
-  // The saved record for this car becomes the active one, and its numbers are
-  // what the fields show. With nothing saved yet the two answer the same thing:
-  // a freshly added record carries no numbers of its own and inherits the same
-  // dataset row applyCarSelection just read, so the first pick of a car is
-  // indistinguishable from the behavior that shipped before this store existed.
-  const saved = selectMyCar(car.id, { label: carLabel(car) });
+  // Picking SHOWS this car. The record becomes the active one if the user has
+  // already saved this car, and nothing is selected if they have not, so the
+  // numbers below come from the record when there is one and from the dataset
+  // row applyCarSelection just read when there is not. Growing the list is
+  // addCurrentCar's job and no part of this one.
+  const saved = selectMyCar(car.id);
   if (saved) prefs = { ...prefs, ...savedCarNumbers(saved, getCar) };
   savePrefs(prefs);
-  $("carName").textContent = `${car.make} ${car.model}`;
+  $("carName").textContent = carSummaryText(saved, car);
   $("carSearch").value = carLabel(car);
-  $("nicknameField").hidden = true;
   $("tweak").open = false;
   writeDisplayValues();
+  // renderMyCars owns nicknameField.hidden now, so the assignment that used to
+  // sit here is gone rather than duplicated: two writers of one flag is how the
+  // field ends up visible for a car that has no name to put in it.
+  renderMyCars();
   render();
 }
 
@@ -848,7 +1409,7 @@ function setCustomCar() {
   // That is the same silence carOverrides gives in the same situation, which is
   // what makes swapping the source here invisible. The override stays the
   // fallback for a selection the store could not represent.
-  const saved = selectMyCar(CUSTOM_CAR_ID, { name: prefs.customName });
+  const saved = selectMyCar(CUSTOM_CAR_ID);
   const ov = saved ? savedCarNumbers(saved, getCar) : (prefs.carOverrides ? prefs.carOverrides[CUSTOM_CAR_ID] : null);
   if (ov) {
     if (Number.isFinite(ov.mpg)) prefs.mpg = ov.mpg;
@@ -856,12 +1417,12 @@ function setCustomCar() {
     if (Number.isFinite(ov.batteryKwh)) prefs.batteryKwh = ov.batteryKwh;
   }
   savePrefs(prefs);
-  $("carName").textContent = prefs.customName || "My car";
+  $("carName").textContent = carSummaryText(saved, null);
   $("carSearch").value = "My own car";
-  $("nicknameField").hidden = false;
   $("tweak").open = true;
   $("carTile").open = true;
   writeDisplayValues();
+  renderMyCars(); // reveals nicknameField: a custom car always gets a name field
   render();
   $("mpg").focus();
 }
@@ -932,6 +1493,20 @@ function setCarActive(index) {
   active.scrollIntoView({ block: "nearest" });
 }
 
+// The add and remove controls, moved out of the open list's way. Hidden rather
+// than disabled, because [hidden] takes the row out of the tab order too;
+// showsCarListActions is the rule and says why.
+//
+// The row is the only thing written here. The two controls inside it keep their
+// own flags, and renderMyCars stays the only writer of those.
+function paintCarListActions(listOpen) {
+  const row = $("myCarsActions");
+  // Focus cannot be left standing on a row that is about to be display:none.
+  // The search field is where it goes because the open list belongs to it.
+  if (listOpen && row.contains(document.activeElement)) $("carSearch").focus();
+  row.hidden = !showsCarListActions(listOpen);
+}
+
 function renderCarResults(query) {
   const ul = $("carResults");
   ul.innerHTML = "";
@@ -976,6 +1551,7 @@ function renderCarResults(query) {
 
   ul.hidden = false;
   $("carSearch").setAttribute("aria-expanded", "true");
+  paintCarListActions(true);
   // The rows underneath just changed, so any previously active one is gone.
   setCarActive(-1);
 }
@@ -983,10 +1559,11 @@ function renderCarResults(query) {
 function hideCarResults() {
   $("carResults").hidden = true;
   $("carSearch").setAttribute("aria-expanded", "false");
+  paintCarListActions(false);
   // Every row is still in the DOM here; renderCarResults is what replaces them.
-  // This clears because the listbox is hidden as of the line above, and an
-  // active option inside a hidden listbox points a screen reader at a row the
-  // user can no longer see or move to.
+  // This clears because the listbox is hidden as of the top of this function,
+  // and an active option inside a hidden listbox points a screen reader at a
+  // row the user can no longer see or move to.
   $("carSearch").removeAttribute("aria-activedescendant");
   carActiveIndex = -1;
   // Whatever the field reads now is the baseline the next search starts from,
@@ -1029,7 +1606,8 @@ function attachEvents() {
   for (const id of CAR_EDIT_FIELDS) {
     $(id).addEventListener("input", () => {
       if (!prefs.carId) return;
-      saveCarNumbers(readInputs());
+      const wrote = saveCarNumbers(readInputs());
+      if (!wrote.ok) sayMyCarsNote(numbersWriteFailedMessage(wrote.reason));
     });
   }
 
@@ -1180,7 +1758,7 @@ function attachEvents() {
     // value here would flow through readInputs into m.powerKw and on into
     // storage, where it would outlive the car that produced it and shorten the
     // next car's estimate. The ceiling belongs at chargeDrawKw in render().
-    $("powerKw").value = round(parseNum(btn.dataset.kw), 2);
+    paint("powerKw", parseNum(btn.dataset.kw), 2);
     render();
   });
 
@@ -1294,6 +1872,7 @@ function attachEvents() {
   wireInfo("timeFeeInfoBtn", "timeFeeInfoNote");
   wireInfo("taxInfoBtn", "taxInfoNote");
 
+  // Bookkeeping only: opening here hid the actions row for a Tab passing through.
   $("carSearch").addEventListener("focus", (e) => {
     track("car-search-focused"); // diagnostic: did they engage the first step at all?
     // A close still pending from a blur belongs to a blur this focus just undid.
@@ -1305,7 +1884,12 @@ function attachEvents() {
     // so first focus is the only chance to bank that label before the list opens.
     carRestoreValue = e.target.value;
     e.target.select();
-    renderCarResults(e.target.value === "My own car" ? "" : e.target.value);
+  });
+
+  // Click, type or arrow to open. A click is the mouse half of what focus used
+  // to do, and it fires on tap too, so nothing is lost on a phone.
+  $("carSearch").addEventListener("click", (e) => {
+    if ($("carResults").hidden) renderCarResults(pickerOpenQuery(e.target.value));
   });
   $("carSearch").addEventListener("input", (e) => renderCarResults(e.target.value));
   // Deferred so a mousedown on a row lands before the list goes away.
@@ -1340,7 +1924,7 @@ function attachEvents() {
     const closed = $("carResults").hidden;
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault(); // otherwise the caret jumps to one end of the text
-      if (closed) renderCarResults(e.target.value === "My own car" ? "" : e.target.value);
+      if (closed) renderCarResults(pickerOpenQuery(e.target.value));
       setCarActive(nextOptionIndex(carActiveIndex, carOptionEls().length, e.key));
     } else if (e.key === "Enter") {
       const action = enterAction(!closed, carActiveIndex);
@@ -1361,12 +1945,114 @@ function attachEvents() {
     // they belong to the caret in the text field, not to the list.
   });
 
+  // The name field writes through writeCarName, which saves, repaints the two
+  // things that read a car's name, and says so when the disk refused. It never
+  // assigns $("carNickname").value: the user owns that field while they are
+  // typing in it. writeDisplayValues is the one unconditional writer of it;
+  // repaintCarName is the other, and skips the field entirely while it has
+  // focus.
   $("carNickname").addEventListener("input", (e) => {
-    prefs.customName = e.target.value.trim();
-    savePrefs(prefs);
-    if (prefs.carId === CUSTOM_CAR_ID) {
-      $("carName").textContent = prefs.customName || "My car";
-    }
+    writeCarName(e.target.value);
+  });
+
+  // Not on input: a field that refilled under the caret could not be cleared.
+  $("carNickname").addEventListener("blur", settleCarName);
+
+  // Enter does not blur a bare text input, so it commits in place instead of leaving the name empty.
+  $("carNickname").addEventListener("keydown", (e) => {
+    // Mid-composition an Enter belongs to the IME, and overwriting the field would take the candidate with it.
+    if (e.key !== "Enter" || e.isComposing) return;
+    settleCarName();
+    // The field is skipped by the repaint while it has focus, which is the whole reason Enter has to fill it.
+    $("carNickname").value = carNameForField();
+  });
+
+  // --- Adding a car ---------------------------------------------------------
+  //
+  // The ONE gesture that grows the list. Picking from the typeahead shows a
+  // car; this is what puts one in your cars, which is why the label reads "Add
+  // this car" and never "Save": the numbers were already saved as they were
+  // typed, and a save button beside them would say otherwise.
+  $("addCarBtn").addEventListener("click", addCurrentCar);
+
+  // --- Removing a car -------------------------------------------------------
+  //
+  // The control opens the question; the dialog's own close is what answers it.
+  // Routing the act through `close` rather than through the Remove button's
+  // click is what makes Escape and "Keep it" one path instead of two.
+  $("removeCarBtn").addEventListener("click", askRemoveCar);
+
+  $("removeCarDialog").addEventListener("close", (e) => {
+    if (e.target.returnValue !== "remove") return;
+    removeActiveCar();
+  });
+
+  // --- The chip row ---------------------------------------------------------
+  //
+  // Delegated, because renderMyCars replaces every chip on each repaint and a
+  // listener bound to a button would go with it.
+  $("myCarsRow").addEventListener("click", (e) => {
+    const chip = e.target.closest(".my-cars__chip");
+    if (!chip) return;
+    // The picker closes here rather than being left to the deferred blur. The
+    // switch rewrites the field a line below, so a list still showing hits for
+    // the old query is a list that no longer answers to what the field says,
+    // and the blur close is not a close this gesture can rely on: a chip that
+    // takes no focus never fires one, and the list then stays open for good.
+    //
+    // Closing AFTER the switch is what banks the right Escape value, since
+    // hideCarResults samples the field on its way out and the field is not
+    // settled until the switch has written to it.
+    clearTimeout(carBlurTimer); // the blur this click caused; its close is now redundant
+    switchToMyCar(chip.dataset.myCarId);
+    hideCarResults();
+  });
+
+  // Arrows MOVE AND SELECT, which is the radiogroup default and the right
+  // behavior here: there are at most five cars, the switch is instant and fully
+  // visible, and a two-step "arrow to it, then press Space" would make the
+  // keyboard path slower than the tap it mirrors. Home and End jump to the
+  // ends, which the combobox next to it deliberately does not do, because there
+  // the two keys belong to the caret in the text field.
+  $("myCarsRow").addEventListener("keydown", (e) => {
+    const chips = myCarChipEls();
+    const at = chips.indexOf(document.activeElement);
+    if (at < 0) return; // a key that arrived on the container, not on a chip
+    const next = nextChipIndex(at, chips.length, e.key);
+    if (next === at || next < 0) return;
+    e.preventDefault(); // Left/Right would otherwise scroll the page sideways
+    switchToMyCar(chips[next].dataset.myCarId);
+    // The row was rebuilt by the switch, so the element just focused is gone.
+    // Re-find by position: list order is stable across a repaint, only the
+    // nodes are new.
+    myCarChipEls()[next]?.focus();
+  });
+
+  // --- Two tabs -------------------------------------------------------------
+  //
+  // Both triggers run the same read, for two different failure modes.
+  //
+  // `storage` is the live one and fires only at the OTHER tabs, which is what
+  // keeps this off the write path. A null key means the whole store was
+  // cleared, so it is ours too.
+  //
+  // ONLY the cars key. sicc.prefs.v1 is written by render(), which is every
+  // keystroke, and render() is also what a prefs refresh would have to call to
+  // be worth anything: that is a write answering a write, in both directions,
+  // forever. Prefs also holds the CHARGER the user is standing at, and pulling
+  // another tab's rate and fees into this one is the rug-pull switchToMyCar
+  // exists to avoid.
+  window.addEventListener("storage", (e) => {
+    if (e.key !== null && e.key !== CARS_KEY) return;
+    refreshMyCarsFromStore();
+  });
+
+  // And the backstop, because a background tab can be frozen with its `storage`
+  // events dropped, and because people switch between tabs rather than watching
+  // two at once. Its own listener rather than a clause inside the theme one: a
+  // handler named for re-resolving a theme is not where a car store belongs.
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) refreshMyCarsFromStore();
   });
 
   // track() dedupes per session, so this counts visits that reached out, not clicks.
@@ -1414,27 +2100,52 @@ function boot() {
   applyUnitLabels();
   const maxLen = maxLabelLength();
   if (maxLen) $("carSearch").maxLength = maxLen;
-  if (prefs.carId === CUSTOM_CAR_ID) {
-    $("carName").textContent = prefs.customName || "My car";
+  // The summary is carSummaryText's to write here as everywhere else. Spelling
+  // out `${car.make} ${car.model}` in a branch below is what made a named car
+  // come back from a reload under a name the user never gave it: boot is the
+  // one moment a saved name has to survive, and it was the one writer that did
+  // not ask. null wherever there is no dataset row, because a custom or
+  // orphaned car HAS none, not because the lookup failed.
+  //
+  // WHICH branch is carTileSource's to decide, for the same reason the naming
+  // is carSummaryLabel's: this used to be a dataset lookup and an else, so a
+  // carId the dataset had dropped landed on the empty state with the user's own
+  // record sitting right there holding its name.
+  const car = prefs.carId && prefs.carId !== CUSTOM_CAR_ID ? getCar(prefs.carId) : null;
+  const saved = activeSavedCar();
+  const source = carTileSource(prefs.carId, car, saved);
+  if (source === "custom") {
+    $("carName").textContent = carSummaryText(saved, null);
     $("carSearch").value = "My own car";
-    $("nicknameField").hidden = false;
     $("tweak").open = true;
+  } else if (source === "dataset") {
+    $("carName").textContent = carSummaryText(saved, car);
+    $("carSearch").value = carLabel(car);
+    $("tweak").open = false;
+  } else if (source === "orphan") {
+    // The dataset no longer lists this car; the store still holds the record,
+    // and the numbers on screen are that record's. Painted the way a switch to
+    // this same car paints it, because a reload is not a different event:
+    // switchToMyCar's no-row branch is the one definition of what an orphan
+    // looks like, and this reads the same two fields it does.
+    //
+    // The picker is NOT forced open the way the empty state forces it. That
+    // nudge is for a user with no car, and this user has one.
+    $("carName").textContent = carSummaryText(saved, null);
+    $("carSearch").value = saved.label || "";
+    $("tweak").open = false;
   } else {
-    const car = getCar(prefs.carId);
-    if (car) {
-      $("carName").textContent = `${car.make} ${car.model}`;
-      $("carSearch").value = carLabel(car);
-      $("tweak").open = false;
-    } else {
-      // Clean slate - nudge the user to pick a car.
-      $("carName").textContent = "Select your car";
-      $("carSearch").value = "";
-      $("carTile").open = true;
-      $("tweak").open = false;
-    }
-    $("nicknameField").hidden = true;
+    // Clean slate - nudge the user to pick a car. Not routed: there is no car
+    // here to summarize, so this is a different sentence, not a fallback.
+    $("carName").textContent = "Select your car";
+    $("carSearch").value = "";
+    $("carTile").open = true;
+    $("tweak").open = false;
   }
+  // The record wins over prefs here: the prefs mirror holds one slot per MODEL.
+  if (saved) prefs = { ...prefs, ...savedCarNumbers(saved, getCar) };
   writeDisplayValues();
+  renderMyCars();
   applyRateMode();
   render();
 }
@@ -1455,10 +2166,13 @@ function boot() {
 // Every request appends ?__vcheck=1 so the service worker passes it straight to
 // the network (see service-worker.js) - never cached, never stale.
 const UPDATE_CHECK_INTERVAL_MS = 15 * 60 * 1000; // re-check every 15 min while open
+// EVERY module main.js reaches belongs here, or a release that only touched the
+// missing one raises no toast. test/assets.test.mjs pins this list.
 const UPDATE_FINGERPRINT_ASSETS = [
   "./index.html", "./css/styles.css",
   "./js/main.js", "./js/calc.js", "./js/units.js", "./js/storage.js",
-  "./js/cars.js", "./js/ui.js", "./js/theme.js", "./js/analytics.js",
+  "./js/cars.js", "./js/myCars.js", "./js/myCarsUi.js", "./js/ui.js",
+  "./js/theme.js", "./js/analytics.js", "./js/editorRows.js", "./js/dropdown.js",
   "./data/phevs.json",
 ];
 

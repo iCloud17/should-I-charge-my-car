@@ -106,19 +106,67 @@ export function loadPrefs() {
 const UNIT_SYSTEM_IDS = ["imperial", "uk", "metric", "kmL"];
 
 // Text caps. The longest id in the bundled dataset is 59 characters, so 128 is
-// slack rather than a tight fit. 40 matches the nickname input's maxlength,
-// which is only a DOM hint and a tampered store walks straight past it.
+// slack rather than a tight fit. 64 is what a car's NAME now has to hold: every
+// saved car is named after its make and model unless the user says otherwise,
+// the longest of those in the bundled dataset is 56 characters, and a copy's
+// " 2" still fits inside the cap. It is also myCars.js's MAX_LABEL_LEN, which
+// holds the same kind of string, so the two figures agree rather than differ by
+// an accident of history. The input's maxlength mirrors this and is only a DOM
+// hint: a tampered store walks straight past it, so storage enforces it too.
 //
 // Both are exported because a saved car holds the same two quantities: a
 // dataset id, and the user's name for the car. Same quantity, same cap.
 export const MAX_CAR_ID_LEN = 128;
-export const MAX_CUSTOM_NAME_LEN = 40;
+export const MAX_CUSTOM_NAME_LEN = 64;
 
 // C0 and C1 control characters survive JSON and reach the page through
 // textContent and input values, where they render as nothing or as broken
 // layout. Stripped rather than rejected, so one stray byte costs a character
 // instead of the whole nickname.
 const CONTROL_CHARS = /[\u0000-\u001F\u007F-\u009F]/g;
+
+// Lazy and guarded: at module scope this threw on older engines and took the whole app down with it.
+let graphemes;
+function segmenter() {
+  // Attempted once and the failure cached: a constructor that EXISTS and throws is as fatal here as a missing one.
+  if (graphemes === undefined) {
+    try {
+      graphemes = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+    } catch {
+      graphemes = null;
+    }
+  }
+  return graphemes;
+}
+
+// Whole characters where the engine can segment, code points where it cannot: neither splits a pair.
+function* clippablePieces(s) {
+  const seg = segmenter();
+  if (!seg) yield* s;
+  else for (const { segment } of seg.segment(s)) yield segment;
+}
+
+// The longest prefix of `s` that fits in `max` UTF-16 units, cut between whole
+// characters. The cap counts units and a character can be several of them, so
+// slicing to it cuts inside one: 63 letters then an emoji stored a name ending
+// in half a surrogate pair, which paints as a glyph the user cannot delete and
+// throws a URIError out of encodeURIComponent.
+//
+// It lives at the BOTTOM of the chain rather than beside the copy-name path in
+// myCarsUi.js that had it first, because cleanText is the write every stored
+// name goes through and that path is one optional caller on top of it. Leaving
+// the strong rule in the optional place is the defect shape named below, with
+// the weaker site defining the contract.
+export function clipWholeCharacters(s, max) {
+  if (max <= 0) return "";
+  if (s.length <= max) return s;
+  let out = "";
+  for (const piece of clippablePieces(s)) {
+    if (out.length + piece.length > max) break;
+    out += piece;
+  }
+  return out;
+}
 
 // Exported so a second store can BUILD ON this rule instead of restating it.
 // Two sanitizers applying different rules to one quantity is this project's
@@ -127,19 +175,33 @@ const CONTROL_CHARS = /[\u0000-\u001F\u007F-\u009F]/g;
 // stripping on top of a cleanText call rather than writing its own.
 export function cleanText(v, max) {
   if (typeof v !== "string") return undefined;
-  return v.replace(CONTROL_CHARS, "").trim().slice(0, max);
+  return clipWholeCharacters(v.replace(CONTROL_CHARS, "").trim(), max);
 }
 
-// A quantity the app divides by, prices against, or charges into. Zero is
-// rejected along with the rest: a zero battery, economy or gas price is not a
-// setting anyone means, and it propagates as a division by zero or as a verdict
-// with nothing behind it.
+// Above this nothing is a real economy, battery, price or kW, and the 2 dp display rounding overflows.
+export const MAX_STORED_NUMBER = 1e6;
+
+// Below this nothing is a real one either, and the 2 dp display rounding paints
+// it as 0. The reciprocal of the ceiling, because the absurdity is symmetric
+// and one decade pair is easier to hold than two unrelated figures.
+export const MIN_STORED_NUMBER = 1e-6;
+
+// A quantity the app divides by, prices against, or charges into. BOUNDED AT
+// BOTH ENDS, and DROPPED rather than clamped to either: clamping hands back a
+// number the user never chose, and the next render reads it out of the field
+// and saves it.
+//
+// The floor subsumes the old "above zero" test and covers what that test let
+// through. A zero battery, economy or gas price is not a setting anyone means,
+// and neither is 1e-308: it is finite and above zero, so it stored happily,
+// painted as "0" in the mpg and battery fields, hid the charge time, blanked
+// the verdict, and propagated into sicc.prefs.v1.
 //
 // Exported for the same reason as cleanText: the saved-car numbers are the same
 // quantities as the top-level mirrors and the per-car overrides, so they get the
 // same predicate rather than a second one that agrees by inspection.
 export function positiveNumber(v) {
-  return Number.isFinite(v) && v > 0 ? v : undefined;
+  return Number.isFinite(v) && v >= MIN_STORED_NUMBER && v <= MAX_STORED_NUMBER ? v : undefined;
 }
 
 // One rule per persisted key. A rule returns the value to use, or undefined to
@@ -365,12 +427,24 @@ export function applyCarSelection(prefs, car) {
   };
 }
 
+// Held to the same PREF_RULES bound the next load applies, so a value the store
+// would drop never becomes the session's setting. Non-finite passes through: a
+// blank field is not an out-of-range number.
+const typedNumber = (k, v) => (Number.isFinite(v) ? PREF_RULES[k](v) ?? DEFAULT_PREFS[k] : v);
+
 // Fold one render pass's canonical model values back into prefs, giving exactly
 // the object that gets saved.
 //
-// powerKw is stored EXACTLY as the user typed it. The car's onboard cap is
-// applied downstream, where the number is used; a capped value must never reach
-// this function, or the cap ratchets into storage and outlives the car.
+// The five persisted numbers are gated here against the rule the next load will
+// apply, so nothing is accepted for the session and dropped by morning. Refused
+// rather than clamped, for the reason PREF_RULES gives. Per-key rather than a
+// loop, because sessionFee and the percentages are legitimately 0 and yourRate
+// is not persisted, so none of them has a rule to be held to.
+//
+// powerKw is stored EXACTLY as the user typed it, within its own rule's bound.
+// The car's onboard cap is applied downstream, where the number is used; a
+// capped value must never reach this function, or the cap ratchets into storage
+// and outlives the car.
 //
 // startPct and targetPct are still folded in, and they are NOT persisted - the
 // two facts fit together because this returns the live prefs as well as the
@@ -382,13 +456,13 @@ export function applyCarSelection(prefs, car) {
 export function persistableFrom(prefs, m) {
   return {
     ...prefs,
-    gasPrice: m.gasPrice,
+    gasPrice: typedNumber("gasPrice", m.gasPrice),
     yourRate: m.yourRate,
-    mpg: m.mpg,
-    miPerKwh: m.miPerKwh,
-    batteryKwh: m.batteryKwh,
+    mpg: typedNumber("mpg", m.mpg),
+    miPerKwh: typedNumber("miPerKwh", m.miPerKwh),
+    batteryKwh: typedNumber("batteryKwh", m.batteryKwh),
     sessionFee: m.sessionFee,
-    powerKw: m.powerKw,
+    powerKw: typedNumber("powerKw", m.powerKw),
     startPct: m.startPct,
     targetPct: m.targetPct,
   };

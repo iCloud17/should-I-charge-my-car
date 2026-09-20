@@ -14,6 +14,7 @@ import {
   kmPerKwhFromMiPerKwh,
   miPerKwhFromKmPerKwh,
   efficiencyToCanonical,
+  canonicalFromField,
   LITERS_PER_GALLON,
   KM_PER_MILE,
   IMP_PER_US_MPG,
@@ -123,4 +124,76 @@ test("gasPriceForDisplay still converts a real finite price (including 0)", () =
   assert.equal(gasPriceForDisplay(3.89, "imperial"), 3.89);
   approx(gasPriceForDisplay(LITERS_PER_GALLON, "uk"), 1);
   approx(gasPriceForDisplay(LITERS_PER_GALLON, "metric"), 1);
+});
+
+// --- Reading a display field back -------------------------------------------
+//
+// The app paints a canonical value rounded for display and reads the field back
+// as canonical on every render. That pair is lossy across a unit change, so the
+// rounded text must not be the only thing that remembers the number. The four
+// systems below are the real cycle from the units picker.
+
+const ALL_SYSTEMS = ["imperial", "uk", "metric", "kmL"];
+
+// The app's own display rounding: 2 dp for economy and efficiency.
+const show = (n) => String(Math.round(n * 100) / 100);
+
+// One writeDisplayValues pass over the economy field.
+const paintMpg = (value, system) => ({ text: show(economyForDisplay(value, system)), value });
+
+test("a units round trip leaves the stored value exactly as the user typed it", () => {
+  let system = "imperial";
+  let stored = 42;
+  let field = paintMpg(stored, system);
+
+  // US -> UK -> L/100km -> km/L -> US, touching nothing. Each switch reads the
+  // field back in the OLD system, then repaints in the new one.
+  for (const next of ["uk", "metric", "kmL", "imperial"]) {
+    stored = canonicalFromField(field.text, field, (t) => economyToCanonical(Number(t), system));
+    system = next;
+    field = paintMpg(stored, system);
+  }
+
+  assert.equal(stored, 42, "a units change is not a user edit");
+  assert.equal(field.text, "42");
+});
+
+test("re-deriving from the painted text alone is what drifted", () => {
+  // The teeth behind the test above: without the painted value, one US -> UK ->
+  // US pass already moves a typed 42.
+  const uk = show(economyForDisplay(42, "uk"));
+  const back = economyToCanonical(Number(uk), "uk");
+  assert.notEqual(back, 42);
+  assert.ok(Math.abs(back - 42) < 0.01, `and it moves quietly: ${back}`);
+});
+
+test("efficiency survives the same round trip", () => {
+  let system = "imperial";
+  let stored = 3.45;
+  let field = { text: show(efficiencyForDisplay(stored, system)), value: stored };
+
+  for (const next of ["metric", "kmL", "imperial"]) {
+    stored = canonicalFromField(field.text, field, (t) => efficiencyToCanonical(Number(t), system));
+    system = next;
+    field = { text: show(efficiencyForDisplay(stored, system)), value: stored };
+  }
+
+  assert.equal(stored, 3.45);
+});
+
+test("a typed value is converted, not taken from what was painted", () => {
+  // Typing 5 in L/100km mode stores 47.0429166 US MPG, painted value or not.
+  const field = paintMpg(42, "metric");
+  const typed = canonicalFromField("5", field, (t) => economyToCanonical(Number(t), "metric"));
+  approx(typed, 47.0429166);
+});
+
+test("an empty or unset field falls through to the conversion in every system", () => {
+  // A blank field is "no value", and the app already reads that as non-finite.
+  for (const system of ALL_SYSTEMS) {
+    const blank = { text: "", value: null };
+    const got = canonicalFromField("", blank, (t) => economyToCanonical(Number(t) || NaN, system));
+    assert.ok(!Number.isFinite(got), `blank stays unset in ${system}`);
+  }
+  assert.equal(canonicalFromField("7", undefined, (t) => Number(t)), 7, "no painted record at all");
 });

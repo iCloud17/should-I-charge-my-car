@@ -11,6 +11,13 @@
 // Change files freely; clients get them on their next online load.
 const CACHE = "sicc";
 const NET_TIMEOUT_MS = 2500; // weak signal: stop waiting and serve cache
+// EVERY static import of main.js belongs on this list, in its import order.
+//
+// The list drifted because nothing warm ever notices: networkFirst caches each
+// response as it fetches it, so a browser that has loaded the app even once
+// fills the gaps in on its own. A COLD install has no such luck. install()
+// addAll's exactly this list, and the first offline load then stops on an
+// `import` that resolves to nothing, with no partial app to fall back to.
 const ASSETS = [
   "./",
   "./index.html",
@@ -20,10 +27,14 @@ const ASSETS = [
   "./js/calc.js",
   "./js/units.js",
   "./js/storage.js",
-  "./js/myCars.js",
   "./js/cars.js",
+  "./js/myCars.js",
+  "./js/myCarsUi.js",
   "./js/ui.js",
   "./js/theme.js",
+  "./js/analytics.js",
+  "./js/editorRows.js",
+  "./js/dropdown.js",
   "./data/phevs.json",
   "./icons/icon.svg",
 ];

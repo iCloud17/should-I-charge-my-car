@@ -26,7 +26,9 @@ import {
 } from "./storage.js";
 import { carCeilingKw } from "./cars.js";
 
-const CARS_KEY = "sicc.cars.v1";
+// Exported so the tab that did NOT write can recognise its own store in a
+// `storage` event, rather than main.js keeping a second copy of the literal.
+export const CARS_KEY = "sicc.cars.v1";
 
 // The version lives IN the payload, not only in the key name. The key says
 // which store this is; `v` says which shape is inside it. A build that finds a
@@ -82,7 +84,15 @@ const RESERVED_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 // Zero-width and soft hyphen are in the same set for the plainer reason: they
 // survive JSON, render as nothing, and make two names that look equal compare
 // unequal.
-const INVISIBLE_CHARS = /[\u00AD\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u2069\uFEFF]/g;
+//
+// TWO ARE NOT DECORATION and are deliberately absent. U+200D joins emoji into
+// one glyph, and stripping it broke a family into separate people. U+200C is
+// orthographic in Persian and Arabic, and stripping it turned "می‌خواهم" into a
+// different and incorrect spelling. Both can still make two names look equal
+// and compare unequal, which is the cost; a name the user cannot spell is the
+// higher one. Neither reorders text, and a name is painted with textContent and
+// never put in a URL, so what is left is display-only.
+const INVISIBLE_CHARS = /[\u00AD\u200B\u200E\u200F\u202A-\u202E\u2060-\u2064\u2066-\u2069\uFEFF]/g;
 
 // A user-facing car name, narrowed rather than dropped, the same way the prefs
 // sanitizer narrows text: each step takes something away, none invents a value
@@ -122,10 +132,15 @@ export function cleanName(v, max) {
 //   maxKw is absent from CAR_EDIT_FIELDS, so the loop that copies the
 //   user-editable numbers into a saved car cannot reach this key; and
 //
-//   datasetChargeKw is the only source, it reads a dataset row and nothing
-//   else, and both callers set the key AFTER spreading whatever they were
-//   handed, so a draft or a legacy override carrying its own maxKw is
-//   overwritten rather than trusted.
+//   the DATASET is the only source of a new figure, and it answers first and
+//   unconditionally whenever it has a row for the car, so a draft or a legacy
+//   override carrying a maxKw of its own is overwritten rather than trusted.
+//
+// A DRAFT'S OWN maxKw IS READ ONLY WHERE THERE IS NO ROW, which is copying an
+// ORPHAN: the record's own snapshot is then the last thing that knows this car
+// has a ceiling, and refusing it made the copy estimate faster than the car it
+// was copied from. No outlet can arrive that way, because a legacy override
+// carries powerKw and nothing narrows a powerKw into this key.
 //
 // Absent is legal. A custom car has no dataset row, so it has no snapshot and
 // stays bounded only by MAX_OUTLET_KW, which is exactly today's behavior.
@@ -159,6 +174,15 @@ function datasetCar(getCar, carId) {
 function datasetChargeKw(getCar, carId) {
   const row = datasetCar(getCar, carId);
   return row ? row.chargeKw : undefined;
+}
+
+// The ceiling a NEW record is created with. The dataset answers whenever it HAS
+// A ROW, including when the row's answer is "no figure", which is the same
+// precedence savedCarCeilingKw reads back with; `fallback` is the orphan case
+// the section header states.
+function newRecordCeilingKw(getCar, carId, fallback) {
+  if (datasetCar(getCar, carId)) return datasetChargeKw(getCar, carId);
+  return positiveNumber(fallback);
 }
 
 // The ceiling for a SAVED car. A different question from the one carCeilingKw
@@ -217,6 +241,32 @@ export function savedCarNumbers(saved, getCar) {
   return out;
 }
 
+// What a COPY of a saved car starts from: the numbers this RECORD holds, and
+// its onboard maximum.
+//
+// THE RECORD, not prefs.carOverrides. That store has one slot per MODEL, and
+// two records of one model is the case this feature exists for, so its slot
+// holds whichever of the two was edited last.
+//
+// ONLY WHAT THE RECORD CARRIES, with no dataset fallback, which is what keeps a
+// copy and its original the same car: an unedited record stores no numbers and
+// inherits the live row, so filling them in here would freeze the copy against
+// a reseed that still reached the original.
+//
+// maxKw rides along because a copy of an ORPHAN has no row to take one from,
+// and on its own line because it is what the dataset said, not what the user
+// typed.
+export function savedCarDraft(saved) {
+  const out = {};
+  for (const k of CAR_NUMBER_KEYS) {
+    const v = positiveNumber(saved?.[k]);
+    if (v !== undefined) out[k] = v;
+  }
+  const snapshot = positiveNumber(saved?.maxKw);
+  if (snapshot !== undefined) out.maxKw = snapshot;
+  return out;
+}
+
 // --- Reading back: a saved-cars payload is untrusted input ------------------
 //
 // Same posture as sanitizePrefs, for the same reason: localStorage is fully
@@ -253,34 +303,30 @@ function safeCar(raw) {
   const id = safeId(raw.id);
   if (!id) return null;
 
+  // A record whose carId did not survive narrowing is unaddressable: the tile,
+  // the search box and both list controls all key off it, so nothing on screen
+  // can reach the record and only "Reset everything" can clear it.
+  const carId = safeCarId(raw.carId);
+  if (!carId) return null;
+
   const car = {
     id,
-    carId: safeCarId(raw.carId) ?? null,
+    carId,
     label: cleanName(raw.label, MAX_LABEL_LEN),
     name: cleanName(raw.name, MAX_CUSTOM_NAME_LEN),
   };
-  let numbers = 0;
   for (const k of CAR_NUMBER_KEYS) {
     const n = positiveNumber(raw[k]);
-    if (n !== undefined) { car[k] = n; numbers++; }
+    if (n !== undefined) car[k] = n;
   }
 
   // Read outside the loop above, because it is not one of those numbers. Those
   // are what the user typed; this is what the dataset said. Same predicate
   // though, since a second rule for one quantity is this project's recorded
   // defect shape.
-  //
-  // It does not count toward `numbers` either. A snapshot with no car to apply
-  // it to is not a car, and counting it would keep a record alive on the
-  // strength of a value the user never entered.
   const snapshot = positiveNumber(raw.maxKw);
   if (snapshot !== undefined) car.maxKw = snapshot;
 
-  // A record with no dataset pointer AND no numbers describes no car: nothing
-  // to look up and nothing to calculate with. A record with a carId and no
-  // numbers is a real car the user picked and never edited, and it inherits the
-  // dataset row, so it stays.
-  if (!car.carId && numbers === 0) return null;
   return car;
 }
 
@@ -356,17 +402,63 @@ export function emptyCarsState() {
   return { v: CARS_V, cars: [], activeId: null };
 }
 
-// One setItem, or none. Returns whether the write happened, so a caller can
-// tell a refusal from a success instead of assuming.
+// --- Re-reading a store another tab has written -----------------------------
+//
+// Every tab holds the whole list in memory and saveMyCars writes all of it, so
+// a tab that has not looked at the disk since another tab wrote to it saves
+// that other tab's cars away. Nothing in the payload can prevent that; the only
+// fix is for the stale tab to read again, which is what this pair is for.
+
+// The disk's LIST, with THIS tab's selection. Pure.
+//
+// The list is replaced rather than merged: every write goes through the same
+// sanitizer, so the disk already holds every tab's adds and removals, and a
+// merge here would resurrect a car another tab deleted on purpose.
+//
+// The SELECTION is this tab's, because it is what this tab's screen is showing
+// and no other tab may move it. It survives only while the car does.
+//
+// A vanished selection DESELECTS rather than falling back to the first car,
+// which is where this parts company with the loader's resolveActiveId. That
+// rule repairs a broken pointer found on disk. Here the pointer was good a
+// moment ago and another tab deleted the car, so promoting a different car
+// would check a chip for a car that is not the one on screen.
+export function reconcileMyCars(disk, wantedActiveId) {
+  const cars = Array.isArray(disk?.cars) ? disk.cars : [];
+  const keep = wantedActiveId != null && cars.some((c) => c.id === wantedActiveId);
+  return { v: CARS_V, cars, activeId: keep ? wantedActiveId : null };
+}
+
+// The store wrapper over that rule: read, reconcile, hand back. READ ONLY, and
+// that is the contract rather than an implementation detail. A refresh that
+// wrote would fire a `storage` event in the tab it was refreshing from, and two
+// tabs answering each other's writes never stop.
+export function refreshMyCars(wantedActiveId) {
+  const disk = loadMyCars();
+  return { ...disk, ...reconcileMyCars(disk, wantedActiveId) };
+}
+
+// One setItem, or none. Returns `{ ok, reason }` rather than a bare boolean,
+// because the two refusals below are not one condition: a blocked store is the
+// browser's doing and the user can act on it, a newer build's payload is this
+// build being out of date and resolves itself on a reload. One boolean made the
+// second read as the first and sent the user to their privacy settings.
 //
 // The version is re-read from storage on every write rather than trusted from
 // whatever loadMyCars returned earlier, because another tab running a newer
 // build can have written in between. A flag captured at load time would be
 // stale in exactly the case it exists to catch.
+//
+// IT IS THE VERSION AND NOTHING ELSE. A same-version write from another tab is
+// replaced wholesale, and no check here can fix that: the caller is handing
+// over a list it built before that write existed. refreshMyCars is what keeps
+// the caller's list current, and a refusal here would only turn a lost car into
+// a lost keystroke.
 export function saveMyCars(state) {
   try {
     const existing = localStorage.getItem(CARS_KEY);
-    if (existing && payloadVersion(JSON.parse(existing)) > CARS_V) return false;
+    // The same word loadMyCars answers with, because it is the same state.
+    if (existing && payloadVersion(JSON.parse(existing)) > CARS_V) return { ok: false, reason: "read-only" };
   } catch {
     // Unparseable or unreadable: there is no newer payload to protect, so the
     // write proceeds and replaces the junk.
@@ -374,9 +466,9 @@ export function saveMyCars(state) {
   try {
     const clean = sanitizeCarsPayload(state);
     localStorage.setItem(CARS_KEY, JSON.stringify(clean));
-    return true;
+    return { ok: true, reason: "ok" };
   } catch {
-    return false; // storage unavailable (private mode); app still works
+    return { ok: false, reason: "unavailable" }; // private mode; app still works
   }
 }
 
@@ -419,11 +511,9 @@ export function newMyCarId(taken) {
 // of a check that has to be remembered.
 //
 // `getCar` is the live dataset, handed in rather than imported so this stays
-// testable with a stub, and it is the ONLY source of the car's onboard
-// maximum. maxKw is written after the caller's draft is spread, so a draft
-// that carries one of its own loses it. That matters because the caller
-// assembles the draft from the edit fields, which is the path an outlet
-// reading would have to take to get in here.
+// testable with a stub. newRecordCeilingKw is what decides the ceiling, and it
+// asks the dataset first and unconditionally, so a draft assembled from the
+// edit fields cannot smuggle an outlet reading into it.
 //
 // AT THE CAP IT REFUSES AND REPORTS. It does not evict the oldest car, and it
 // does not accept the car and quietly keep five. Both of those lose something
@@ -434,10 +524,11 @@ export function addMyCar(state, car, getCar) {
   const cars = Array.isArray(state?.cars) ? state.cars : [];
   if (cars.length >= MAX_MY_CARS) return { ok: false, reason: "full", limit: MAX_MY_CARS, state: asState(state) };
 
+  const carId = safeCarId(car?.carId);
   const entry = safeCar({
     ...car,
     id: newMyCarId(cars.map((c) => c.id)),
-    maxKw: datasetChargeKw(getCar, safeCarId(car?.carId)),
+    maxKw: newRecordCeilingKw(getCar, carId, car?.maxKw),
   });
   if (!entry) return { ok: false, reason: "invalid", state: asState(state) };
 
@@ -450,15 +541,21 @@ export function addMyCar(state, car, getCar) {
   return { ok: true, reason: "ok", state: { v: CARS_V, cars: [...cars, entry], activeId } };
 }
 
-// Remove a car. Deleting the selected one leaves a dangling id, which is the
-// same situation the loader already has a rule for, so it is handed to that
-// rule rather than given a second one. The app is never left holding an id
-// that resolves to nothing.
+// Remove a car. Removing the SELECTED one selects its NEIGHBOUR: the car before
+// it, or the new first car when the head went. resolveActiveId is left alone
+// because it is the LOADER's rule, where there is no previous car to speak of.
 export function removeMyCar(state, id) {
   const cars = Array.isArray(state?.cars) ? state.cars : [];
+  const removedAt = cars.findIndex((c) => c.id === id);
+  if (removedAt === -1) return { ok: false, reason: "not-found", state: asState(state) };
+
   const next = cars.filter((c) => c.id !== id);
-  if (next.length === cars.length) return { ok: false, reason: "not-found", state: asState(state) };
-  return { ok: true, reason: "ok", state: { v: CARS_V, cars: next, activeId: resolveActiveId(next, state?.activeId ?? null) } };
+  const wanted = state?.activeId ?? null;
+  // Every car ahead of removedAt survives, so removedAt - 1 is always in range.
+  const activeId = wanted === id
+    ? (next.length ? next[Math.max(0, removedAt - 1)].id : null)
+    : resolveActiveId(next, wanted);
+  return { ok: true, reason: "ok", state: { v: CARS_V, cars: next, activeId } };
 }
 
 // Select a car. Passing null deselects, which is a real state: it is what the
@@ -533,6 +630,40 @@ export function applyMyCarEdit(state, id, inputs) {
   };
 }
 
+// Rename one saved car. A SEPARATE FUNCTION rather than a fourth key in
+// applyMyCarEdit, because the two merge rules are opposites and folding them
+// together would need a per-key exception inside one loop:
+//
+//   a number cleared mid-edit KEEPS the last good value, because "3." is a
+//   half-typed 3.4 and erasing it costs the user something they entered; but
+//
+//   a name cleared CLEARS, because blank is a name the user is allowed to
+//   choose and refusing it would leave them unable to take one back off.
+//
+// It also keeps applyMyCarEdit's single call site single. saveCarNumbers is
+// the one writer of a car's numbers, pinned by a source guard, and a name
+// arriving from a different field on a different event has no business
+// travelling through the function that exists to keep the two number stores in
+// step.
+//
+// cleanName is the same narrowing safeCar applies on the way back out of
+// storage, so what is written here is already a fixed point of the read path
+// and survives the round trip unchanged. That is what lets main.js mirror this
+// result into prefs.customName instead of sanitizing the text a second time:
+// one rule, one answer, and no second spelling to drift from.
+export function renameMyCar(state, id, name) {
+  const cars = Array.isArray(state?.cars) ? state.cars : [];
+  const target = cars.find((c) => c.id === id);
+  if (!target) return { ok: false, reason: "not-found", state: asState(state) };
+
+  const next = { ...target, name: cleanName(name, MAX_CUSTOM_NAME_LEN) };
+  return {
+    ok: true,
+    reason: "ok",
+    state: { v: CARS_V, cars: cars.map((c) => (c === target ? next : c)), activeId: state?.activeId ?? null },
+  };
+}
+
 function asState(state) {
   return state && typeof state === "object" ? state : emptyCarsState();
 }
@@ -551,10 +682,8 @@ function asState(state) {
 // optimistic. Capturing either requires the live dataset, and taking it as
 // functions keeps this testable with a stub.
 
-// The one definition of the custom-car sentinel. main.js held its own copy of
-// the literal until 64994ed deleted it; it imports this now, so there is one
-// spelling of the identity rather than two with nothing keeping them equal. A
-// source guard in test/myCars.test.mjs pins that a second copy does not return.
+// The one spelling of the custom-car identity. A source guard in
+// test/myCars.test.mjs pins that a second copy of the literal does not return.
 export const CUSTOM_CAR_ID = "__custom__";
 
 // A car's label is cosmetic; its numbers are not. A lookup that throws must
@@ -658,7 +787,7 @@ export function migrateIfNeeded(prefs, labelFor, getCar) {
 
     // Build fully in memory, then exactly one setItem. saveMyCars is the only
     // writer, so there is no incremental path to interrupt.
-    if (!saveMyCars(payload)) return { migrated: false, reason: "write-refused", dropped };
+    if (!saveMyCars(payload).ok) return { migrated: false, reason: "write-refused", dropped };
     return { migrated: true, reason: "ok", dropped, cars: payload.cars.length };
   } catch {
     return { migrated: false, reason: "failed", dropped: [] };

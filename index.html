@@ -126,6 +126,9 @@
         </span>
       </summary>
       <div class="disclosure__body">
+        <!-- Saved cars. Empty and hidden until a SECOND car exists: one car needs
+             no switcher, and a user who owns one car must not pay for this. -->
+        <div class="my-cars" id="myCarsRow" role="radiogroup" aria-label="Your saved cars" hidden></div>
         <div class="field">
           <div class="field-label-row">
             <label for="carSearch">Your car</label>
@@ -137,14 +140,37 @@
             <input id="carSearch" type="text" autocomplete="off" spellcheck="false" placeholder="Search make or model…" role="combobox" aria-expanded="false" aria-controls="carResults" aria-autocomplete="list" enterkeyhint="done" />
             <ul id="carResults" class="combo__results" role="listbox" aria-label="Cars" hidden></ul>
           </div>
+          <!-- The two list-membership actions, on one row: read as a pair they
+               say what the saved list is, and the row holds them apart so the
+               pairing never becomes a mis-tap. -->
+          <div class="my-cars__actions" id="myCarsActions">
+            <!-- Picking from the list above SHOWS a car; this is the only thing
+                 that puts one in your saved cars. Labelled by addControlLabel, so
+                 the same control in the same place reads "Add a copy" once the car
+                 on screen is already saved. It never says "save": the numbers were
+                 saved as they were typed. -->
+            <button type="button" class="link link--muted" id="addCarBtn" hidden>Add this car</button>
+            <!-- Asks first, in the dialog below the page. Removing is the one
+                 act here that throws away numbers the user typed, and nothing
+                 puts them back. -->
+            <button type="button" class="link link--danger" id="removeCarBtn" hidden>Remove this car</button>
+          </div>
+          <!-- Always in the DOM and always rendered, empty or not: the styles
+               take it out of the layout while it has nothing to say without
+               using display:none, which would take it out of the accessibility
+               tree as well. A live region added at the moment it speaks is a
+               live region that often does not. -->
+          <p class="hint my-cars__note" id="myCarsNote" aria-live="polite"></p>
         </div>
 
+        <!-- "details" rather than "numbers": the car name lives in here too, and
+             "info" already means the (i) notes elsewhere on this page. -->
         <details class="tweak" id="tweak">
-          <summary>Adjust numbers</summary>
+          <summary>Adjust details</summary>
           <div class="tweak__body">
             <div class="field" id="nicknameField" hidden>
               <label for="carNickname">Car name <span class="label-opt">(optional)</span></label>
-              <input id="carNickname" type="text" autocomplete="off" maxlength="40" placeholder="e.g., My RAV4" />
+              <input id="carNickname" type="text" autocomplete="off" maxlength="64" placeholder="e.g., My RAV4" />
             </div>
             <div class="field-row">
               <div class="field">
@@ -364,6 +390,24 @@
       </div>
     </footer>
   </main>
+
+  <!-- Outside <main> because a closed <details> would take its subtree out of
+       the render tree, top layer or not. method="dialog" is what makes the
+       answer a returnValue rather than a pair of listeners, and Escape then
+       lands in the same place "Keep it" does. There is no backdrop dismiss:
+       the box is narrower than the control that opens it, so a slow second tap
+       on "Remove this car" landed outside and closed the question. -->
+  <dialog class="dialog" id="removeCarDialog" aria-labelledby="removeCarPrompt">
+    <form method="dialog" class="dialog__inner">
+      <p class="dialog__title" id="removeCarPrompt"></p>
+      <!-- "Keep it" is FIRST so it is the form's default submit; row-reverse draws it last. -->
+      <div class="dialog__actions">
+        <!-- autofocus, so the modal opens on the answer that changes nothing. -->
+        <button type="submit" value="keep" class="btn btn--ghost" id="removeCarNo" autofocus>Keep it</button>
+        <button type="submit" value="remove" class="btn btn--danger" id="removeCarYes">Remove</button>
+      </div>
+    </form>
+  </dialog>
 
   <script type="module" src="js/main.js"></script>
 

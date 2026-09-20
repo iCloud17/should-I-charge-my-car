@@ -117,3 +117,13 @@ export function gasPriceForDisplay(perGallon, system) {
   if (!Number.isFinite(perGallon)) return perGallon;
   return system === "imperial" ? perGallon : perLiterFromPerGallon(perGallon);
 }
+
+// --- Reading a display field back -------------------------------------------
+// The canonical value behind a field, given `painted` ({ text, value }) as it
+// was last written. A field still holding exactly that text has not been
+// edited, so the value that produced it is handed back rather than re-derived
+// from a rounded string: a units change is not a user edit.
+export function canonicalFromField(shown, painted, convert) {
+  if (painted && Number.isFinite(painted.value) && shown === painted.text) return painted.value;
+  return convert(shown);
+}
