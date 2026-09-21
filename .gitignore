@@ -19,6 +19,11 @@ npm-debug.log*
 /*.png
 !/og-image.png
 
+# Scratch space for local runs: backups, probe scripts, server logs, screenshots.
+# Everything temporary belongs here rather than in /tmp, so it is visible and
+# can be cleared in one go.
+tmp/
+
 # Seed script cache
 scripts/.vehicles.cache.csv
 
