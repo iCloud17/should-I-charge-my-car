@@ -355,3 +355,178 @@ test("source guard: a closed dialog is hidden even where <dialog> is unknown", (
     "the remove question and both its buttons are drawn permanently down the page on every pre-2022 Safari and Firefox",
   );
 });
+
+// --- The card with a charger price but no gas price -------------------------
+
+// The session total and the all-in $/kWh are worked out before the break-even
+// is ever consulted and neither depends on it, yet the whole card used to
+// collapse to an ellipsis the moment the break-even went NaN. Read as a GATE
+// and not as substrings in the arm, because the regression to catch is an arm
+// that names session.totalCost and then hides everything anyway.
+
+// From the first `open` at or after `from`, the index of its match, or -1. A
+// ${} inside a template literal balances, so a scan of source text holds.
+function matchDelim(s, from, open, close) {
+  const start = s.indexOf(open, from);
+  if (start === -1) return -1;
+  let depth = 0;
+  for (let i = start; i < s.length; i++) {
+    if (s[i] === open) depth++;
+    else if (s[i] === close && --depth === 0) return i;
+  }
+  return -1;
+}
+
+// The `!Number.isFinite(be)` arm of render(), brace-matched so the `else if`
+// arms that follow it cannot stand in for it.
+function noGasArm(src) {
+  const body = bodyOf(src, "render");
+  const start = body.indexOf("if (!Number.isFinite(be))");
+  assert.notEqual(start, -1, "the no-break-even arm of render() moved or was renamed");
+  const end = matchDelim(body, start, "{", "}");
+  assert.notEqual(end, -1, "the no-break-even arm has no closing brace");
+  return body.slice(start, end + 1);
+}
+
+// That arm's two cases: the one that has a price to show and the bare one.
+// null when the arm never splits, which is what the collapsed version was.
+function noGasCases(src) {
+  const arm = noGasArm(src);
+  const ifAt = arm.indexOf("if (", arm.indexOf("{") + 1);
+  if (ifAt === -1) return null;
+  const condEnd = matchDelim(arm, ifAt, "(", ")");
+  const pricedEnd = matchDelim(arm, condEnd, "{", "}");
+  const elseAt = arm.indexOf("else", pricedEnd);
+  if (condEnd === -1 || pricedEnd === -1 || elseAt === -1) return null;
+  const bareEnd = matchDelim(arm, elseAt, "{", "}");
+  if (bareEnd === -1) return null;
+  return {
+    cond: arm.slice(arm.indexOf("(", ifAt) + 1, condEnd),
+    priced: arm.slice(arm.indexOf("{", condEnd) + 1, pricedEnd),
+    bare: arm.slice(arm.indexOf("{", elseAt) + 1, bareEnd),
+  };
+}
+
+// The right-hand side of one assignment inside a case, "" when there is none.
+const rhs = (block, target) =>
+  (new RegExp(`${target.replace(".", "\\.")}\\s*=([^;]*);`).exec(block)?.[1] ?? "").trim();
+
+// A sample render() shaped like the real one, for the guards on the guard.
+const asRender = (inner) => `function render() {\n  if (!Number.isFinite(be)) {\n${inner}\n  }\n}\n`;
+const COLLAPSED = asRender('    headline.textContent = "\\u2026";\n    detailLine.hidden = true;');
+
+test("source guard: the card prices the charge even with no gas price to judge it against", () => {
+  // Guard on the guard: the arm as it used to be has no priced case at all, so
+  // every assertion below would otherwise be reading an empty string.
+  assert.equal(noGasCases(COLLAPSED), null);
+
+  const c = noGasCases(read("../js/main.js"));
+  assert.notEqual(c, null, "the no-gas-price arm no longer has a case that shows a price: it collapses to an ellipsis again");
+
+  assert.match(
+    rhs(c.priced, "headline.textContent"),
+    /session\.totalCost/,
+    "the headline with no gas price is not the session total, so a cost we had already worked out is withheld",
+  );
+
+  assert.match(
+    c.priced,
+    /detailLine\.hidden\s*=\s*false/,
+    "the detail line is hidden with no gas price, so the all-in $/kWh is withheld",
+  );
+  assert.doesNotMatch(
+    c.priced,
+    /detailLine\.hidden\s*=\s*true/,
+    "the priced case shows the detail line and then hides it again",
+  );
+
+  const detail = rhs(c.priced, "detailLine.textContent");
+  assert.match(detail, /showEffective/, "the detail line ignores showEffective, so a flat no-fee rate is relabelled as effective");
+  assert.match(detail, /\beffective\b/, "the detail line with no gas price never shows the effective rate");
+  assert.match(detail, /m\.yourRate/, "the showEffective=false half of the detail line is gone");
+  assert.doesNotMatch(detail, /break-even/, "the detail line quotes a break-even that is NaN in this state");
+
+  assert.match(
+    c.priced,
+    /timeline\.hidden\s*=\s*false/,
+    "the how-long line is hidden with no gas price, though the duration does not depend on one",
+  );
+
+  assert.match(
+    rhs(c.priced, "card.dataset.verdict"),
+    /"none"/,
+    'the no-gas-price card claims a verdict colour; only "none" maps to --muted in styles.css, the rest imply an answer we have not given',
+  );
+
+  // The nudge is the whole reason this state is not a dead end.
+  assert.match(rhs(c.priced, "sub.textContent"), /gas price/, "the priced case stopped telling the user what a gas price would unlock");
+
+  // And the bare case is still bare.
+  assert.match(c.bare, /detailLine\.hidden\s*=\s*true/, "the case with nothing to price now shows a detail line with nothing in it");
+  assert.match(rhs(c.bare, "headline.textContent"), /\\u2026|\u2026/, "the case with nothing to price lost its placeholder headline");
+});
+
+test("source guard: a charge we cannot size is never given a price", () => {
+  // chargeCurve returns totalCost = sessionFee * taxFactor with no battery, no
+  // power or no valid start/target, so an ungated headline prints the bare
+  // session fee as if it were the price of the whole charge.
+  const gated = (src) => {
+    const c = noGasCases(src);
+    return c !== null && /\bhasRate\b/.test(c.cond) && /\bkwh\s*>\s*0/.test(c.cond);
+  };
+
+  // Guard on the guard: the collapsed arm, and the half-gated version that
+  // prices a charge whose size is unknown.
+  assert.equal(gated(COLLAPSED), false);
+  assert.equal(gated(asRender("    if (hasRate) {\n      x();\n    } else {\n      y();\n    }")), false);
+  assert.equal(gated(asRender("    if (hasRate && kwh > 0) {\n      x();\n    } else {\n      y();\n    }")), true);
+
+  assert.equal(
+    gated(read("../js/main.js")),
+    true,
+    "the no-gas-price headline is not gated on both a charger rate and a real kWh, so it prints the session fee alone as the price of a charge whose size is unknown",
+  );
+});
+
+// --- What the effective rate says it includes -------------------------------
+
+// The note is lifted out of the source and RUN, because the four answers are
+// the thing to pin and a scan for literals cannot tell " incl. tax" being
+// returned from it merely being present. bodyOf stops short of the closing
+// brace, hence the one added back.
+const liftNote = (src) => new Function(`${bodyOf(src, "inclusionNote")}\n}\nreturn inclusionNote;`)();
+
+// The detail line of both cards: the priced no-gas-price one and the verdict.
+const effectiveLines = (src) => bodyOf(src, "render").split("\n").filter((l) => l.includes("`Effective "));
+
+// A sales tax is not a fee, but hasFees folds one in (deliberately: showEffective
+// wants either). Hung off that, the note called a tax-only rate "incl. fees".
+test("source guard: the effective-rate note names a tax as a tax", () => {
+  // Guard on the guard: the lift has to run the function it names, or every
+  // answer below is really the same answer.
+  const sample = 'function inclusionNote(hasTax, hasFee) {\n  return hasTax ? "T" : hasFee ? "F" : "";\n}\n';
+  assert.equal(liftNote(sample)(true, false), "T");
+  assert.equal(liftNote(sample)(false, true), "F");
+
+  const note = liftNote(read("../js/main.js"));
+  assert.equal(note(true, false), " incl. tax", "a sales tax on its own is still reported as a fee");
+  assert.equal(note(false, true), " incl. fees", "the session and per-hour fees lost their name");
+  assert.equal(note(true, true), " incl. tax and fees", "a rate carrying both names only one of them");
+  assert.equal(note(false, false), "", "the note appears with neither a tax nor a fee behind it");
+});
+
+test("source guard: both detail lines take that note from the one place it is worked out", () => {
+  // Guard on the guard: the wording inlined per site is what this replaced, and
+  // it has to be told from the shared value.
+  const inlined = '    ? `Effective ${money(effective, cur)}/kWh${hasFees ? " incl. fees" : ""}`';
+  assert.equal(effectiveLines(asRender(inlined)).length, 1, "the detail-line scan cannot see a detail line");
+  assert.match(effectiveLines(asRender(inlined))[0], /incl\./, "the detail-line scan cannot see inlined wording");
+  assert.equal(effectiveLines(asRender("    ? `You pay ${money(m.yourRate, cur)}/kWh`")).length, 0);
+
+  const lines = effectiveLines(read("../js/main.js"));
+  assert.equal(lines.length, 2, `${lines.length} effective-rate detail lines in render(), expected 2: a new one has to share the note too`);
+  for (const line of lines) {
+    assert.match(line, /\$\{inclNote\}/, "a detail line works out what the rate includes on its own, so the two cards can word it differently");
+    assert.doesNotMatch(line, /incl\./, "a detail line spells the wording out inline, which is how the two cards drift apart");
+  }
+});

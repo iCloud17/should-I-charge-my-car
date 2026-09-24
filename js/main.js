@@ -80,6 +80,16 @@ function persistFrom(m) {
   savePrefs(prefs);
 }
 
+// What the effective rate includes beyond the entered price. Sales tax is not a
+// fee, so it is named as itself; "fees" stays plural because it covers the
+// per-session and per-hour ones together.
+function inclusionNote(hasTax, hasFee) {
+  if (hasTax && hasFee) return " incl. tax and fees";
+  if (hasTax) return " incl. tax";
+  if (hasFee) return " incl. fees";
+  return "";
+}
+
 // --- Render everything from current inputs ---
 function render() {
   const m = readInputs();
@@ -171,6 +181,8 @@ function render() {
   const timeFee = session.timeFee;
   const hasTimeFee = timeFee > 0;
   const hasFees = m.sessionFee > 0 || hasTimeFee || hasTax;
+  // One wording for both cards, so they cannot drift apart.
+  const inclNote = inclusionNote(hasTax, m.sessionFee > 0 || hasTimeFee);
 
   let effective = NaN;
   if (hasRate) {
@@ -196,17 +208,36 @@ function render() {
   if (hasTax) track("fees-tax");
 
   if (!Number.isFinite(be)) {
-    card.dataset.verdict = "close";
-    headline.textContent = "\u2026";
     const haveCar = Number.isFinite(m.mpg) && Number.isFinite(m.miPerKwh);
-    sub.textContent = haveCar
-      ? "Enter your local gas price to see the break-even."
-      : "Pick your car to start.";
-    timeline.hidden = true;
+    if (hasRate && kwh > 0) {
+      // No gas price means no verdict, but the cost of the stop never needed one.
+      card.dataset.verdict = "none";
+      headline.textContent = money(session.totalCost, cur);
+      sub.textContent = haveCar
+        ? "Cost of this charge. Add your gas price to see if it beats filling up."
+        : "Cost of this charge. Pick your car to compare it with gas.";
+      detailLine.hidden = false;
+      detailLine.textContent = showEffective
+        ? `Effective ${money(effective, cur)}/kWh${inclNote}`
+        : `You pay ${money(m.yourRate, cur)}/kWh`;
+      if (Number.isFinite(session.minutes) && session.minutes > 0) {
+        timeline.hidden = false;
+        timeline.textContent = `Est. ${formatDuration(session.minutes)} to ${Math.round(session.soc)}% at ${round(drawKw, 2)} kW`;
+      } else {
+        timeline.hidden = true;
+      }
+    } else {
+      card.dataset.verdict = "close";
+      headline.textContent = "\u2026";
+      sub.textContent = haveCar
+        ? "Enter your local gas price to see the break-even."
+        : "Pick your car to start.";
+      timeline.hidden = true;
+      detailLine.hidden = true;
+    }
     touNote.hidden = true;
     timeNote.hidden = true;
     worthTip.hidden = true;
-    detailLine.hidden = true;
   } else if (!hasRate) {
     // No charger price yet - the break-even IS the headline answer.
     card.dataset.verdict = "worth";
@@ -280,7 +311,7 @@ function render() {
 
     detailLine.hidden = false;
     detailLine.textContent = showEffective
-      ? `Effective ${money(effective, cur)}/kWh${hasFees ? " incl. fees" : ""} \u00b7 break-even ${money(be, cur)}/kWh`
+      ? `Effective ${money(effective, cur)}/kWh${inclNote} \u00b7 break-even ${money(be, cur)}/kWh`
       : `You pay ${money(m.yourRate, cur)}/kWh \u00b7 break-even ${money(be, cur)}/kWh`;
 
     // "How long" at a glance, using your saved battery / power / charge target.
