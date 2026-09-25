@@ -31,6 +31,7 @@ const ASSETS = [
   "./js/myCars.js",
   "./js/myCarsUi.js",
   "./js/ui.js",
+  "./js/cardUi.js",
   "./js/theme.js",
   "./js/analytics.js",
   "./js/editorRows.js",

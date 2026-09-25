@@ -1,6 +1,6 @@
 // main.js - wire inputs → calc → render. Persist to localStorage.
 
-import { breakevenKwhPrice, chargeCurve, verdict, rateAtTime, rateAtElapsed, cheapestPeriod } from "./calc.js";
+import { breakevenKwhPrice, chargeCurve, verdict, rateAtTime, rateAtElapsed } from "./calc.js";
 import * as U from "./units.js";
 import {
   loadPrefs, savePrefs, resetPrefs, defaultPrefs,
@@ -24,6 +24,7 @@ import {
   removeGoneMessage, nameWriteFailedMessage, numbersWriteFailedMessage, selectionWriteFailedMessage,
 } from "./myCarsUi.js";
 import { $, parseNum, money, formatDuration, escapeHtml, nextOptionIndex, enterAction } from "./ui.js";
+import { cardFor, advancedFor, inclusionNote, numText } from "./cardUi.js";
 import { applyTheme, nextThemeMode, themeLabel } from "./theme.js";
 import { track, trackWhenReady } from "./analytics.js";
 import {
@@ -50,8 +51,9 @@ let chargeCapMin = null; // "charge for" slider value in minutes (volatile)
 let capTouched = false;  // has the user dragged the "charge for" slider?
 let currencyDropdown = null, unitDropdown = null; // built in attachEvents()
 
+const setText = (el, text) => { if (text !== null) el.textContent = text; };
+
 // Above this, a stop-early recommendation reads as "partway", not "briefly".
-const BRIEF_MAX_MIN = 60;
 
 // --- Read canonical model values from the DOM (converting from display units) ---
 function readInputs() {
@@ -80,20 +82,12 @@ function persistFrom(m) {
   savePrefs(prefs);
 }
 
-// What the effective rate includes beyond the entered price. Sales tax is not a
-// fee, so it is named as itself; "fees" stays plural because it covers the
-// per-session and per-hour ones together.
-function inclusionNote(hasTax, hasFee) {
-  if (hasTax && hasFee) return " incl. tax and fees";
-  if (hasTax) return " incl. tax";
-  if (hasFee) return " incl. fees";
-  return "";
-}
-
 // --- Render everything from current inputs ---
 function render() {
   const m = readInputs();
   const cur = prefs.currency;
+  // One read for the whole render: two would let the price and the note land either side of a minute.
+  const nowMin = nowMinutes();
 
   const be = breakevenKwhPrice({ gasPrice: m.gasPrice, mpg: m.mpg, miPerKwh: m.miPerKwh });
   const card = $("resultCard");
@@ -115,7 +109,7 @@ function render() {
   let rateOf = null, schedule = null, hasRate = false, startClockMin = 0, durTiers = null;
   if (rateMode === "tod") {
     schedule = readSchedule();
-    if (schedule.length) { rateOf = (clock) => rateAtTime(schedule, clock); hasRate = true; startClockMin = nowMinutes(); }
+    if (schedule.length) { rateOf = (clock) => rateAtTime(schedule, clock); hasRate = true; startClockMin = nowMin; }
   } else if (rateMode === "dur") {
     durTiers = readDurationTiers();
     if (durTiers.length) { rateOf = (_clock, elapsed) => rateAtElapsed(durTiers, elapsed); hasRate = true; }
@@ -207,161 +201,38 @@ function render() {
   if (hasTimeTiers) track("fees-time");
   if (hasTax) track("fees-tax");
 
-  if (!Number.isFinite(be)) {
-    const haveCar = Number.isFinite(m.mpg) && Number.isFinite(m.miPerKwh);
-    if (hasRate && kwh > 0) {
-      // No gas price means no verdict, but the cost of the stop never needed one.
-      card.dataset.verdict = "none";
-      headline.textContent = money(session.totalCost, cur);
-      sub.textContent = haveCar
-        ? "Cost of this charge. Add your gas price to see if it beats filling up."
-        : "Cost of this charge. Pick your car to compare it with gas.";
-      detailLine.hidden = false;
-      detailLine.textContent = showEffective
-        ? `Effective ${money(effective, cur)}/kWh${inclNote}`
-        : `You pay ${money(m.yourRate, cur)}/kWh`;
-      if (Number.isFinite(session.minutes) && session.minutes > 0) {
-        timeline.hidden = false;
-        timeline.textContent = `Est. ${formatDuration(session.minutes)} to ${Math.round(session.soc)}% at ${round(drawKw, 2)} kW`;
-      } else {
-        timeline.hidden = true;
-      }
-    } else {
-      card.dataset.verdict = "close";
-      headline.textContent = "\u2026";
-      sub.textContent = haveCar
-        ? "Enter your local gas price to see the break-even."
-        : "Pick your car to start.";
-      timeline.hidden = true;
-      detailLine.hidden = true;
-    }
-    touNote.hidden = true;
-    timeNote.hidden = true;
-    worthTip.hidden = true;
-  } else if (!hasRate) {
-    // No charger price yet - the break-even IS the headline answer.
-    card.dataset.verdict = "worth";
-    headline.textContent = `${money(be, cur)}/kWh`;
-    sub.textContent = rateMode === "tod"
-      ? "Break-even price. Add your time-of-day rates below for a yes/no."
-      : rateMode === "dur"
-        ? "Break-even price. Add your duration tiers below for a yes/no."
-        : "Break-even price. Enter the charger's energy rate for a yes/no.";
-    timeline.hidden = true;
-    touNote.hidden = true;
-    timeNote.hidden = true;
-    worthTip.hidden = true;
-    detailLine.hidden = true;
-  } else if (Number.isFinite(m.startPct) && Number.isFinite(m.targetPct) && !(m.targetPct > m.startPct)) {
-    // Battery is already at (or above) the charge target - there's nothing to
-    // charge, so a gas/charge verdict would be misleading. Show a neutral state.
-    card.dataset.verdict = "none";
-    const atFull = m.targetPct >= 100 || m.startPct >= 100;
-    headline.textContent = atFull ? "\uD83D\uDD0B Battery's full" : "\uD83D\uDD0B Nothing to charge";
-    sub.textContent = atFull
-      ? "Already full, so there's nothing to charge."
-      : `Already at your ${Math.round(m.targetPct)}% target. Raise \u201cCharge to\u201d to compare.`;
-    timeline.hidden = true;
-    touNote.hidden = true;
-    timeNote.hidden = true;
-    worthTip.hidden = true;
-    detailLine.hidden = true;
-  } else {
+  const nothingToCharge = Number.isFinite(m.startPct) && Number.isFinite(m.targetPct) && !(m.targetPct > m.startPct);
+  const view = cardFor({
+    m, be, cur, units: prefs.units, hasRate, session, full,
+    drawKw, effective, showEffective, inclNote, rateMode, schedule, hasTimeTiers,
+    worthLimitMin, fullNotWorth, tip, showBriefly,
+    now: nowMin,
+  });
+
+  // Gated on cardFor's fourth arm, so the funnel still counts verdict states
+  // only. track() is impure, so it cannot move in there with the rest.
+  if (Number.isFinite(be) && hasRate && !nothingToCharge) {
     const v = verdict(effective, be);
-
     track("verdict-shown");
-    track(showBriefly ? "verdict-charge-briefly" : v === "worth" ? "verdict-charge-it" : v === "gas" ? "verdict-use-gas" : "verdict-toss-up");
-
-    card.dataset.verdict = showBriefly ? "close" : (v === "unknown" ? "close" : v);
-    // "Briefly" for a genuinely short stop, "partway" once it runs long.
-    headline.textContent = showBriefly
-      ? (tip.min <= BRIEF_MAX_MIN ? "\u26A1 Charge briefly" : "\u26A1 Charge partway")
-      : v === "worth" ? "\u26A1 Charge it" : v === "gas" ? "\u26FD Use gas" : "\u2248 Toss-up";
-
-    // Layman framing: the gas price that would cost the same per mile, plus how
-    // much cheaper/pricier charging is per mile. Everyone intuits gas prices.
-    const gasPerMile = m.gasPrice / m.mpg;
-    const elecPerMile = effective / m.miPerKwh;
-    const equivGas = (effective * m.mpg) / m.miPerKwh; // canonical $/gallon
-    const equivDisp = U.gasPriceForDisplay(equivGas, prefs.units);
-    const gasUnit = prefs.units === "imperial" ? "/gal" : "/L";
-    const pct = gasPerMile > 0 ? Math.round((Math.abs(gasPerMile - elecPerMile) / gasPerMile) * 100) : 0;
-    // "Pricier" as a percentage reads as confusing once it hits 100% (2x),
-    // so at/above 100% we switch to a rounded multiplier ("~2x", "~2.5x",
-    // "~3x") in 0.5 steps; under 100% the percentage is clear, so keep it.
-    // Gate on the rounded pct (not mult >= 2) so floating-point values a hair
-    // under 2x (e.g. 1.9999) still show "~2x" instead of "100% pricier".
-    const mult = gasPerMile > 0 ? elecPerMile / gasPerMile : NaN;
-    const pricier = pct >= 100
-      ? `~${Math.round(mult * 2) / 2}x the price`
-      : `${pct}% pricier`;
-    // The sub always describes the CURRENT selection (updates live with the
-    // slider), so it never disagrees with the price shown for it just below.
-    sub.textContent = !(m.gasPrice > 0)
-      ? "Gas is free here, so charging can't win."
-      : v === "worth"
-      ? `Like ${money(equivDisp, cur)}${gasUnit} gas, ${pct}% cheaper`
-      : v === "gas"
-        ? (mult > 100
-            ? "Charging here costs far more than gas."
-            : `Like ${money(equivDisp, cur)}${gasUnit} gas, ${pricier}`)
-        : pct > 0
-          ? `About the same as gas (~${money(equivDisp, cur)}${gasUnit}), leaning ${elecPerMile < gasPerMile ? "cheaper" : "pricier"} ${pct}%`
-          : `About the same as gas (~${money(equivDisp, cur)}${gasUnit})`;
-
-    detailLine.hidden = false;
-    detailLine.textContent = showEffective
-      ? `Effective ${money(effective, cur)}/kWh${inclNote} \u00b7 break-even ${money(be, cur)}/kWh`
-      : `You pay ${money(m.yourRate, cur)}/kWh \u00b7 break-even ${money(be, cur)}/kWh`;
-
-    // "How long" at a glance, using your saved battery / power / charge target.
-    if (!showBriefly && v !== "gas" && Number.isFinite(session.minutes) && session.minutes > 0) {
-      timeline.hidden = false;
-      timeline.textContent = `Est. ${formatDuration(session.minutes)} to ${Math.round(session.soc)}% at ${round(drawKw, 2)} kW`;
-    } else {
-      timeline.hidden = true;
-    }
-
-    // Time-of-day suggestion based on the current clock time. Suppressed when a
-    // best-value tip is showing, so the card gives one clear action, not two.
-    if (rateMode === "tod" && schedule && schedule.length && !tip) {
-      const now = nowMinutes();
-      const nowRate = rateAtTime(schedule, now);
-      const cheap = cheapestPeriod(schedule);
-      touNote.hidden = false;
-      if (cheap && nowRate > cheap.rate + 1e-9) {
-        touNote.textContent = `\u23F0 Cheaper from ${fmtClock(cheap.start)}: ${money(cheap.rate, cur)}/kWh (now ${money(nowRate, cur)})`;
-      } else {
-        touNote.textContent = `\u2705 You're in the cheapest window now (${money(nowRate, cur)}/kWh)`;
-      }
-    } else {
-      touNote.hidden = true;
-    }
-
-    // Best-value tip: when a shorter charge is the smart move (rising duration
-    // tiers, or a per-hour time fee whose $/kWh bottoms out below 100%), surface
-    // the sweet spot in a distinct green block (miles + saving). Otherwise fall
-    // back to the plain worth-limit note or hide it. The "Charge for" slider
-    // answers "how far can I go."
-    worthTip.hidden = true;
-    if (tip) {
-      timeNote.hidden = true;
-      worthTip.hidden = false;
-      $("worthTipLead").textContent = `\uD83D\uDCA1 Best value: charge about ${formatDuration(tip.min)}`;
-      $("worthTipSub").textContent = `~${tip.range} ${tip.rangeUnit} \u00b7 like ${tip.equiv}${tip.unit} gas, ${tip.pct}% cheaper`;
-    } else if (fullNotWorth) {
-      timeNote.hidden = false;
-      timeNote.textContent = `\u23F1\uFE0F Even a short charge here costs more than gas.`;
-    } else if (worthLimitMin != null && worthLimitMin < fullChargeMin - 0.5) {
-      timeNote.hidden = false;
-      const why = hasTimeTiers ? "the time fee beats gas" : "the rate climbs past gas";
-      timeNote.textContent = `\u23F1\uFE0F Worth it up to about ${formatDuration(worthLimitMin)} of charging (~${Math.round(full.worthLimitSoc)}%). Longer, and ${why}.`;
-    } else {
-      timeNote.hidden = true;
-    }
+    track(view.showBriefly ? "verdict-charge-briefly" : v === "worth" ? "verdict-charge-it" : v === "gas" ? "verdict-use-gas" : "verdict-toss-up");
   }
 
-  renderAdvanced(m, be, cur, session, effective, timeFee, drawKw);
+  card.dataset.verdict = view.verdict;
+  headline.textContent = view.headline;
+  sub.textContent = view.sub;
+  detailLine.hidden = view.detailLine.hidden;
+  setText(detailLine, view.detailLine.text);
+  timeline.hidden = view.timeline.hidden;
+  setText(timeline, view.timeline.text);
+  touNote.hidden = view.touNote.hidden;
+  setText(touNote, view.touNote.text);
+  timeNote.hidden = view.timeNote.hidden;
+  setText(timeNote, view.timeNote.text);
+  worthTip.hidden = view.worthTip.hidden;
+  setText($("worthTipLead"), view.worthTip.lead);
+  setText($("worthTipSub"), view.worthTip.sub);
+
+  renderAdvanced(m, cur, session, effective, timeFee, drawKw);
   updatePresetActive();
   persistFrom(m);
 }
@@ -1215,52 +1086,15 @@ function updateChargeSlider(show, fullChargeMin, curMin, curSoc, hasTimeFeeConte
         : "Stopping early: less energy, and you skip the pricier later rate.");
 }
 
-function renderAdvanced(m, be, cur, session, effective, timeFee, drawKw) {
-  // Lead with range added (the tangible benefit), keep kWh for pricing context.
-  const kwhIn = session.kwhIntoBattery;
-  if (Number.isFinite(kwhIn) && kwhIn > 0) {
-    const kwhStr = `${kwhIn.toFixed(1)} kWh`;
-    if (Number.isFinite(m.miPerKwh) && m.miPerKwh > 0) {
-      const dist = m.miPerKwh * kwhIn; // canonical miles
-      const distDisp = (prefs.units === "metric" || prefs.units === "kmL") ? U.kmFromMiles(dist) : dist;
-      $("advKwh").textContent = `${Math.round(distDisp)} ${U.labels(prefs.units).distance} \u00b7 ${kwhStr}`;
-    } else {
-      $("advKwh").textContent = kwhStr;
-    }
-  } else {
-    $("advKwh").textContent = "-";
-  }
-  // The power field holds the OUTLET, so on a car whose onboard charger is
-  // slower the estimate runs at a rate that appears nowhere on screen until
-  // both prices are in and the verdict card's timeline shows up. This row
-  // always renders and sits in the same disclosure as the presets, so it names
-  // the rate here. In the label rather than the value because the rate is
-  // context and the duration is the answer: muted keeps it from reading as a
-  // warning. Only when the cap actually bites, since a car that can take the
-  // whole outlet would just repeat the field two rows above.
-  const capped = Number.isFinite(drawKw) && Number.isFinite(m.powerKw) && drawKw < m.powerKw - 0.05;
-  const hasTime = Number.isFinite(session.minutes) && session.minutes > 0;
-  $("advTimeLabel").textContent = capped && hasTime
-    ? `Time at ${round(drawKw, 2)} kW (est.)`
-    : "Time to charge (est.)";
-  $("advTime").textContent = formatDuration(session.minutes);
-  const tfRow = $("advTimeFeeRow");
-  if (timeFee > 0) {
-    tfRow.hidden = false;
-    $("advTimeFee").textContent = money(timeFee, cur);
-  } else {
-    tfRow.hidden = true;
-  }
-  // Bottom line: the all-in dollar cost of this charge. Only meaningful once a
-  // rate is set (effective is finite) and we know the battery size to bill an
-  // actual amount of energy against.
-  const totalRow = $("advTotalRow");
-  if (Number.isFinite(effective) && session.kwhFromCharger > 0 && Number.isFinite(session.totalCost)) {
-    totalRow.hidden = false;
-    $("advTotal").textContent = money(session.totalCost, cur);
-  } else {
-    totalRow.hidden = true;
-  }
+function renderAdvanced(m, cur, session, effective, timeFee, drawKw) {
+  const view = advancedFor({ m, cur, units: prefs.units, session, effective, timeFee, drawKw });
+  setText($("advKwh"), view.range.text);
+  setText($("advTimeLabel"), view.timeLabel.text);
+  setText($("advTime"), view.time.text);
+  $("advTimeFeeRow").hidden = view.timeFee.hidden;
+  setText($("advTimeFee"), view.timeFee.text);
+  $("advTotalRow").hidden = view.total.hidden;
+  setText($("advTotal"), view.total.text);
 }
 
 // --- Units picker ---
@@ -1320,19 +1154,13 @@ function writeDisplayValues() {
   renderCurrencyMenu();
 }
 
-function round(n, d) {
-  if (!Number.isFinite(n)) return "";
-  const f = Math.pow(10, d);
-  return String(Math.round(n * f) / f);
-}
-
 // What each field was last painted with: { text, value }, read back by
 // readInputs to tell an untouched field from a typed one.
 const painted = new Map();
 
 // Write one value into its field, remembering the canonical value behind it.
 function paint(id, display, digits, canonical = display) {
-  const text = round(display, digits);
+  const text = numText(display, digits);
   $(id).value = text;
   painted.set(id, { text, value: canonical });
 }
@@ -1341,16 +1169,6 @@ function paint(id, display, digits, canonical = display) {
 function nowMinutes() {
   const d = new Date();
   return d.getHours() * 60 + d.getMinutes();
-}
-
-function fmtClock(min) {
-  min = ((Math.round(min) % 1440) + 1440) % 1440;
-  let h = Math.floor(min / 60);
-  const m = min % 60;
-  const ap = h < 12 ? "AM" : "PM";
-  h = h % 12;
-  if (h === 0) h = 12;
-  return `${h}:${String(m).padStart(2, "0")} ${ap}`;
 }
 
 // The fee/schedule editor rows (time-of-day, by-duration, station-time, tax)
@@ -2272,7 +2090,8 @@ const UPDATE_FINGERPRINT_ASSETS = [
   "./index.html", "./css/styles.css",
   "./js/main.js", "./js/calc.js", "./js/units.js", "./js/storage.js",
   "./js/cars.js", "./js/myCars.js", "./js/myCarsUi.js", "./js/ui.js",
-  "./js/theme.js", "./js/analytics.js", "./js/editorRows.js", "./js/dropdown.js",
+  "./js/cardUi.js", "./js/theme.js", "./js/analytics.js", "./js/editorRows.js",
+  "./js/dropdown.js",
   "./data/phevs.json",
 ];
 
