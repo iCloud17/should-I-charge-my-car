@@ -167,11 +167,36 @@ test("with nothing priced at all the card prompts for what is missing", () => {
   const c = card({ be: NaN, hasRate: false });
   assert.equal(c.verdict, "close");
   assert.equal(c.headline, "\u2026");
-  assert.equal(c.sub, "Enter your local gas price to see the break-even.");
+  assert.equal(c.sub, "Start with your gas price or the energy rate. Add both to see which is cheaper.");
   assert.equal(c.detailLine.hidden, true);
   assert.equal(c.timeline.hidden, true);
   const noCar = card({ be: NaN, hasRate: false, m: { mpg: NaN, miPerKwh: NaN } });
   assert.equal(noCar.sub, "Pick your car to start.");
+});
+
+test("the empty card points at the current charger pricing editor", () => {
+  assert.equal(card({ be: NaN, hasRate: false, rateMode: "tod" }).sub,
+    "Start with your gas price or time-of-day rates. Add both to see which is cheaper.");
+  assert.equal(card({ be: NaN, hasRate: false, rateMode: "dur" }).sub,
+    "Start with your gas price or duration tiers. Add both to see which is cheaper.");
+  assert.equal(card({ be: NaN, hasRate: false, rateMode: "flat" }).sub,
+    "Start with your gas price or the energy rate. Add both to see which is cheaper.");
+});
+
+test("the empty card only mentions charger pricing when the charge can be sized", () => {
+  const noSizedCharge = card({ be: NaN, hasRate: false, session: { kwhFromCharger: 0 } });
+  assert.equal(noSizedCharge.sub, "Enter your local gas price to see the break-even.");
+
+  const alreadyHasRate = card({ be: NaN, hasRate: true, session: { kwhFromCharger: 0 } });
+  assert.equal(alreadyHasRate.sub, "Enter your local gas price to see the break-even.");
+
+  // By-duration with the "Charge for" slider at 0: adding tiers would still buy nothing.
+  const durNothingToBuy = card({ be: NaN, hasRate: false, rateMode: "dur", session: { kwhFromCharger: 0 } });
+  assert.equal(durNothingToBuy.sub, "Enter your local gas price to see the break-even.");
+
+  // Time of day with nothing to charge: a schedule cannot price a charge that cannot be sized.
+  const todNothingToBuy = card({ be: NaN, hasRate: false, rateMode: "tod", session: { kwhFromCharger: 0 } });
+  assert.equal(todNothingToBuy.sub, "Enter your local gas price to see the break-even.");
 });
 
 // --- Arm 2: no charger price -------------------------------------------------

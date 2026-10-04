@@ -44,7 +44,8 @@ export function fmtClock(min) {
 // cardFor is the four-arm decision chain of render() with the DOM taken out:
 // same order, same conditions, same strings. Order matters. No gas price (or no
 // car) first, then no charger price, then nothing to charge, then the real
-// verdict.
+// verdict. Inside the first arm, a priced and sized charge can still show its
+// cost without a gas price.
 //
 // null text means "leave what is already there". Three of the four arms hide an
 // element without rewriting it, so its previous text survives behind
@@ -52,6 +53,16 @@ export function fmtClock(min) {
 // which is a visible change the moment one is shown again.
 const hiddenLine = () => ({ hidden: true, text: null });
 const hiddenTip = () => ({ hidden: true, lead: null, sub: null });
+
+function missingGasOrChargerPrompt(rateMode) {
+  if (rateMode === "tod") {
+    return "Start with your gas price or time-of-day rates. Add both to see which is cheaper.";
+  }
+  if (rateMode === "dur") {
+    return "Start with your gas price or duration tiers. Add both to see which is cheaper.";
+  }
+  return "Start with your gas price or the energy rate. Add both to see which is cheaper.";
+}
 
 function rangeText(kwhIn, miPerKwh, units) {
   const kwhStr = `${kwhIn.toFixed(1)} kWh`;
@@ -72,7 +83,8 @@ export function cardFor(model) {
 
   if (!Number.isFinite(be)) {
     const haveCar = Number.isFinite(m.mpg) && Number.isFinite(m.miPerKwh);
-    if (hasRate && session.kwhFromCharger > 0) {
+    const chargeIsSized = session.kwhFromCharger > 0;
+    if (hasRate && chargeIsSized) {
       // No gas price means no verdict, but the cost of the stop never needed one.
       return {
         verdict: "none",
@@ -99,7 +111,9 @@ export function cardFor(model) {
       verdict: "close",
       headline: "\u2026",
       sub: haveCar
-        ? "Enter your local gas price to see the break-even."
+        ? !hasRate && chargeIsSized
+          ? missingGasOrChargerPrompt(rateMode)
+          : "Enter your local gas price to see the break-even."
         : "Pick your car to start.",
       detailLine: hiddenLine(),
       timeline: hiddenLine(),
