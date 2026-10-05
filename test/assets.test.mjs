@@ -134,53 +134,73 @@ function bodyOf(src, name) {
 // feature test alone is not the fix, because bailing out is that same silence.
 // The confirm is what keeps the control working, so both halves are pinned.
 //
-// Read as a GATE inside askRemoveCar, not as two substrings anywhere in the
-// file. Unscoped, any unrelated window.confirm( in main.js stood in for this
-// one, and a confirm whose answer was taken and then ignored counted as a
+// Read as a GATE inside the function that asks, not as two substrings anywhere
+// in the file. Unscoped, any unrelated window.confirm( in main.js stood in for
+// this one, and a confirm whose answer was taken and then ignored counted as a
 // working fallback.
-function dialogFallback(src) {
-  const body = bodyOf(src, "askRemoveCar");
+function dialogFallback(src, asker, act) {
+  const body = bodyOf(src, asker);
   if (!/typeof\s+\w+\.showModal\s*!==\s*["']function["']/.test(body)) return false;
-  // The answer has to be SPENT: asked in a condition, with the removal hanging
-  // off it. Either way round, because the refusal may be the early return.
-  return /if\s*\(\s*!?\s*window\.confirm\(/.test(body) && body.includes("removeActiveCar()");
+  // The answer has to be SPENT: the act inside the yes branch, or after a
+  // refusal that returns. A refusal that falls through is Cancel acting anyway.
+  const asked = String.raw`window\.confirm\((?:[^()]|\([^()]*\))*\)`;
+  if (new RegExp(String.raw`if\s*\(\s*${asked}\s*\)\s*(?:\{[^{}]*)?\b${act}\(\)`).test(body)) return true;
+  const refused = new RegExp(String.raw`if\s*\(\s*!\s*${asked}\s*\)\s*(?:return\b|\{[^{}]*\breturn\s*;?\s*\})`).exec(body);
+  return refused !== null && body.includes(`${act}()`, refused.index + refused[0].length);
 }
 
-test("the remove-car control still works on engines without <dialog>", () => {
+test("the remove and reset controls still work on engines without <dialog>", () => {
   const ask = (lines) => `function askRemoveCar() {\n${lines}\n}\n`;
+  const removal = (src) => dialogFallback(src, "askRemoveCar", "removeActiveCar");
 
   // Guard on the guard: a bare call, and a feature test that bails rather than asks.
-  assert.equal(dialogFallback(ask("  dlg.showModal();")), false);
-  assert.equal(dialogFallback(ask('  if (typeof dlg.showModal !== "function") return;')), false);
+  assert.equal(removal(ask("  dlg.showModal();")), false);
+  assert.equal(removal(ask('  if (typeof dlg.showModal !== "function") return;')), false);
 
   // One that ASKS and throws the answer away, which the old substring pair
   // passed: the question is drawn, "Keep it" is pressed, the car goes anyway.
   assert.equal(
-    dialogFallback(ask('  if (typeof dlg.showModal !== "function") {\n    window.confirm(q);\n    removeActiveCar();\n  }')),
+    removal(ask('  if (typeof dlg.showModal !== "function") {\n    window.confirm(q);\n    removeActiveCar();\n  }')),
     false,
   );
 
   // And a confirm belonging to a different control, which is exactly what an
   // unscoped scan could not tell from this one.
   const elsewhere = "function resetEverything() {\n  if (window.confirm(q)) removeActiveCar();\n}\n";
-  assert.equal(dialogFallback(elsewhere + ask('  if (typeof dlg.showModal !== "function") return;')), false);
+  assert.equal(removal(elsewhere + ask('  if (typeof dlg.showModal !== "function") return;')), false);
 
   // Both gating shapes pass: the answer spent where it is taken, and the
   // refusal taken as an early return.
+  const sound = ask('  if (typeof dlg.showModal !== "function") {\n    if (!window.confirm(q)) return;\n    removeActiveCar();\n  }');
   assert.equal(
-    dialogFallback(ask('  if (typeof dlg.showModal !== "function") {\n    if (window.confirm(q)) removeActiveCar();\n  }')),
+    removal(ask('  if (typeof dlg.showModal !== "function") {\n    if (window.confirm(q)) removeActiveCar();\n  }')),
     true,
   );
-  assert.equal(
-    dialogFallback(ask('  if (typeof dlg.showModal !== "function") {\n    if (!window.confirm(q)) return;\n    removeActiveCar();\n  }')),
-    true,
-  );
+  assert.equal(removal(sound), true);
 
-  assert.equal(
-    dialogFallback(read("../js/main.js")),
-    true,
-    "askRemoveCar reaches showModal() with no confirm gating the removal: below Firefox 98 / Safari 15.4 the remove control does nothing at all",
-  );
+  // A refusal that counts the "no" and falls through to the act, which is
+  // Cancel resetting anyway: askReset's refusal block with its return dropped.
+  const resetAsker = (refusal) =>
+    `function askReset() {\n  if (typeof dlg.showModal !== "function") {\n${refusal}    resetEverything();\n    return;\n  }\n}\n`;
+  const reset = (src) => dialogFallback(src, "askReset", "resetEverything");
+  const kept = '      trackWhenReady("reset-kept");\n';
+  assert.equal(reset(resetAsker(`    if (!window.confirm(q)) {\n${kept}    }\n`)), false);
+  assert.equal(reset(resetAsker('    if (!window.confirm(q)) trackWhenReady("reset-kept");\n')), false);
+  assert.equal(reset(resetAsker(`    if (!window.confirm(q)) {\n${kept}      return;\n    }\n`)), true);
+
+  // And the asker named is the one read: a sound askRemoveCar must not vouch
+  // for an askReset that has no fallback at all.
+  const bare = "function askReset() {\n  dlg.showModal();\n}\n";
+  assert.equal(dialogFallback(sound + bare, "askReset", "resetEverything"), false);
+
+  const src = read("../js/main.js");
+  for (const [asker, act] of [["askRemoveCar", "removeActiveCar"], ["askReset", "resetEverything"]]) {
+    assert.equal(
+      dialogFallback(src, asker, act),
+      true,
+      `${asker} reaches showModal() with no confirm gating ${act}(): below Firefox 98 / Safari 15.4 the control does nothing, or acts on Cancel`,
+    );
+  }
 });
 
 // --- Analytics --------------------------------------------------------------
@@ -250,13 +270,18 @@ test("source guard: the switch a removal performs is not counted as a user switc
   );
 });
 
-test("source guard: the saved-cars events are all still sent", () => {
+test("source guard: the saved-cars and reset events are all still sent", () => {
   // A positive match, unlike the bans above, because here the literal IS the
   // metric: a renamed event is not a broken test, it is a series that stops in
-  // GoatCounter and a new one that starts with no history.
+  // GoatCounter and a new one that starts with no history. The reset pair is
+  // read as a ratio, kept against reset, so losing either one loses both.
   const src = stripComments(read("../js/main.js"));
-  for (const name of ["cars-added", "cars-second-added", "cars-copy-added", "cars-switched", "storage-refused"]) {
-    assert.ok(src.includes(`"${name}"`), `${name} is no longer sent from main.js: the saved-cars feature lost a metric`);
+  const names = [
+    "cars-added", "cars-second-added", "cars-copy-added", "cars-switched", "storage-refused",
+    "reset-everything", "reset-kept",
+  ];
+  for (const name of names) {
+    assert.ok(src.includes(`"${name}"`), `${name} is no longer sent from main.js, so its series stops in GoatCounter`);
   }
 });
 

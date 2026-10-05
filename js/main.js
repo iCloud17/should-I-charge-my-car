@@ -22,6 +22,7 @@ import {
   newCarName, defaultCarName, withDefaultNames,
   legacyNameSlot, nameFieldValue, removedMessage, removeWriteFailedMessage, removeConfirmQuestion,
   removeGoneMessage, nameWriteFailedMessage, numbersWriteFailedMessage, selectionWriteFailedMessage,
+  resetConfirmQuestion, resetDoneMessage,
 } from "./myCarsUi.js";
 import { $, parseNum, money, escapeHtml, nextOptionIndex, enterAction } from "./ui.js";
 import { cardFor, advancedFor, inclusionNote, numText, chargeForReadout, chargeForSlider, rememberedChargeFor } from "./cardUi.js";
@@ -920,6 +921,70 @@ function removeActiveCar() {
   // feedback a screen reader gets, so this line is the whole of what it hears.
   sayMyCarsNote(removedMessage(label));
   focusCarListAction();
+}
+
+// --- Resetting everything ---------------------------------------------------
+//
+// Asked first, in a modal of its own, for the reason a removal is: every saved
+// car goes, names and numbers included, and nothing in the app puts them back.
+// Not the remove dialog with a mode flag, because refreshing from another tab
+// closes that one whenever the car it names is gone, and a reset names no car.
+
+function askReset() {
+  const dlg = $("resetDialog");
+  if (dlg.open) return;
+  // Read from disk rather than from myCars: what is on disk is what gets deleted.
+  const question = resetConfirmQuestion(loadMyCars().cars.length);
+  $("resetPrompt").textContent = question;
+
+  // The same fallback askRemoveCar has, for the same engines. No re-read first:
+  // the reset empties the store whatever another tab has written to it.
+  if (typeof dlg.showModal !== "function") {
+    if (!window.confirm(question)) {
+      trackWhenReady("reset-kept");
+      return;
+    }
+    resetEverything();
+    return;
+  }
+
+  // Cleared rather than trusted: not every engine resets it on show.
+  dlg.returnValue = "";
+  dlg.showModal();
+}
+
+function resetEverything() {
+  prefs = resetPrefs();
+  // "Reset everything" means everything, saved cars included. Keeping them
+  // would also keep the migration's one-shot flag burned, so the fresh prefs
+  // would come up beside a list of cars they know nothing about, and the user
+  // would be looking at a clean slate that is not clean underneath.
+  //
+  // Emptied, not deleted: clearMyCars leaves an empty store so the one-shot
+  // migration stays spent. Another tab still holds its car and writes its
+  // prefs on its next keystroke, and a missing key let the next load migrate
+  // those cars straight back.
+  clearMyCars();
+  myCars = emptyCarsState();
+  // Reset volatile UI too: pricing mode, schedule/tier rows, info note.
+  rateMode = "flat";
+  chargeCapMin = null;
+  capTouched = false;
+  const flatRadio = document.querySelector('input[name="rateMode"][value="flat"]');
+  if (flatRadio) flatRadio.checked = true;
+  $("touRows").innerHTML = "";
+  $("durRows").innerHTML = "";
+  $("timeFeeRows").innerHTML = "";
+  $("taxRows").innerHTML = "";
+  $("carInfoNote").hidden = true;
+  $("carInfoBtn").setAttribute("aria-expanded", "false");
+  boot();
+  trackWhenReady("reset-everything");
+
+  // After boot(), which clears the note, and then focus, the same as removing
+  // the last car: a first-run screen has one thing to do on it.
+  sayMyCarsNote(resetDoneMessage());
+  $("carSearch").focus();
 }
 
 // --- Two tabs ---------------------------------------------------------------
@@ -1982,31 +2047,17 @@ function attachEvents() {
     copied.then(() => showCopyToast("Email address copied"), () => {});
   });
 
-  $("resetBtn").addEventListener("click", () => {
-    prefs = resetPrefs();
-    // "Reset everything" means everything, saved cars included. Keeping them
-    // would also keep the migration's one-shot flag burned, so the fresh prefs
-    // would come up beside a list of cars they know nothing about, and the user
-    // would be looking at a clean slate that is not clean underneath.
-    //
-    // No re-migration afterwards, and none is needed: prefs are at their
-    // defaults now, so there is nothing to carry across and migrateIfNeeded
-    // would write nothing. The empty state below is the same answer it reaches.
-    clearMyCars();
-    myCars = emptyCarsState();
-    // Reset volatile UI too: pricing mode, schedule/tier rows, info note.
-    rateMode = "flat";
-    chargeCapMin = null;
-    capTouched = false;
-    const flatRadio = document.querySelector('input[name="rateMode"][value="flat"]');
-    if (flatRadio) flatRadio.checked = true;
-    $("touRows").innerHTML = "";
-    $("durRows").innerHTML = "";
-    $("timeFeeRows").innerHTML = "";
-    $("taxRows").innerHTML = "";
-    $("carInfoNote").hidden = true;
-    $("carInfoBtn").setAttribute("aria-expanded", "false");
-    boot();
+  // --- Resetting everything -------------------------------------------------
+  //
+  // The same shape as removing a car: the control asks, and the dialog's close
+  // answers, so Escape and "Keep it all" are one path. Kept against reset is
+  // counted because it shows how much a charger-only clear is wanted. No click
+  // listener on the dialog, so there is no backdrop dismiss.
+  $("resetBtn").addEventListener("click", askReset);
+
+  $("resetDialog").addEventListener("close", (e) => {
+    if (e.target.returnValue === "reset") resetEverything();
+    else trackWhenReady("reset-kept");
   });
 }
 

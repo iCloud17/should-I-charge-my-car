@@ -11,6 +11,7 @@ import {
   carTileSource, carSummaryLabel, legacyNameSlot, nameFieldValue,
   nextChipIndex, atCapMessage, addRefusalMessage, addWriteFailedMessage, addedMessage,
   removedMessage, removeWriteFailedMessage, removeConfirmQuestion, removeGoneMessage,
+  resetConfirmQuestion, resetDoneMessage,
   nameWriteFailedMessage, numbersWriteFailedMessage, selectionWriteFailedMessage,
 } from "../js/myCarsUi.js";
 import { CUSTOM_CAR_ID, MAX_MY_CARS, addMyCar, emptyCarsState } from "../js/myCars.js";
@@ -1024,6 +1025,22 @@ test("the remove question names the car the CHIP names, not a car still on scree
   );
 });
 
+test("the reset question counts the saved cars, the one loss not on screen", () => {
+  assert.equal(resetConfirmQuestion(3), "Delete your 3 saved cars and reset everything?");
+  assert.equal(resetConfirmQuestion(1), "Delete your saved car and reset everything?");
+  assert.equal(resetConfirmQuestion(0), "Clear your car, prices and settings?");
+  // Not a count, so no number is claimed.
+  assert.equal(resetConfirmQuestion(NaN), "Clear your car, prices and settings?");
+  assert.equal(resetConfirmQuestion(-1), "Clear your car, prices and settings?");
+});
+
+test("the reset announcement is a statement, never a question", () => {
+  // Read after the reset has happened, like removedMessage. A question mark
+  // here would read as a reset still waiting for an answer.
+  assert.equal(resetDoneMessage(), "Everything was reset.");
+  assert.ok(!resetDoneMessage().includes("?"), `the reset is still asking: ${resetDoneMessage()}`);
+});
+
 test("a refused removal is reported as a refusal, in the add path's own words", () => {
   // H-5. The write can be refused and the removal used to be announced as done
   // anyway, over a disk that still held the car. The outcome differs by one
@@ -1175,6 +1192,7 @@ test("no copy in this module uses an em dash", () => {
     selectionWriteFailedMessage("unavailable"), selectionWriteFailedMessage("read-only"),
     removeConfirmQuestion("Volt"), removeConfirmQuestion(""),
     removeGoneMessage("Volt"), removeGoneMessage(""),
+    resetConfirmQuestion(0), resetConfirmQuestion(1), resetConfirmQuestion(3), resetDoneMessage(),
     // The words this module invents when no car, row or record supplies any.
     chipBaseLabel({ carId: CUSTOM_CAR_ID }, getCar), chipBaseLabel({ carId: "gone" }, getCar),
     carSummaryLabel(null, null, ""),
@@ -1278,24 +1296,112 @@ test("source guard: the confirm is a modal, and the act hangs off its close", ()
   );
 });
 
-test("source guard: the harmless answer is the dialog's default submit", () => {
+test("source guard: the reset question is a modal too, and the reset hangs off its close", () => {
+  // The footer Reset ran on its own click, deleting every saved car in one tap.
+  // This watches for that handler coming back, and for the remove question's
+  // other reverts: a non-modal show, a close that resets whatever the answer,
+  // and a backdrop dismiss.
+  const src = readFileSync(new URL("../js/main.js", import.meta.url), "utf8");
+  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const bodyOf = (name) => {
+    const start = src.indexOf(`function ${name}(`);
+    assert.notEqual(start, -1, `${name} moved or was renamed`);
+    return src.slice(start, src.indexOf("\n}", start))
+      .split("\n").filter((l) => !l.trim().startsWith("//")).join("\n");
+  };
+
+  const at = html.indexOf('id="resetDialog"');
+  assert.notEqual(at, -1, "the reset question is gone from the page");
+  const dialog = html.slice(html.lastIndexOf("<", at), html.indexOf("</dialog>", at));
+  assert.match(dialog, /^<dialog\b/, "the reset question is no longer a dialog element");
+  assert.match(dialog, /<form[^>]*method="dialog"/, "the reset answer no longer arrives as a returnValue");
+  assert.match(bodyOf("askReset"), /\.showModal\(\)/, "the reset question opens non-modally, so it traps nothing");
+
+  // Escape and "Keep it all" are one path because the act hangs off the close,
+  // and only the answer "reset" may reach it.
+  const wiring = bodyOf("attachEvents");
+  const closeAt = wiring.indexOf('$("resetDialog").addEventListener("close"');
+  assert.notEqual(closeAt, -1, "nothing listens for the reset question closing");
+  const onClose = wiring.slice(closeAt, wiring.indexOf("\n  });", closeAt));
+  assert.match(onClose, /resetEverything\(\)/, "the question's answer no longer resets anything");
+
+  // Escape and the back gesture close with "" and Keep it all with "keep", so
+  // only a strict test for "reset" keeps them apart. The early return the
+  // remove handler uses is refused too: drop its return and every close resets.
+  const resetsOnlyOnReset = (handler) => {
+    const count = (re) => (handler.match(re) ?? []).length;
+    if (count(/\bresetEverything\(/g) !== 1 || count(/\breturnValue\b/g) !== 1) return false;
+    return /\bif\s*\(\s*[\w$.]+\.returnValue\s*===\s*(["'])reset\1\s*\)\s*\{?\s*resetEverything\(\)/.test(handler);
+  };
+
+  // Guard on the guard: the shipped shape and its braced reflow pass, and each
+  // way for a close that is not "reset" to reach the reset fails.
+  assert.equal(resetsOnlyOnReset('if (e.target.returnValue === "reset") resetEverything();\nelse trackWhenReady("reset-kept");'), true);
+  assert.equal(resetsOnlyOnReset('if (e.target.returnValue === "reset") {\n  resetEverything();\n}'), true);
+  const bad = {
+    "Escape and the back gesture reset": 'if (e.target.returnValue !== "keep") resetEverything();',
+    "the same, loosely": 'if (e.target.returnValue != "keep") resetEverything();',
+    "Keep it all resets": "if (e.target.returnValue) resetEverything();",
+    "a lost return resets on every close": 'if (e.target.returnValue !== "reset") trackWhenReady("reset-kept");\nresetEverything();',
+    "the else resets too": 'if (e.target.returnValue === "reset") resetEverything();\nelse { trackWhenReady("reset-kept"); resetEverything(); }',
+    "a widened test lets Escape in": 'if (e.target.returnValue === "reset" || !e.target.returnValue) resetEverything();',
+  };
+  for (const [what, handler] of Object.entries(bad)) {
+    assert.equal(resetsOnlyOnReset(handler), false, `${what}, and the guard passed it`);
+  }
+
+  assert.ok(
+    resetsOnlyOnReset(onClose),
+    'the close resets on something other than returnValue === "reset", so Escape, the back gesture or Keep it all deletes the saved cars',
+  );
+  assert.doesNotMatch(
+    wiring.replace(onClose, ""),
+    /\bresetEverything\b|resetPrefs\(|clearMyCars\(/,
+    "the wiring resets somewhere other than on the question's answer, so a tap resets with no question",
+  );
+
+  assert.doesNotMatch(
+    src,
+    /\$\("resetDialog"\)\.addEventListener\("click"/,
+    "the backdrop light dismiss is on the reset question, so a second tap outside the box dismisses it",
+  );
+});
+
+test("source guard: the reset is announced after the repaint that clears the note", () => {
+  // boot() repaints the saved-cars UI, and that repaint empties the note, so a
+  // done message said before it is wiped in the same task and nobody hears it.
+  const src = readFileSync(new URL("../js/main.js", import.meta.url), "utf8");
+  const start = src.indexOf("function resetEverything(");
+  assert.notEqual(start, -1, "resetEverything moved or was renamed");
+  const body = src.slice(start, src.indexOf("\n}", start))
+    .split("\n").filter((l) => !l.trim().startsWith("//")).join("\n");
+
+  const repaint = body.indexOf("boot()");
+  assert.notEqual(repaint, -1, "resetEverything stopped repainting");
+  assert.match(body.slice(repaint), /resetDoneMessage\(/, "the reset is not announced after the repaint, so a screen reader hears nothing");
+  assert.doesNotMatch(body.slice(0, repaint), /resetDoneMessage\(/, "the reset is announced before boot() clears the note");
+});
+
+test("source guard: the harmless answer is every dialog's default submit", () => {
   // Implicit submission fires the FIRST submit button in the form. There is no
   // text control here today, so nothing triggers it, but the day someone adds a
   // "type the car name to confirm" field, Enter would mean Remove with no other
   // edit. Source order answers that and CSS puts the visual order back, so both
   // halves are pinned: the swap alone moves Remove under the thumb, the reverse
-  // alone is the trap again.
+  // alone is the trap again. Every row, so the reset question is held to it too.
   const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
-  const from = html.indexOf('class="dialog__actions"');
-  assert.notEqual(from, -1, "the dialog's actions row moved or was renamed");
-  const actions = html.slice(from, html.indexOf("</div>", from));
+  const rows = [...html.matchAll(/class="dialog__actions"/g)]
+    .map((m) => html.slice(m.index, html.indexOf("</div>", m.index)));
+  assert.ok(rows.length >= 2, `${rows.length} dialog actions rows found, and the remove and reset questions each have one`);
 
-  const attrs = [...actions.matchAll(/<button\b([^>]*)>/g)].map((m) => m[1]);
-  assert.equal(attrs.length, 2, `the question grew or lost an answer: ${attrs.length} buttons`);
-  const firstSubmit = attrs.find((a) => /type="submit"/.test(a));
-  assert.ok(firstSubmit, "the answers stopped being submit buttons, so method=dialog carries no answer");
-  assert.match(firstSubmit, /id="removeCarNo"/, "Remove is the default submit again, so an added text field would make Enter mean Remove");
-  assert.match(firstSubmit, /autofocus/, "the modal no longer opens on the answer that changes nothing");
+  for (const actions of rows) {
+    const attrs = [...actions.matchAll(/<button\b([^>]*)>/g)].map((m) => m[1]);
+    assert.equal(attrs.length, 2, `a question grew or lost an answer: ${attrs.length} buttons`);
+    const firstSubmit = attrs.find((a) => /type="submit"/.test(a));
+    assert.ok(firstSubmit, "the answers stopped being submit buttons, so method=dialog carries no answer");
+    assert.match(firstSubmit, /value="keep"/, `the act is the default submit again, so an added text field would make Enter mean it: ${firstSubmit.trim()}`);
+    assert.match(firstSubmit, /autofocus/, `the modal no longer opens on the answer that changes nothing: ${firstSubmit.trim()}`);
+  }
 
   const css = readFileSync(new URL("../css/styles.css", import.meta.url), "utf8");
   const rule = css.match(/\.dialog__actions\s*\{[^}]*\}/);

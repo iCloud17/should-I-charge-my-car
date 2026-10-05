@@ -475,9 +475,17 @@ export function saveMyCars(state) {
   }
 }
 
+// Empties the store rather than deleting the key. The key's presence is how
+// migrateIfNeeded knows it already ran, and with the key gone another tab still
+// showing a car wrote its carId and carOverrides on its next keystroke, so the
+// next load migrated every car the reset had just deleted back in.
+//
+// Written directly rather than through saveMyCars, which refuses a newer
+// build's payload. A reset is the user asking for everything on this device to
+// go, and removeItem always cleared that payload too.
 export function clearMyCars() {
   try {
-    localStorage.removeItem(CARS_KEY);
+    localStorage.setItem(CARS_KEY, JSON.stringify(emptyCarsState()));
   } catch {
     /* ignore */
   }

@@ -508,3 +508,19 @@ export function removeGoneMessage(label) {
   const l = trimmed(label);
   return l ? `${l} was already removed in another tab.` : "That car was already removed in another tab.";
 }
+
+// What the user is asked before "Reset everything". It names the saved cars
+// because they are the one loss that is not on screen. `count` is what is on
+// disk, since that is what the reset deletes; anything that is not a count
+// gets the question that claims no number.
+export function resetConfirmQuestion(count) {
+  if (!Number.isInteger(count) || count < 1) return "Clear your car, prices and settings?";
+  if (count === 1) return "Delete your saved car and reset everything?";
+  return `Delete your ${count} saved cars and reset everything?`;
+}
+
+// The reset's announcement. A statement, like removedMessage: by the time it is
+// read the question has been asked and answered.
+export function resetDoneMessage() {
+  return "Everything was reset.";
+}

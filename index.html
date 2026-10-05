@@ -380,7 +380,7 @@
     </details>
 
     <footer class="app__foot">
-      <button id="resetBtn" class="link" type="button">Reset</button>
+      <button id="resetBtn" class="link" type="button">Reset everything</button>
       <div class="app__foot-right">
         <span class="app__foot-note">Saved on this device.</span>
         <a id="feedbackLink" class="link" href="mailto:shouldichargemycar@duck.com?subject=Should%20I%20Charge&amp;body=Please%20leave%20out%20anything%20personal.%20I%20do%20not%20need%20your%20location%20or%20your%20account." aria-label="Contact me, also copies the address" title="Contact me, email shouldichargemycar@duck.com">Contact me</a>
@@ -405,6 +405,18 @@
         <!-- autofocus, so the modal opens on the answer that changes nothing. -->
         <button type="submit" value="keep" class="btn btn--ghost" id="removeCarNo" autofocus>Keep it</button>
         <button type="submit" value="remove" class="btn btn--danger" id="removeCarYes">Remove</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- The footer reset's question, with the same answer order, autofocus and
+       lack of a backdrop dismiss as the remove question above. -->
+  <dialog class="dialog" id="resetDialog" aria-labelledby="resetPrompt">
+    <form method="dialog" class="dialog__inner">
+      <p class="dialog__title" id="resetPrompt"></p>
+      <div class="dialog__actions">
+        <button type="submit" value="keep" class="btn btn--ghost" id="resetNo" autofocus>Keep it all</button>
+        <button type="submit" value="reset" class="btn btn--danger" id="resetYes">Reset</button>
       </div>
     </form>
   </dialog>

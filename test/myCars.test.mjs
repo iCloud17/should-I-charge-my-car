@@ -379,7 +379,7 @@ test("nothing in this module reads or writes sicc.prefs.v1", () => {
   clearMyCars();
 
   assert.equal(store.getItem(PREFS_KEY), prefsBefore, "the rollback data is untouched");
-  assert.equal(store.getItem(CARS_KEY), null, "and clearing our key clears only ours");
+  assert.deepEqual(JSON.parse(store.getItem(CARS_KEY)), emptyCarsState(), "and clearing our key empties only ours");
 });
 
 test("a store that throws on every call leaves the app working", () => {
@@ -639,6 +639,27 @@ test("a user who deleted every saved car does not get them resurrected", () => {
   saveMyCars(emptyCarsState());
   assert.equal(migrateIfNeeded(prefs, labelFor).reason, "already-present");
   assert.deepEqual(loadMyCars().cars, [], "the key's presence is the record that it already ran");
+});
+
+test("a reset keeps the migration flag", () => {
+  // Reset used to delete the key. Another tab still showing a car then wrote
+  // its carId and every carOverrides entry on its next keystroke, and the next
+  // load migrated them back: two cars the reset deleted came back as two chips.
+  seed(JSON.stringify({ v: CARS_V, cars: [car(), car({ id: "c2", carId: "prius-2021" })], activeId: "c1" }));
+  clearMyCars();
+  const otherTab = legacyPrefs({ carOverrides: { "volt-2018": { mpg: 39 }, "prius-2021": { mpg: 51 } } });
+  assert.equal(migrateIfNeeded(otherTab, labelFor).reason, "already-present");
+  assert.deepEqual(loadMyCars().cars, [], "the next load undid the reset");
+});
+
+test("a reset clears a newer build's payload", () => {
+  // saveMyCars refuses here, which is right for an edit. A reset is the user
+  // asking for everything on this device to go, and it always cleared this too.
+  seed(JSON.stringify({ v: CARS_V + 1, cars: [car()], activeId: "c1" }));
+  assert.equal(saveMyCars(emptyCarsState()).ok, false, "the ordinary writer would have kept the cars");
+  clearMyCars();
+  assert.deepEqual(JSON.parse(globalThis.localStorage.getItem(CARS_KEY)), emptyCarsState());
+  assert.deepEqual(loadMyCars(), { ...emptyCarsState(), readOnly: false });
 });
 
 test("nothing to migrate is a normal outcome and writes nothing", () => {
