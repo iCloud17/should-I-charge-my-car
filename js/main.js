@@ -23,8 +23,8 @@ import {
   legacyNameSlot, nameFieldValue, removedMessage, removeWriteFailedMessage, removeConfirmQuestion,
   removeGoneMessage, nameWriteFailedMessage, numbersWriteFailedMessage, selectionWriteFailedMessage,
 } from "./myCarsUi.js";
-import { $, parseNum, money, formatDuration, escapeHtml, nextOptionIndex, enterAction } from "./ui.js";
-import { cardFor, advancedFor, inclusionNote, numText } from "./cardUi.js";
+import { $, parseNum, money, escapeHtml, nextOptionIndex, enterAction } from "./ui.js";
+import { cardFor, advancedFor, inclusionNote, numText, chargeForReadout, chargeForSlider, rememberedChargeFor } from "./cardUi.js";
 import { applyTheme, nextThemeMode, themeLabel } from "./theme.js";
 import { track, trackWhenReady } from "./analytics.js";
 import {
@@ -169,7 +169,9 @@ function render() {
   else if (showBriefly && !capTouched) cap = tip.min;
   const session = cap === Infinity ? full : chargeCurve({ ...curveArgs, capMinutes: cap });
 
-  updateChargeSlider(canStopEarly && fullChargeMin > 0, fullChargeMin, session.minutes, session.soc, hasTimeTiers);
+  const showChargeFor = canStopEarly && fullChargeMin > 0;
+  updateChargeSlider(showChargeFor, fullChargeMin, session.minutes, session.soc, hasTimeTiers);
+  ({ capTouched, chargeCapMin } = rememberedChargeFor(showChargeFor, capTouched, chargeCapMin));
 
   const kwh = session.kwhFromCharger;
   const timeFee = session.timeFee;
@@ -201,7 +203,6 @@ function render() {
   if (hasTimeTiers) track("fees-time");
   if (hasTax) track("fees-tax");
 
-  const nothingToCharge = Number.isFinite(m.startPct) && Number.isFinite(m.targetPct) && !(m.targetPct > m.startPct);
   const view = cardFor({
     m, be, cur, units: prefs.units, hasRate, session, full,
     drawKw, effective, showEffective, inclNote, rateMode, schedule, hasTimeTiers,
@@ -209,9 +210,10 @@ function render() {
     now: nowMin,
   });
 
-  // Gated on cardFor's fourth arm, so the funnel still counts verdict states
-  // only. track() is impure, so it cannot move in there with the rest.
-  if (Number.isFinite(be) && hasRate && !nothingToCharge) {
+  // cardFor says whether this card is a verdict, so the funnel still counts
+  // verdict states only. track() is impure, so it cannot move in there with
+  // the rest.
+  if (view.counted) {
     const v = verdict(effective, be);
     track("verdict-shown");
     track(view.showBriefly ? "verdict-charge-briefly" : v === "worth" ? "verdict-charge-it" : v === "gas" ? "verdict-use-gas" : "verdict-toss-up");
@@ -1073,21 +1075,18 @@ function updateChargeSlider(show, fullChargeMin, curMin, curSoc, hasTimeFeeConte
   field.hidden = !show;
   if (!show) return;
   const slider = $("chargeForMin");
-  const maxMin = Math.max(15, Math.ceil(fullChargeMin));
-  slider.max = String(maxMin);
   // Follow the current selection (a dragged cap, the recommended partial, or the
   // full charge) so the slider and the numbers around it always agree.
-  slider.value = String(Math.max(0, Math.min(maxMin, Math.round(curMin))));
-  $("chargeForOut").textContent = `${formatDuration(Number(slider.value))} (~${Math.round(curSoc)}%)`;
-  $("chargeForNote").textContent = Number(slider.value) >= maxMin - 0.5
-    ? "Full charge to your target."
-    : (hasTimeFeeContext
-        ? "Stopping early: less energy, but less time fee."
-        : "Stopping early: less energy, and you skip the pricier later rate.");
+  const view = chargeForSlider(fullChargeMin, curMin, hasTimeFeeContext);
+  slider.max = String(view.max);
+  slider.value = String(view.value);
+  $("chargeForOut").textContent = chargeForReadout(view.value, curSoc);
+  $("chargeForNote").textContent = view.note;
 }
 
 function renderAdvanced(m, cur, session, effective, timeFee, drawKw) {
   const view = advancedFor({ m, cur, units: prefs.units, session, effective, timeFee, drawKw });
+  setText($("advKwhLabel"), view.rangeLabel.text);
   setText($("advKwh"), view.range.text);
   setText($("advTimeLabel"), view.timeLabel.text);
   setText($("advTime"), view.time.text);

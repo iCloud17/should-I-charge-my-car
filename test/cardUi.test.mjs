@@ -7,7 +7,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { inclusionNote, numText, fmtClock, cardFor, advancedFor } from "../js/cardUi.js";
+import { inclusionNote, numText, fmtClock, cardFor, advancedFor, chargeForReadout, chargeForSlider, rememberedChargeFor } from "../js/cardUi.js";
 
 // --- What the effective rate says it includes -------------------------------
 
@@ -86,9 +86,12 @@ test("fmtClock rounds a fractional minute before splitting off the hour", () => 
   assert.equal(fmtClock(59.4), "12:59 AM");
 });
 
-test("fmtClock has no non-finite gate, unlike numText", () => {
-  // Recorded, not endorsed: a NaN minute reaches the card as text.
-  assert.equal(fmtClock(NaN), "NaN:NaN PM");
+test("fmtClock answers a dash for anything non-finite, like money", () => {
+  // It is painted into the time-of-day note beside money(), which writes "-"
+  // for an unknown price. "NaN:NaN PM" reached the card as text before this.
+  assert.equal(fmtClock(NaN), "-");
+  assert.equal(fmtClock(Infinity), "-");
+  assert.equal(fmtClock(-Infinity), "-");
 });
 
 // --- The whole result card, as a value --------------------------------------
@@ -249,6 +252,113 @@ test("the arms keep their order: a missing price outranks a full battery", () =>
   assert.equal(noRate.headline, "$0.47/kWh", "arm 3 answered ahead of arm 2");
 });
 
+// Start equal to target, as render() would size it: nothing to buy.
+const AT_TARGET = () => ({ m: { startPct: 50, targetPct: 50 }, session: { kwhFromCharger: 0, minutes: 0 } });
+
+test("with a rate and nothing to charge, the card says so before a gas price is in", () => {
+  // It asked for the gas price, and a gas price could only lead here.
+  const c = card({ ...AT_TARGET(), be: NaN, m: { ...AT_TARGET().m, batteryKwh: 10 } });
+  assert.equal(c.verdict, "none");
+  assert.equal(c.headline, "\uD83D\uDD0B Nothing to charge");
+  assert.equal(c.sub, "Already at your 50% target. Raise \u201cCharge to\u201d to see what it costs.",
+    "without a gas price, raising the target shows a cost, not a comparison");
+  assert.equal(c.detailLine.hidden, true);
+  assert.equal(c.timeline.hidden, true);
+  assert.equal(card({ be: NaN, m: { startPct: 50, targetPct: 55, batteryKwh: 10 } }).headline, "$3.25",
+    "where raising it leads");
+});
+
+test("with no battery size, nothing to charge asks for the gas price as well", () => {
+  // Raising "Charge to" cannot show a cost here: a charge with no battery size
+  // cannot be sized, so it only reaches the gas prompt. With a gas price too,
+  // the rate gets a verdict.
+  const raised = { m: { startPct: 50, targetPct: 55 }, session: { kwhFromCharger: 0, minutes: 0 }, full: { fullMinutes: 0, kwhFromCharger: 0 } };
+  assert.equal(card({ ...raised, be: NaN }).sub, "Enter your local gas price to see the break-even.",
+    "where raising it alone leads");
+  assert.equal(card(raised).headline, "\u26A1 Charge it", "where raising it and a gas price lead");
+  const c = card({ ...AT_TARGET(), be: NaN });
+  assert.equal(c.headline, "\uD83D\uDD0B Nothing to charge");
+  assert.equal(c.sub, "At your 50% target. Raise \u201cCharge to\u201d and add your gas price to compare.");
+});
+
+test("with no charge power, nothing to charge asks for the gas price as well", () => {
+  // A power of 0, or a blank one, sizes nothing either.
+  for (const drawKw of [0, NaN]) {
+    const c = card({ ...AT_TARGET(), be: NaN, m: { ...AT_TARGET().m, batteryKwh: 10 }, drawKw });
+    assert.equal(c.sub, "At your 50% target. Raise \u201cCharge to\u201d and add your gas price to compare.",
+      `a ${drawKw} kW charge was promised a cost`);
+  }
+});
+
+test("a full battery, or a gas price, asks the same whether or not the charge can be sized", () => {
+  // "Battery's full" asks for nothing, and with a gas price a higher target
+  // gets a verdict sized or not, so neither depends on the battery size.
+  const atFull = { m: { startPct: 100, targetPct: 100 }, session: { kwhFromCharger: 0, minutes: 0 } };
+  assert.deepEqual(card({ ...atFull, be: NaN }), card({ ...atFull, be: NaN, m: { ...atFull.m, batteryKwh: 10 } }));
+  assert.equal(card({ ...atFull, be: NaN }).sub, "Already full, so there's nothing to charge.");
+  for (const drawKw of [7.2, 0]) {
+    assert.equal(card({ ...AT_TARGET(), drawKw }).sub, "Already at your 50% target. Raise \u201cCharge to\u201d to compare.");
+  }
+});
+
+test("the no-gas nothing-to-charge card is the one arm 3 paints", () => {
+  const atFull = { m: { startPct: 100, targetPct: 100 }, session: { kwhFromCharger: 0, minutes: 0 } };
+  assert.deepEqual(card({ ...atFull, be: NaN }), card(atFull), "the two arms drifted apart");
+  assert.equal(card({ ...atFull, be: NaN }).headline, "\uD83D\uDD0B Battery's full");
+  assert.equal(card({ ...AT_TARGET(), be: NaN }).headline, card(AT_TARGET()).headline);
+});
+
+test("with no rate, nothing to charge still asks for the gas price", () => {
+  // Honest here: the break-even card comes before nothing-to-charge, so a gas
+  // price alone delivers what the prompt promises.
+  const c = card({ ...AT_TARGET(), be: NaN, hasRate: false });
+  assert.equal(c.headline, "\u2026");
+  assert.equal(c.sub, "Enter your local gas price to see the break-even.");
+  assert.equal(card({ ...AT_TARGET(), hasRate: false }).headline, "$0.47/kWh");
+});
+
+test("with no car, nothing to charge still asks for the car", () => {
+  const c = card({ ...AT_TARGET(), be: NaN, m: { mpg: NaN, miPerKwh: NaN, startPct: 50, targetPct: 50 } });
+  assert.equal(c.sub, "Pick your car to start.");
+});
+
+test("with a gas price and nothing to charge, the break-even card asks for a higher target too", () => {
+  // It asked for the rate alone "for a yes/no", and a rate alone only leads to
+  // "Nothing to charge". The break-even does not depend on the charge, so it stays.
+  assert.equal(card(AT_TARGET()).headline, "\uD83D\uDD0B Nothing to charge", "where a rate alone leads");
+  for (const [rateMode, sub] of [
+    ["flat", "Break-even price. Raise \u201cCharge to\u201d and enter the energy rate for a yes/no."],
+    ["tod", "Break-even price. Raise \u201cCharge to\u201d and add time-of-day rates for a yes/no."],
+    ["dur", "Break-even price. Raise \u201cCharge to\u201d and add duration tiers for a yes/no."],
+  ]) {
+    const c = card({ ...AT_TARGET(), hasRate: false, rateMode });
+    assert.equal(c.headline, "$0.47/kWh", `${rateMode} lost the break-even`);
+    assert.equal(c.sub, sub);
+  }
+});
+
+test("a full battery's break-even card asks for nothing it cannot use", () => {
+  // "Charge to" cannot go past 100%, so there is nothing to raise.
+  const full = { m: { startPct: 100, targetPct: 100 }, session: { kwhFromCharger: 0, minutes: 0 }, hasRate: false };
+  for (const rateMode of ["flat", "tod", "dur"]) {
+    const c = card({ ...full, rateMode });
+    assert.equal(c.headline, "$0.47/kWh");
+    assert.equal(c.sub, "Break-even price. Already full, so there's nothing to charge.");
+  }
+});
+
+test("with a target above the start, the break-even card still asks for the rate alone", () => {
+  // A rate alone gets a yes/no here, so the prompt was honest and stays.
+  const above = { m: { startPct: 50, targetPct: 55 } };
+  assert.equal(card(above).headline, "\u26A1 Charge it", "where a rate alone leads");
+  assert.equal(card({ ...above, hasRate: false }).sub,
+    "Break-even price. Enter the charger's energy rate for a yes/no.");
+  assert.equal(card({ ...above, hasRate: false, rateMode: "tod" }).sub,
+    "Break-even price. Add your time-of-day rates below for a yes/no.");
+  assert.equal(card({ ...above, hasRate: false, rateMode: "dur" }).sub,
+    "Break-even price. Add your duration tiers below for a yes/no.");
+});
+
 // --- Arm 4: the verdict ------------------------------------------------------
 
 test("a cheap charge reads as a win, priced in gallons", () => {
@@ -391,6 +501,146 @@ test("a worth limit at the end of the charge is no limit at all", () => {
   assert.equal(card({ worthLimitMin: 119, full: { fullMinutes: 120 } }).timeNote.hidden, false);
 });
 
+// --- "Charge for" at 0 ------------------------------------------------------
+
+// The slider dragged to 0 in by-duration mode, as render() sizes it: a full
+// charge buys energy, the selected one buys none, and with no flat rate behind
+// it the effective price is unknown.
+const AT_ZERO = () => ({
+  session: { kwhFromCharger: 0, kwhIntoBattery: 0, minutes: 0, soc: 20, totalCost: 0 },
+  full: { worthLimitSoc: 60, fullMinutes: 120, kwhFromCharger: 11.36 },
+  effective: NaN,
+  showEffective: true,
+  rateMode: "dur",
+});
+
+test("with Charge for at 0 the card asks for a charge instead of comparing one", () => {
+  // It read as a toss-up: "About the same as gas (~-/gal)", "Effective -/kWh".
+  const c = card(AT_ZERO());
+  assert.equal(c.verdict, "none", "amber would claim a toss-up nobody calculated");
+  assert.equal(c.headline, "\u2026");
+  assert.equal(c.sub, "Slide \u201cCharge for\u201d up to see what it costs.");
+  for (const el of ["detailLine", "timeline", "touNote", "timeNote", "worthTip"]) {
+    assert.equal(c[el].hidden, true, `${el} still showed for a charge that buys nothing`);
+  }
+});
+
+test("Charge for at 0 is not judged on the bare rate either", () => {
+  // Flat mode with a time fee falls back to the entered rate, which is finite,
+  // so the card read "Charge it" for a charge that buys nothing.
+  const c = card({ ...AT_ZERO(), rateMode: "flat", effective: 0.15, showEffective: false, hasTimeTiers: true });
+  assert.equal(c.headline, "\u2026");
+});
+
+test("without a gas price, Charge for at 0 shows the same card", () => {
+  // Not the gas prompt: a gas price alone would only lead to this card.
+  assert.deepEqual(card({ ...AT_ZERO(), be: NaN }), card(AT_ZERO()), "the two arms drifted apart");
+});
+
+test("with no rate or no car, Charge for at 0 keeps its prompt", () => {
+  assert.equal(card({ ...AT_ZERO(), be: NaN, hasRate: false }).sub,
+    "Enter your local gas price to see the break-even.");
+  assert.equal(card({ ...AT_ZERO(), be: NaN, m: { mpg: NaN, miPerKwh: NaN } }).sub, "Pick your car to start.");
+});
+
+test("with a gas price but no rate, Charge for at 0 asks for a longer charge too", () => {
+  // It asked for the rate alone "for a yes/no", and a rate alone only leads to
+  // the card above. By duration, or with a time fee in the other two modes.
+  assert.equal(card(AT_ZERO()).sub, "Slide \u201cCharge for\u201d up to see what it costs.", "where a rate alone leads");
+  for (const [rateMode, sub] of [
+    ["flat", "Break-even price. Slide \u201cCharge for\u201d up and enter the energy rate for a yes/no."],
+    ["tod", "Break-even price. Slide \u201cCharge for\u201d up and add time-of-day rates for a yes/no."],
+    ["dur", "Break-even price. Slide \u201cCharge for\u201d up and add duration tiers for a yes/no."],
+  ]) {
+    const c = card({ ...AT_ZERO(), hasRate: false, rateMode, hasTimeTiers: rateMode !== "dur" });
+    assert.equal(c.headline, "$0.47/kWh", `${rateMode} lost the break-even`);
+    assert.equal(c.sub, sub);
+  }
+});
+
+test("a 100% target is not a full battery, and an unsized charge only needs the rate", () => {
+  assert.equal(card({ ...AT_ZERO(), hasRate: false, m: { startPct: 20, targetPct: 100 } }).sub,
+    "Break-even price. Slide \u201cCharge for\u201d up and add duration tiers for a yes/no.",
+    "Charge for at 0 with a 100% target was called full");
+  // No battery size: no length buys anything, and the rate alone still gets a verdict.
+  const unsized = { session: { kwhFromCharger: 0, minutes: 0 }, full: { fullMinutes: 0, kwhFromCharger: 0 } };
+  assert.equal(card({ ...unsized, hasRate: false }).sub, "Break-even price. Enter the charger's energy rate for a yes/no.");
+});
+
+test("a charge that cannot be sized is not mistaken for Charge for at 0", () => {
+  // No battery size: the full charge buys nothing either, so the verdict on
+  // the entered rate stands, and so does the gas prompt before it.
+  const unsized = { session: { kwhFromCharger: 0, minutes: 0 }, full: { fullMinutes: 0, kwhFromCharger: 0 } };
+  assert.equal(card(unsized).headline, "\u26A1 Charge it");
+  assert.equal(card({ ...unsized, be: NaN }).sub, "Enter your local gas price to see the break-even.");
+});
+
+test("the Charge for readout says 0 min at 0, not a dash", () => {
+  assert.equal(chargeForReadout(0, 20), "0 min (~20%)");
+  assert.equal(chargeForReadout(45, 51.6), "45 min (~52%)");
+  assert.equal(chargeForReadout(90, 80), "1 hr 30 min (~80%)");
+});
+
+// --- The "Charge for" slider -------------------------------------------------
+
+test("a 288.3-minute full charge is called full, with the handle at the far end", () => {
+  // The end was rounded up to 289 and the handle to the nearest minute, 288,
+  // so a finished charge read "Stopping early" and sat a step short.
+  const s = chargeForSlider(288.3, 288.3, true);
+  assert.equal(s.note, "Full charge to your target.");
+  assert.equal(s.max, 288);
+  assert.equal(s.value, s.max, "the handle snapped back a step from the far end");
+});
+
+test("a full charge past the half minute rounds the same way at both ends", () => {
+  const s = chargeForSlider(288.7, 288.7, true);
+  assert.deepEqual([s.max, s.value, s.note], [289, 289, "Full charge to your target."]);
+});
+
+test("a charge stopped short says why, in the words of the pricing mode", () => {
+  assert.equal(chargeForSlider(288.3, 287, true).note, "Stopping early: less energy, but less time fee.",
+    "a minute short of the full charge is still stopping early");
+  assert.equal(chargeForSlider(288.3, 120, false).note,
+    "Stopping early: less energy, and you skip the pricier later rate.");
+  assert.deepEqual([chargeForSlider(288.3, 0, true).value, chargeForSlider(288.3, 120, true).value], [0, 120]);
+});
+
+test("a 10-minute full charge ends the track, with the handle at the end", () => {
+  // The track never spanned less than 15 minutes, so the handle sat two thirds
+  // along, and dragged to the end it snapped back to 10.
+  const s = chargeForSlider(10, 10, true);
+  assert.equal(s.max, 10, "the track ran past the full charge");
+  assert.equal(s.value, s.max, "the handle snapped back from the end");
+  assert.equal(s.note, "Full charge to your target.");
+  const odd = chargeForSlider(10.3, 10.3, true);
+  assert.deepEqual([odd.max, odd.value, odd.note], [10, 10, "Full charge to your target."]);
+  assert.equal(chargeForSlider(10, 5, true).note, "Stopping early: less energy, but less time fee.",
+    "a short track still prices a shorter charge");
+});
+
+test("a full charge under half a minute still gets a track, ending at the full charge", () => {
+  // What the old 15-minute floor still did: this charge rounds to 0 minutes,
+  // and a track from 0 to 0 has nothing to drag.
+  const s = chargeForSlider(0.3, 0.3, true);
+  assert.deepEqual([s.max, s.value, s.note], [1, 1, "Full charge to your target."]);
+});
+
+test("a hidden Charge for forgets a 0 and starts over", () => {
+  // Dragged to 0, then "Charge to" lowered to "Battery now": the card asked to
+  // raise it and add a price, and doing both came back to the hidden 0 with
+  // "Slide "Charge for" up" instead of a verdict.
+  assert.deepEqual(rememberedChargeFor(false, true, 0), { capTouched: false, chargeCapMin: null });
+});
+
+test("Charge for keeps a 0 on screen and any longer drag while hidden", () => {
+  assert.deepEqual(rememberedChargeFor(true, true, 0), { capTouched: true, chargeCapMin: 0 },
+    "the card on screen asks to slide this very 0 up");
+  assert.deepEqual(rememberedChargeFor(false, true, 30), { capTouched: true, chargeCapMin: 30 });
+  assert.deepEqual(rememberedChargeFor(false, true, 1), { capTouched: true, chargeCapMin: 1 },
+    "a minute buys energy, so it is a drag like any other");
+  assert.deepEqual(rememberedChargeFor(false, false, null), { capTouched: false, chargeCapMin: null });
+});
+
 // --- The shape the applier depends on ---------------------------------------
 
 test("a hidden element asks to keep its text, never to be blanked", () => {
@@ -400,6 +650,7 @@ test("a hidden element asks to keep its text, never to be blanked", () => {
     "the break-even card": card({ hasRate: false }),
     "the nothing-to-charge card": card({ m: { startPct: 80, targetPct: 80 } }),
     "the prompt card": card({ be: NaN, hasRate: false }),
+    "the zero-minute card": card(AT_ZERO()),
   })) {
     assert.equal(c.touNote.text, null, `${what} blanked the time-of-day note`);
     assert.equal(c.timeNote.text, null, `${what} blanked the worth-limit note`);
@@ -418,6 +669,7 @@ test("every arm answers for every element, with hidden always a boolean", () => 
     "the prompt card": card({ be: NaN, hasRate: false }),
     "the break-even card": card({ hasRate: false }),
     "the nothing-to-charge card": card({ m: { startPct: 80, targetPct: 80 } }),
+    "the zero-minute card": card(AT_ZERO()),
     "the verdict card": card(),
     "the stop-early card": card({ tip: TIP(), showBriefly: true }),
   };
@@ -426,6 +678,7 @@ test("every arm answers for every element, with hidden always a boolean", () => 
     assert.equal(typeof c.headline, "string", `${what} has no headline`);
     assert.equal(typeof c.sub, "string", `${what} has no sub`);
     assert.equal(typeof c.showBriefly, "boolean", `${what} lost showBriefly, which the funnel counts on`);
+    assert.equal(typeof c.counted, "boolean", `${what} left counted undefined, which the funnel is gated on`);
     for (const el of ["detailLine", "timeline", "touNote", "timeNote"]) {
       assert.equal(typeof c[el].hidden, "boolean", `${what} left ${el}.hidden undefined`);
       assert.ok(c[el].text === null || typeof c[el].text === "string", `${what} gave ${el} a non-string text`);
@@ -434,6 +687,32 @@ test("every arm answers for every element, with hidden always a boolean", () => 
   }
   assert.equal(arms["the stop-early card"].showBriefly, true);
   assert.equal(arms["the verdict card"].showBriefly, false);
+});
+
+test("only a verdict is counted in the funnel", () => {
+  // render() sends the verdict events when this says so, so a card that
+  // compared nothing must not count as a verdict shown. "Charge for" at 0
+  // used to count as a toss-up nobody saw.
+  for (const [what, c] of Object.entries({
+    "the cost card": card({ be: NaN }),
+    "the prompt card": card({ be: NaN, hasRate: false }),
+    "the break-even card": card({ hasRate: false }),
+    "the nothing-to-charge card": card(AT_TARGET()),
+    "the no-gas nothing-to-charge card": card({ ...AT_TARGET(), be: NaN }),
+    "the zero-minute card": card(AT_ZERO()),
+    "the no-gas zero-minute card": card({ ...AT_ZERO(), be: NaN }),
+  })) {
+    assert.equal(c.counted, false, `${what} was counted as a verdict`);
+  }
+  for (const [what, c] of Object.entries({
+    "Charge it": card(),
+    "Use gas": card({ effective: 0.9 }),
+    "Toss-up": card({ effective: 0.47 }),
+    "Charge briefly": card({ tip: TIP(), showBriefly: true }),
+    "a verdict on the bare rate, with no battery size": card({ session: { kwhFromCharger: 0, minutes: 0 }, full: { fullMinutes: 0, kwhFromCharger: 0 } }),
+  })) {
+    assert.equal(c.counted, true, `${what} was not counted`);
+  }
 });
 
 // --- The "For this charge" block -------------------------------------------
@@ -504,8 +783,18 @@ test("metric and kmL units show distance in kilometers with the matching label",
   assert.equal(advanced({ units: "kmL" }).range.text, "56 km \u00b7 10.0 kWh");
 });
 
-test("a known battery without miPerKwh preserves the bare-kWh range bug", () => {
-  assert.equal(advanced({ m: { miPerKwh: NaN } }).range.text, "10.0 kWh");
+test("a known battery without miPerKwh calls the row energy, not range", () => {
+  // The row can only show kWh here, and "Range added" promised a distance.
+  const view = advanced({ m: { miPerKwh: NaN } });
+  assert.equal(view.range.text, "10.0 kWh");
+  assert.deepEqual(view.rangeLabel, { hidden: false, text: "Energy added" });
+});
+
+test("the row keeps the range heading when it shows a distance, or nothing", () => {
+  assert.deepEqual(advanced().rangeLabel, { hidden: false, text: "Range added" });
+  assert.equal(advanced({ units: "metric" }).rangeLabel.text, "Range added");
+  // A dash names no unit, so the heading index.html paints is left standing.
+  assert.equal(advanced({ m: { miPerKwh: NaN }, session: { kwhIntoBattery: 0 } }).rangeLabel.text, "Range added");
 });
 
 test("a non-USD currency flows through every money field", () => {
