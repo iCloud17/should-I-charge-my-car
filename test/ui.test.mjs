@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseNum, money, nextOptionIndex, enterAction } from "../js/ui.js";
+import { parseNum, money, nextOptionIndex, enterAction, describedByWith } from "../js/ui.js";
 
 test("parseNum reads a plain dot decimal", () => {
   assert.equal(parseNum("3.89"), 3.89);
@@ -122,4 +122,15 @@ test("enterAction treats a non-integer active index as nothing active", () => {
   for (const bad of [null, undefined, NaN, 1.5, "2"]) {
     assert.equal(enterAction(true, bad), "close", `activeIndex ${String(bad)}`);
   }
+});
+
+// --- describedByWith: an info note added to a field's description ---
+
+// main.js wires every (i) note this way. The kW field's markup already points
+// at its unit, and the note has to land after it as a second id: run together,
+// the two make one id that names nothing, and the field loses both.
+test("describedByWith puts the note after the ids already there, as its own id", () => {
+  assert.equal(describedByWith(null, "powerInfoNote"), "powerInfoNote", "no aria-describedby yet");
+  assert.equal(describedByWith("", "powerInfoNote"), "powerInfoNote", "an empty one");
+  assert.equal(describedByWith("powerKwUnit", "powerInfoNote"), "powerKwUnit powerInfoNote", "the kW field's unit, then the note");
 });

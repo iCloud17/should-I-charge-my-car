@@ -208,8 +208,9 @@
       </div>
     </section>
 
-    <!-- The Charger tile: everything the charger at this stop sets, and
-         exactly what New charger clears. A test holds the two together. -->
+    <!-- The Charger tile: everything the charger at this stop sets. New
+         charger clears exactly this tile, plus Charge for, in Charge time &
+         cost. A test holds them together. -->
     <section class="card" id="chargerTile">
       <div class="charger-head">
         <h2 class="card__title">Charger</h2>
@@ -256,6 +257,33 @@
         </div>
       </div>
 
+      <!-- The charger's speed, read once off the station and Level 2 at most
+           stops, so one row like Fees that keeps the value on screen. The
+           summary is the disclosure's button, so the field keeps its own
+           label. The commas are read, the dot is seen. -->
+      <details class="tweak tweak--muted" id="speedSection">
+        <summary><span id="speedTitle">Charger speed</span><span class="speed__value"><span class="speed__sr">, </span><span id="speedPreset"><span id="speedName">Level 2</span><span aria-hidden="true"> &middot; </span><span class="speed__sr">, </span></span><span id="speedRate">6.6 kW</span></span></summary>
+        <div class="tweak__body">
+          <div class="field">
+            <div class="field-label-row">
+              <label for="powerKw">Charge power</label>
+              <button type="button" id="powerInfoBtn" class="info-btn" aria-label="What charge power should I enter?" aria-expanded="false">i</button>
+              <p class="hint info-note" id="powerInfoNote" hidden>The charger you&rsquo;re plugged into, not your car. Your car&rsquo;s onboard charger caps how fast it takes power, and the estimate already uses whichever is lower, so you don&rsquo;t need to account for it here. The speed sets how long the charge takes, which also changes the total if the station bills by the hour or by duration. Edit this when the charger&rsquo;s rate differs from the Level 1 or Level 2 presets. We treat anything above 22 kW as 22, the top of the common AC range. New charger puts it back at 6.6, and so does your next visit.</p>
+            </div>
+            <div class="speed__row">
+              <div class="presets" id="powerPresets" role="group" aria-labelledby="speedTitle">
+                <button type="button" class="preset" data-kw="1.4" aria-pressed="false"><span class="preset__name">Level 1</span><span class="preset__kw">1.4 kW</span></button>
+                <button type="button" class="preset is-active" data-kw="6.6" aria-pressed="true"><span class="preset__name">Level 2</span><span class="preset__kw">6.6 kW</span></button>
+              </div>
+              <div class="input-money has-suffix speed__kw">
+                <input id="powerKw" type="text" min="0" step="any" inputmode="decimal" autocomplete="off" value="6.6" aria-describedby="powerKwUnit" />
+                <span class="input-money__suffix" id="powerKwUnit">kW</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </details>
+
       <!-- Optional extras, only if the charger lists them -->
       <details class="tweak tweak--muted" id="chargerFees">
         <summary>Fees (service, time, tax)</summary>
@@ -289,42 +317,13 @@
           </div>
         </div>
       </details>
-
-      <!-- The charger's, not the battery's: it shows only with a time fee or
-           By duration, and a dragged one would override the next charger's
-           own "charge briefly" pick, so New charger clears it. -->
-      <div class="field" id="chargeForField" hidden>
-        <label for="chargeForMin">Charge for: <output id="chargeForOut">-</output></label>
-        <input id="chargeForMin" type="range" min="0" max="180" step="1" value="180" />
-        <p class="hint" id="chargeForNote"></p>
-      </div>
     </section>
 
     <!-- How long to charge: secondary time estimate + cost breakdown -->
     <details class="card disclosure" id="advanced">
       <summary>Charge time &amp; cost</summary>
       <div class="disclosure__body">
-        <p class="hint hint--lead">Set your charger speed and how full you want the battery, then see how long it takes, the range you add, and the all-in price per kWh.</p>
-
-        <div class="field">
-          <p class="sublabel">Charger speed</p>
-          <div class="presets" id="powerPresets">
-            <button type="button" class="preset" data-kw="1.4">Level 1 &middot; 1.4 kW</button>
-            <button type="button" class="preset" data-kw="6.6">Level 2 &middot; 6.6 kW</button>
-          </div>
-        </div>
-
-        <div class="field-row">
-          <div class="field">
-            <div class="field-label-row">
-              <label for="powerKw">Charge power (kW)</label>
-              <button type="button" id="powerInfoBtn" class="info-btn" aria-label="What charge power should I enter?" aria-expanded="false">i</button>
-              <p class="hint info-note" id="powerInfoNote" hidden>The charger you&rsquo;re plugged into, not your car. Your car&rsquo;s own limit is already in the estimate, so you don&rsquo;t need to account for it here. Edit this when the charger&rsquo;s rate differs from the Level 1 or Level 2 presets. We treat anything above 22 kW as 22, the top of the common AC range, and the field comes back at 6.6 next time.</p>
-            </div>
-            <input id="powerKw" type="text" min="0" step="any" inputmode="decimal" autocomplete="off" value="6.6" />
-          </div>
-        </div>
-        <p class="hint">Your car&rsquo;s onboard charger caps how fast it takes power, so the estimate uses whichever is lower, the charger or the car. That sets how long it takes, which also changes the total if the station bills by the hour or by duration.</p>
+        <p class="hint hint--lead">Set how full the battery is now and how full you want it, and when to stop if the charger bills by time. Then see how long it takes, the range you add, and the all-in price per kWh.</p>
 
         <div class="field">
           <label for="startPct">Battery now: <output id="startPctOut">0%</output></label>
@@ -333,6 +332,15 @@
         <div class="field">
           <label for="targetPct">Charge to: <output id="targetPctOut">100%</output></label>
           <input id="targetPct" type="range" min="0" max="100" step="5" value="100" />
+        </div>
+        <!-- The charger's, not the battery's, though it sits by the battery
+             sliders it stops: it shows only with a time fee or By duration,
+             and a dragged one would override the next charger's own "charge
+             briefly" pick, so New charger clears it. -->
+        <div class="field" id="chargeForField" hidden>
+          <label for="chargeForMin">Charge for: <output id="chargeForOut">-</output></label>
+          <input id="chargeForMin" type="range" min="0" max="180" step="1" value="180" />
+          <p class="hint" id="chargeForNote"></p>
         </div>
 
         <div class="advanced-result" id="advancedResult">
@@ -377,8 +385,8 @@
         <details class="faq__item">
           <summary><h2 class="faq__q">What is &ldquo;Charge time &amp; cost&rdquo; for?</h2></summary>
           <p class="faq__a">This section is optional. It estimates how long a charge takes and what the whole session costs.</p>
-          <p class="faq__a">Set the charger speed (Level 1 is a wall socket, Level 2 is a 240V unit) and the two battery sliders. You get range added, time, and total.</p>
-          <p class="faq__a">Charge power sets the time estimate. On flat per-kWh pricing that is all it does. If the station adds an hourly fee or prices energy by duration, charging slower costs more for the same kWh, so it can flip the verdict, and a &ldquo;Charge for&rdquo; slider appears in the Charger section so you can price a partial charge.</p>
+          <p class="faq__a">Set the two battery sliders and you get range added, time, and total. The charger speed (Level 1 is a wall socket, Level 2 is a 240V unit) is in the Charger section, under the price.</p>
+          <p class="faq__a">Charge power sets the time estimate. On flat per-kWh pricing that is all it does. If the station adds an hourly fee or prices energy by duration, charging slower costs more for the same kWh, so it can flip the verdict, and a &ldquo;Charge for&rdquo; slider appears here, under Charge to, so you can price a partial charge.</p>
         </details>
 
         <details class="faq__item">

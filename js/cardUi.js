@@ -11,6 +11,7 @@
 import { verdict, rateAtTime, cheapestPeriod } from "./calc.js";
 import { money, formatDuration } from "./ui.js";
 import { gasPriceForDisplay, kmFromMiles, labels } from "./units.js";
+import { presetMatchesKw } from "./cars.js";
 const BRIEF_MAX_MIN = 60;
 
 // What the effective rate includes beyond the entered price. Sales tax is not a
@@ -374,6 +375,18 @@ export function advancedFor(model) {
 // estimate, but a handle dragged to 0 is a known zero.
 export function chargeForReadout(minutes, soc) {
   return `${minutes === 0 ? "0 min" : formatDuration(minutes)} (~${Math.round(soc)}%)`;
+}
+
+// The Charger speed row's value and which preset is pressed, from one match:
+// a preset the field matches by its name and printed rate ("Level 2",
+// "6.6 kW"), any other number as itself ("7.2 kW"), a blank as "Not set". So
+// the row, the highlight and aria-pressed cannot disagree. `presets` is
+// [{ name, kw }] in page order.
+export function speedSummary(fieldKw, presets) {
+  const pressed = presets.map((p) => presetMatchesKw(fieldKw, p.kw));
+  const on = presets[pressed.indexOf(true)];
+  if (on) return { name: on.name, rate: `${numText(on.kw, 2)} kW`, pressed };
+  return { name: null, rate: Number.isFinite(fieldKw) ? `${numText(fieldKw, 2)} kW` : "Not set", pressed };
 }
 
 // Where the "Charge for" handle sits and what the note under it says, both

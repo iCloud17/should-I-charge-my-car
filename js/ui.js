@@ -83,3 +83,9 @@ export function enterAction(expanded, activeIndex) {
   if (!expanded) return "ignore";
   return Number.isInteger(activeIndex) && activeIndex >= 0 ? "commit" : "close";
 }
+
+// An aria-describedby value with `id` added after the ids it already lists,
+// which `current` holds space separated (null when the attribute is absent).
+export function describedByWith(current, id) {
+  return [current, id].filter(Boolean).join(" ");
+}

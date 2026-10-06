@@ -258,7 +258,7 @@ test("loadPrefs ignores prototype-polluting override keys", () => {
 
 // The numbers that must be finite and above zero, each with the default it
 // falls back to when the stored value is not.
-const POSITIVE_FIELDS = { mpg: null, miPerKwh: null, batteryKwh: null, gasPrice: null, powerKw: 6.6 };
+const POSITIVE_FIELDS = { mpg: null, miPerKwh: null, batteryKwh: null, gasPrice: null };
 
 const BAD_NUMBERS = [null, undefined, NaN, Infinity, -Infinity, "42", "", -1, 0, true, {}, []];
 
@@ -272,7 +272,7 @@ test("a numeric field holding anything but a positive number falls back to its d
 });
 
 test("a numeric field holding a positive number is kept exactly", () => {
-  const good = { mpg: 42, miPerKwh: 3.1, batteryKwh: 17, gasPrice: 3.899, powerKw: 3.3 };
+  const good = { mpg: 42, miPerKwh: 3.1, batteryKwh: 17, gasPrice: 3.899 };
   const out = sanitizePrefs(good);
   for (const [field, v] of Object.entries(good)) assert.equal(out[field], v, field);
 });
@@ -396,13 +396,30 @@ test("the bound reaches every store that shares the predicate", () => {
   assert.deepEqual(mergeCarOverride({ mpg: 42 }, { mpg: huge }), { mpg: 42 }, "and it keeps the last good one");
 });
 
-test("an outlet power past the AC ceiling falls back to the default, not to the ceiling", () => {
-  // Clamping would hand back a socket the user never plugged into, and the next
-  // render reads the field and saves it, so the invention becomes their setting.
-  for (const bad of [MAX_OUTLET_KW + 0.1, 50, 350, 99999999]) {
-    assert.equal(sanitizePrefs({ powerKw: bad }).powerKw, DEFAULT_PREFS.powerKw, `powerKw = ${bad}`);
+test("a typed speed outside (0, 22] reaches prefs as typed, offers New charger, and restoreCharger brings it back", () => {
+  // Charger state, never saved, so nothing here bounds it: the 22 kW ceiling is
+  // chargeDrawKw's (cars.test.mjs). Rate and fee blank, so the speed alone counts.
+  for (const typed of [0, MAX_OUTLET_KW + 0.5, 50]) {
+    const p = persistableFrom(defaultPrefs(), liveModel({ powerKw: typed, yourRate: NaN, sessionFee: 0 }));
+    assert.equal(p.powerKw, typed, `a typed ${typed} did not reach prefs as typed`);
+    assert.equal(hasChargerInput(p, NOTHING_ELSE), true, `a typed ${typed} offers no New charger`);
+    assert.equal(restoreCharger(clearCharger(p), p).powerKw, typed, `New charger, then Undo, lost a typed ${typed}`);
   }
-  assert.equal(sanitizePrefs({ powerKw: MAX_OUTLET_KW }).powerKw, MAX_OUTLET_KW, "the ceiling itself is a real outlet");
+});
+
+test("a speed saved by an older release is never read back", () => {
+  // Baadal, 2026-10-05: the speed is the charger's, so a fresh launch starts
+  // at 6.6. Valid, invalid and absurd all land on the default, and the next
+  // save drops the key.
+  for (const v of [...BAD_NUMBERS, 1.4, 3.3, 7.2, MAX_OUTLET_KW]) {
+    assert.equal(sanitizePrefs({ powerKw: v }).powerKw, 6.6, `powerKw = ${String(v)}`);
+  }
+  const store = seed(JSON.stringify({ carId: "honda-clarity", powerKw: 1.4 }));
+  const out = loadPrefs();
+  assert.equal(out.powerKw, 6.6, "last visit's Level 1 came back");
+  assert.equal(out.carId, "honda-clarity", "and the car beside it still loads");
+  savePrefs({ ...out, powerKw: 1.4 });
+  assert.equal("powerKw" in JSON.parse(store.map.get(KEY)), false, "a speed was written to the store");
 });
 
 test("neither battery percentage is ever read back out of the store", () => {
@@ -602,7 +619,7 @@ test("every persisted key survives sanitation when its value is valid", () => {
     carId: "honda-clarity", customName: "Nellie",
     carOverrides: { "honda-clarity": { mpg: 42 } },
     mpg: 42, miPerKwh: 3.1, batteryKwh: 17, gasPrice: 3.899,
-    units: "uk", currency: "£", powerKw: 3.3,
+    units: "uk", currency: "£",
     themeMode: "dark",
   };
   const out = sanitizePrefs(valid);
@@ -629,7 +646,7 @@ test("a valid setup round trips through storage byte for byte", () => {
     carId: "honda-clarity", customName: "Nellie",
     carOverrides: { "honda-clarity": { mpg: 42, miPerKwh: 3.1, batteryKwh: 17 } },
     mpg: 42, miPerKwh: 3.1, batteryKwh: 17, gasPrice: 3.899,
-    units: "uk", currency: "£", powerKw: 3.3,
+    units: "uk", currency: "£",
     themeMode: "dark",
   };
   savePrefs({ ...DEFAULT_PREFS, ...saved });
@@ -647,7 +664,7 @@ test("savePrefs and loadPrefs round trip the stable fields", () => {
     ...DEFAULT_PREFS,
     carId: "honda-clarity", customName: "Nellie", mpg: 42, miPerKwh: 3.1,
     batteryKwh: 17, gasPrice: 3.899, units: "uk", currency: "£",
-    powerKw: 3.3, themeMode: "dark",
+    themeMode: "dark",
     carOverrides: { "honda-clarity": { mpg: 42 } },
   });
   const out = loadPrefs();
@@ -656,18 +673,18 @@ test("savePrefs and loadPrefs round trip the stable fields", () => {
   assert.equal(out.gasPrice, 3.899); // not rounded away
   assert.equal(out.units, "uk");
   assert.equal(out.currency, "£");
-  assert.equal(out.powerKw, 3.3);
   assert.equal(out.themeMode, "dark");
   assert.deepEqual(out.carOverrides, { "honda-clarity": { mpg: 42 } });
 });
 
 test("savePrefs writes only the stable keys, not the per-stop ones", () => {
   const store = seed();
-  savePrefs({ ...DEFAULT_PREFS, mpg: 25, yourRate: 0.32, sessionFee: 2.5, startPct: 40, targetPct: 80 });
+  savePrefs({ ...DEFAULT_PREFS, mpg: 25, yourRate: 0.32, sessionFee: 2.5, powerKw: 1.4, startPct: 40, targetPct: 80 });
   const saved = JSON.parse(store.map.get(KEY));
   assert.equal(saved.mpg, 25);
   assert.equal("yourRate" in saved, false);
   assert.equal("sessionFee" in saved, false);
+  assert.equal("powerKw" in saved, false, "the speed belongs to one charger");
   assert.equal("startPct" in saved, false, "a state of charge belongs to one stop");
   assert.equal("targetPct" in saved, false);
   assert.equal(loadPrefs().yourRate, null); // comes back as the default, not 0.32
@@ -691,6 +708,7 @@ test("a store written by the previous release loads clean and self-cleans on the
   const out = loadPrefs();
   assert.equal(out.startPct, 0, "the stored state of charge is not restored");
   assert.equal(out.targetPct, 100);
+  assert.equal(out.powerKw, 6.6, "nor the stored speed, which is the charger's");
   // Everything the user legitimately saved is still exactly theirs.
   assert.equal(out.carId, "honda-clarity");
   assert.equal(out.customName, "Nellie");
@@ -700,7 +718,6 @@ test("a store written by the previous release loads clean and self-cleans on the
   assert.equal(out.gasPrice, 3.899);
   assert.equal(out.units, "uk");
   assert.equal(out.currency, "£");
-  assert.equal(out.powerKw, 3.3);
   assert.equal(out.themeMode, "dark");
   assert.deepEqual(out.carOverrides, { "honda-clarity": { mpg: 42, powerKw: 3.3 } });
 
@@ -708,6 +725,7 @@ test("a store written by the previous release loads clean and self-cleans on the
   const rewritten = JSON.parse(store.map.get(KEY));
   assert.equal("startPct" in rewritten, false, "the stale key is gone, no migration step needed");
   assert.equal("targetPct" in rewritten, false);
+  assert.equal("powerKw" in rewritten, false);
   assert.deepEqual(Object.keys(rewritten).sort(), [...PERSIST_KEYS].sort());
 
   // And a second load is stable: what came back out is what goes back in.
@@ -910,11 +928,12 @@ test("applyCarSelection does not mutate the prefs it was given", () => {
 
 // --- persistableFrom: exactly what a render pass writes to storage ---
 
-test("a render pass saves the typed values, including the raw outlet power", () => {
-  const prefs = persistableFrom({ ...defaultPrefs(), carId: "rav4-prime-2023" }, liveModel());
+test("a render pass saves the typed values and keeps the raw outlet power for the session", () => {
+  const prefs = persistableFrom({ ...defaultPrefs(), carId: "rav4-prime-2023" }, liveModel({ powerKw: 7.2 }));
+  assert.equal(prefs.powerKw, 7.2, "the outlet the user typed, never a car-capped value");
   savePrefs(prefs);
   const back = loadPrefs();
-  assert.equal(back.powerKw, 6.6, "the outlet the user typed, never a car-capped value");
+  assert.equal(back.powerKw, 6.6, "and, like the charger's rate, it is not saved");
   assert.equal(back.gasPrice, 3.899, "at full precision");
   assert.equal(back.carId, "rav4-prime-2023", "a render pass must not forget which car this is");
   assert.equal(back.yourRate, null, "and the per-stop values still don't persist");
@@ -932,18 +951,15 @@ test("a render pass still carries the live percentages in memory, where the slid
   assert.equal(prefs.targetPct, 90);
 });
 
-test("the saved outlet power survives a slow car, a render, and the next car", () => {
-  // The whole ratchet loop the app actually runs: pick a car, render (which
-  // persists), pick another. A cap applied anywhere on that path sticks in
-  // storage and outlives the car that caused it.
-  savePrefs(applyCarSelection({ ...defaultPrefs(), powerKw: 6.6 }, SLOW_CAR));
-
-  const typed = loadPrefs().powerKw;
-  assert.equal(chargeDrawKw(typed, SLOW_CAR), 3.3, "the car is still capped where it matters");
-  savePrefs(persistableFrom(loadPrefs(), liveModel({ powerKw: typed })));
-
-  savePrefs(applyCarSelection(loadPrefs(), FAST_CAR));
-  assert.equal(loadPrefs().powerKw, 6.6, "a Level 2 outlet is not downgraded by one 3.3 kW car");
+test("the outlet power survives a slow car, a render, and the next car", () => {
+  // The whole ratchet loop the app actually runs: pick a car, render, pick
+  // another. A cap applied anywhere on that path sticks for the session and
+  // outlives the car that caused it.
+  let prefs = applyCarSelection({ ...defaultPrefs(), powerKw: 6.6 }, SLOW_CAR);
+  assert.equal(chargeDrawKw(prefs.powerKw, SLOW_CAR), 3.3, "the car is still capped where it matters");
+  prefs = persistableFrom(prefs, liveModel({ powerKw: prefs.powerKw }));
+  prefs = applyCarSelection(prefs, FAST_CAR);
+  assert.equal(prefs.powerKw, 6.6, "a Level 2 outlet is not downgraded by one 3.3 kW car");
 });
 
 test("persistableFrom does not mutate the prefs it was given", () => {
@@ -957,12 +973,11 @@ test("persistableFrom does not mutate the prefs it was given", () => {
 
 test("a number the store will not keep never becomes the session's setting", () => {
   const prefs = persistableFrom(defaultPrefs(), liveModel({
-    gasPrice: 2e6, mpg: 1e-308, batteryKwh: 1e308, powerKw: MAX_OUTLET_KW + 1,
+    gasPrice: 2e6, mpg: 1e-308, batteryKwh: 1e308,
   }));
   assert.equal(prefs.gasPrice, DEFAULT_PREFS.gasPrice, "over the ceiling");
   assert.equal(prefs.mpg, DEFAULT_PREFS.mpg, "under the floor");
   assert.equal(prefs.batteryKwh, DEFAULT_PREFS.batteryKwh, "far over the ceiling");
-  assert.equal(prefs.powerKw, DEFAULT_PREFS.powerKw, "past the outlet ceiling, and not clamped to it");
 });
 
 test("what a render pass writes is exactly what the next load reads back", () => {
@@ -978,7 +993,7 @@ test("what a render pass writes is exactly what the next load reads back", () =>
     const written = persistableFrom(defaultPrefs(), m);
     savePrefs(written);
     const back = loadPrefs();
-    for (const k of ["gasPrice", "mpg", "miPerKwh", "batteryKwh", "powerKw"]) {
+    for (const k of ["gasPrice", "mpg", "miPerKwh", "batteryKwh"]) {
       assert.equal(back[k], written[k], `${k} was accepted for the session and dropped on the next load`);
     }
   }
@@ -1143,6 +1158,7 @@ test("a fresh charger card has nothing for New charger to clear", () => {
   assert.equal(hasChargerInput(defaultPrefs(), NOTHING_ELSE), false);
   // A cleared field reads back as NaN, not the null default: the same blank.
   assert.equal(hasChargerInput({ ...defaultPrefs(), yourRate: NaN }, NOTHING_ELSE), false);
+  assert.equal(hasChargerInput({ ...defaultPrefs(), powerKw: 6.6 }, NOTHING_ELSE), false, "Level 2, where every charger starts");
 });
 
 test("any one charger input is enough to offer New charger", () => {
@@ -1150,6 +1166,9 @@ test("any one charger input is enough to offer New charger", () => {
     ["an energy rate", { yourRate: 0.3 }, {}],
     ["an energy rate of 0, which is still a rate", { yourRate: 0 }, {}],
     ["a service fee", { sessionFee: 1 }, {}],
+    ["Level 1's speed", { powerKw: 1.4 }, {}],
+    ["a typed 7.2 kW", { powerKw: 7.2 }, {}],
+    ["a cleared speed, which New charger puts back at 6.6", { powerKw: NaN }, {}],
     ["a price in one editor row", {}, { rows: [NaN, 0.25] }],
     ["a 0 typed in an editor row, which is still a price", {}, { rows: [0, NaN] }],
     ["a dragged Charge for", {}, { capTouched: true }],
@@ -1185,8 +1204,17 @@ test("the battery sliders alone never offer New charger, which keeps them", () =
 });
 
 test("after a new charger there is nothing left to clear, whatever else is set", () => {
-  // The car, gas price, outlet, battery levels, units, currency and theme are
-  // not the charger, so they never offer New charger, and it never offers
-  // itself twice.
+  // The car, gas price, battery levels, units, currency and theme are not the
+  // charger, so they never offer New charger, and it never offers itself twice.
   assert.equal(hasChargerInput(clearCharger(setupAtACharger()), NOTHING_ELSE), false);
+});
+
+test("the speed is the charger's: New charger puts it back at 6.6 and its undo brings it back", () => {
+  // Baadal, 2026-10-05: "option B". Read off the list, not inferred from the
+  // partition, which holds with the speed on any one of the three.
+  assert.ok(CHARGER_KEYS.includes("powerKw"), "the speed is not on CHARGER_KEYS");
+  const atLevel1 = { ...setupAtACharger(), powerKw: 1.4 };
+  const cleared = clearCharger(atLevel1);
+  assert.equal(cleared.powerKw, 6.6, "New charger left the last charger's Level 1");
+  assert.equal(restoreCharger(cleared, atLevel1).powerKw, 1.4, "Undo did not bring back Level 1");
 });

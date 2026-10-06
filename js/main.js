@@ -9,7 +9,7 @@ import {
 } from "./storage.js";
 import {
   loadCars, getCar, getCars, carLabel, maxLabelLength,
-  chargeDrawKw, presetMatchesKw,
+  chargeDrawKw,
 } from "./cars.js";
 import { CUSTOM_CAR_ID, MAX_MY_CARS, CARS_KEY, loadMyCars, saveMyCars, clearMyCars, emptyCarsState, migrateIfNeeded,
   addMyCar, removeMyCar, setActiveMyCar, applyMyCarEdit, renameMyCar, refreshMyCars,
@@ -25,8 +25,8 @@ import {
   removeGoneMessage, nameWriteFailedMessage, numbersWriteFailedMessage, selectionWriteFailedMessage,
   resetConfirmQuestion, resetDoneMessage,
 } from "./myCarsUi.js";
-import { $, parseNum, money, escapeHtml, nextOptionIndex, enterAction } from "./ui.js";
-import { cardFor, advancedFor, inclusionNote, numText, chargeForReadout, chargeForSlider, rememberedChargeFor, effectivePerKwh } from "./cardUi.js";
+import { $, parseNum, money, escapeHtml, nextOptionIndex, enterAction, describedByWith } from "./ui.js";
+import { cardFor, advancedFor, inclusionNote, numText, chargeForReadout, chargeForSlider, rememberedChargeFor, effectivePerKwh, speedSummary } from "./cardUi.js";
 import { applyTheme, nextThemeMode, themeLabel } from "./theme.js";
 import { track, trackWhenReady } from "./analytics.js";
 import {
@@ -242,7 +242,7 @@ function render() {
 // That is not the same as the cap being pinned here. chargeDrawKw is already
 // imported above, so moving the cap up into readInputs is a one-line edit that
 // leaves the suite green while ratcheting the capped value into m.powerKw and
-// on into storage. The rule is that a capped value never reaches m.powerKw;
+// on into prefs. The rule is that a capped value never reaches m.powerKw;
 // review enforces that, the tests do not.
 function currentCar() {
   return prefs.carId && prefs.carId !== CUSTOM_CAR_ID ? getCar(prefs.carId) : null;
@@ -716,10 +716,10 @@ function carSummaryText(saved, car) {
 //
 // THE CHARGER INPUTS SURVIVE THIS, and that requirement is the entire reason
 // this function exists instead of a call to boot(). The energy rate, the
-// session fee, the time-of-use and duration rows, the fee and tax rows, the
-// rate mode and the "charge for" slider all describe the CHARGER the user is
-// standing at, not the car they are standing next to. Switching cars must leave
-// every one of them exactly where it was.
+// session fee, the speed, the time-of-use and duration rows, the fee and tax
+// rows, the rate mode and the "charge for" slider all describe the CHARGER the
+// user is standing at, not the car they are standing next to. Switching cars
+// must leave every one of them exactly where it was.
 //
 // What makes that true is the narrowness of what this writes: prefs.carId, the
 // three fields in CAR_EDIT_FIELDS, and customName for a custom car.
@@ -1042,13 +1042,21 @@ function ceilingCar() {
   return saved ? { chargeKw: savedCarCeilingKw(saved, getCar) } : currentCar();
 }
 
-// Highlight the charger-speed preset that matches the current power, if any.
+// Highlight the charger-speed preset that matches the current power, if any,
+// and show the same speed on the Charger speed row, all from one speedSummary.
 // The car is not consulted: the field and the presets are both outlet rates.
 function updatePresetActive() {
-  const kw = parseNum($("powerKw").value);
-  for (const btn of document.querySelectorAll("#powerPresets .preset")) {
-    btn.classList.toggle("is-active", presetMatchesKw(kw, parseNum(btn.dataset.kw)));
-  }
+  const btns = [...document.querySelectorAll("#powerPresets .preset")];
+  const view = speedSummary(parseNum($("powerKw").value), btns.map((btn) => ({
+    name: btn.querySelector(".preset__name").textContent, kw: parseNum(btn.dataset.kw),
+  })));
+  btns.forEach((btn, i) => {
+    btn.classList.toggle("is-active", view.pressed[i]);
+    btn.setAttribute("aria-pressed", String(view.pressed[i]));
+  });
+  $("speedPreset").hidden = view.name === null;
+  $("speedName").textContent = view.name ?? "";
+  $("speedRate").textContent = view.rate;
 }
 
 // The "sweet spot" for rising by-duration tiers: charge through the cheap tiers
@@ -1186,7 +1194,6 @@ function writeDisplayValues() {
   paint("mpg", U.economyForDisplay(prefs.mpg, s), 2, prefs.mpg);
   paint("miPerKwh", U.efficiencyForDisplay(prefs.miPerKwh, s), 2, prefs.miPerKwh);
   paint("batteryKwh", prefs.batteryKwh, 2);
-  paint("powerKw", prefs.powerKw, 2);
   paintChargerFields();
   $("startPct").value = prefs.startPct;
   $("targetPct").value = prefs.targetPct;
@@ -1208,6 +1215,7 @@ function writeDisplayValues() {
 function paintChargerFields() {
   paint("yourRate", prefs.yourRate, 6);
   paint("sessionFee", prefs.sessionFee, 2);
+  paint("powerKw", prefs.powerKw, 2);
   // Dynamic pricing rows bake the symbol in at creation; refresh them too on a currency change.
   for (const el of document.querySelectorAll("#touRows .input-money__sym, #durRows .input-money__sym, #timeFeeRows .input-money__sym")) {
     el.textContent = prefs.currency;
@@ -1258,12 +1266,13 @@ function applyRateMode() {
 //
 // Clears the charger the user was standing at, so the last stop's fees cannot
 // quietly price the next one in an installed app that is never reloaded. It
-// keeps what a reload keeps: the car, the gas price, the outlet power, the
-// units, the currency and the theme. It also keeps Battery now and Charge to,
-// which a reload resets, because the charger next door charges the same
-// battery. clearCharger in storage.js holds the rule for the prefs half; the
-// rest of the charger lives in this file and the DOM, and clearChargerInputs
-// is the one place that clears it.
+// keeps what a reload keeps: the car, the gas price, the units, the currency
+// and the theme. It also keeps Battery now and Charge to, which a reload
+// resets, because the charger next door charges the same battery, but not
+// Charge for under them, which times this charger's fees. clearCharger in
+// storage.js holds the rule for the prefs half; the rest of the charger lives
+// in this file and the DOM, and clearChargerInputs is the one place that
+// clears it.
 //
 // Undone rather than confirmed, because nothing saved changes. The undo stays
 // on offer until the charger next holds something, because from then on it
@@ -1829,8 +1838,9 @@ function attachEvents() {
     // Presets are the outlet's rate (Level 1 / Level 2), so each writes exactly
     // the number on its label. Nothing on this path is capped: a car-derived
     // value here would flow through readInputs into m.powerKw and on into
-    // storage, where it would outlive the car that produced it and shorten the
-    // next car's estimate. The ceiling belongs at chargeDrawKw in render().
+    // prefs, where it would outlive the car that produced it and shorten the
+    // next car's estimate for the rest of the visit. The ceiling belongs at
+    // chargeDrawKw in render().
     paint("powerKw", parseNum(btn.dataset.kw), 2);
     render();
   });
@@ -1878,7 +1888,8 @@ function attachEvents() {
     // so describing both would read the same paragraph out twice in a row.
     const labelled = infoBtn.closest(".field-label-row")?.querySelector("label[for]");
     const described = (labelled && $(labelled.htmlFor)) || infoBtn;
-    described.setAttribute("aria-describedby", noteId);
+    // After any description the markup gives it, such as the kW field's unit.
+    described.setAttribute("aria-describedby", describedByWith(described.getAttribute("aria-describedby"), noteId));
     let pinned = false;
     const show = (v) => {
       infoNote.hidden = !v;

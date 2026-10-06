@@ -12,27 +12,27 @@
 // persistableFrom, clearCharger, restoreCharger) rather than in main.js, so
 // each rule is testable without a DOM or a store.
 
-import { MAX_OUTLET_KW } from "./cars.js";
-
 const KEY = "sicc.prefs.v1";
 
 // What survives to the next visit: the values that are still true when the app
 // reopens. The ones that change at every stop (the charger's rate, its session
-// fee, its time-of-day schedule, where the battery is and how full you want it)
-// are deliberately left out, because the user re-enters those on the spot.
+// fee, its speed, its time-of-day schedule, where the battery is and how full
+// you want it) are deliberately left out, because the user re-enters those on
+// the spot.
 //
-// powerKw is the named exception. It is charger-specific by any reading - it's
-// the outlet you're plugged into, not a property of the car - and it is saved
-// anyway, because the outlet you use most is usually the same one. That is not
-// true of startPct and targetPct: a state of charge is a fact about one stop,
-// and restoring last week's 47% is a plausible wrong number wearing the user's
-// own authority. They keep their defaults below and start every visit there.
+// powerKw used to be the named exception, saved because the outlet you use
+// most is usually the same one. Baadal made it charger state on 2026-10-05:
+// it is the charger you are plugged into, so a fresh launch starts at 6.6 and
+// New charger puts it back there. startPct and targetPct are left out for a
+// different reason: a state of charge is a fact about one stop, and restoring
+// last week's 47% is a plausible wrong number wearing the user's own
+// authority. They keep their defaults below and start every visit there.
 //
 // Exported because it is also the whitelist on the way back IN: sanitizePrefs
 // reads these keys and no others, so the two directions cannot drift apart.
 export const PERSIST_KEYS = [
   "carId", "customName", "carOverrides", "mpg", "miPerKwh", "batteryKwh",
-  "gasPrice", "units", "currency", "powerKw", "themeMode",
+  "gasPrice", "units", "currency", "themeMode",
 ];
 
 export const DEFAULT_PREFS = {
@@ -55,8 +55,8 @@ export const DEFAULT_PREFS = {
   // empty-to-full, which is a question rather than an answer.
   startPct: 0,
   targetPct: 100,
-  // The outlet you're plugged into, not a property of the car. Persisted,
-  // because the outlet you use most is usually the same one.
+  // The outlet you're plugged into, not a property of the car. The charger's,
+  // so NOT persisted: every visit and every New charger starts at Level 2.
   powerKw: 6.6,
 };
 
@@ -223,13 +223,6 @@ const PREF_RULES = {
   batteryKwh: positiveNumber,
   gasPrice: positiveNumber,
 
-  // The outlet, held to the same AC ceiling the estimate uses. Dropped when it
-  // is out of range rather than clamped to MAX_OUTLET_KW, because clamping
-  // hands back a socket the user never plugged into and the next render saves
-  // it. Dropping restores the documented 6.6 default, and since the ceiling is
-  // a constant it lands there once instead of ratcheting down over sessions.
-  powerKw: (v) => (Number.isFinite(v) && v > 0 && v <= MAX_OUTLET_KW ? v : undefined),
-
   units: (v) => (UNIT_SYSTEM_IDS.includes(v) ? v : undefined),
   currency: safeCurrency,
 
@@ -312,8 +305,9 @@ const OVERRIDE_KEYS = ["mpg", "miPerKwh", "batteryKwh", "powerKw"];
 //
 // The legacy powerKw rides the same rule and is unharmed by it: it holds a real
 // positive number (see OVERRIDE_KEYS). It is deliberately NOT held to
-// MAX_OUTLET_KW the way the top-level powerKw is, because that bound describes
-// an outlet and this value is a car's onboard ceiling.
+// MAX_OUTLET_KW, because that bound describes an outlet, and chargeDrawKw
+// applies it where the outlet is used, while this value is a car's onboard
+// ceiling.
 //
 // Prototype-polluting ids are skipped, so a tampered store can't reparent the
 // object these land in.
@@ -435,16 +429,19 @@ const typedNumber = (k, v) => (Number.isFinite(v) ? PREF_RULES[k](v) ?? DEFAULT_
 // Fold one render pass's canonical model values back into prefs, giving exactly
 // the object that gets saved.
 //
-// The five persisted numbers are gated here against the rule the next load will
+// The four persisted numbers are gated here against the rule the next load will
 // apply, so nothing is accepted for the session and dropped by morning. Refused
 // rather than clamped, for the reason PREF_RULES gives. Per-key rather than a
-// loop, because sessionFee and the percentages are legitimately 0 and yourRate
-// is not persisted, so none of them has a rule to be held to.
+// loop, because sessionFee and the percentages are legitimately 0, and yourRate
+// and powerKw are never saved, so none of them has a rule to be held to.
 //
-// powerKw is stored EXACTLY as the user typed it, within its own rule's bound.
-// The car's onboard cap is applied downstream, where the number is used; a
-// capped value must never reach this function, or the cap ratchets into storage
-// and outlives the car.
+// powerKw is kept EXACTLY as the user typed it, like yourRate and sessionFee,
+// 0, 50 and a blank included. It is charger state: hasChargerInput and New
+// charger's undo read the prefs this returns, so a gate here would hide a typed
+// speed from both.
+// MAX_OUTLET_KW and the car's onboard cap apply downstream, in chargeDrawKw,
+// where the number is used; a capped value must never reach this function, or
+// the cap ratchets into the session and outlives the car.
 //
 // startPct and targetPct are still folded in, and they are NOT persisted - the
 // two facts fit together because this returns the live prefs as well as the
@@ -462,7 +459,7 @@ export function persistableFrom(prefs, m) {
     miPerKwh: typedNumber("miPerKwh", m.miPerKwh),
     batteryKwh: typedNumber("batteryKwh", m.batteryKwh),
     sessionFee: m.sessionFee,
-    powerKw: typedNumber("powerKw", m.powerKw),
+    powerKw: m.powerKw,
     startPct: m.startPct,
     targetPct: m.targetPct,
   };
@@ -505,11 +502,12 @@ export function resetPrefs() {
 // added to the defaults has to be put on one side before the suite goes green.
 //
 // CHARGER_KEYS describe the charger the user is standing at, and "New charger"
-// clears them. The rest of the charger never reaches prefs: the pricing mode,
-// the schedule, tier, fee and tax rows, and the "Charge for" slider. main.js
-// keeps those in module variables and the DOM, and clears them beside
+// clears them: its rate, its service fee and its speed, which goes back to
+// Level 2's 6.6. The rest of the charger never reaches prefs: the pricing
+// mode, the schedule, tier, fee and tax rows, and the "Charge for" slider.
+// main.js keeps those in module variables and the DOM, and clears them beside
 // clearCharger.
-export const CHARGER_KEYS = ["yourRate", "sessionFee"];
+export const CHARGER_KEYS = ["yourRate", "sessionFee", "powerKw"];
 
 // Where the battery is and how full it should get at this stop. New charger
 // keeps them: moving to the charger next door does not change the battery.
@@ -534,7 +532,8 @@ export function restoreCharger(prefs, before) {
 
 // Whether "New charger" has anything to clear: something the user entered at
 // this charger. A charger pref counts once it is off its default; a blank field
-// reads back as NaN where the default is null, and both are blank. `rows` holds
+// reads back as NaN where the default is null, and both are blank. A blank
+// speed is off its 6.6, so it counts. `rows` holds
 // the number in each editor row's price, rate or percentage field, NaN where
 // blank, and counts once one holds a number, 0 included. So does a "Charge
 // for" the user has dragged. A pricing mode alone does not, nor do the blank

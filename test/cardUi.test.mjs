@@ -7,7 +7,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { inclusionNote, numText, fmtClock, cardFor, advancedFor, chargeForReadout, chargeForSlider, rememberedChargeFor, effectivePerKwh } from "../js/cardUi.js";
+import { inclusionNote, numText, fmtClock, cardFor, advancedFor, chargeForReadout, chargeForSlider, rememberedChargeFor, effectivePerKwh, speedSummary } from "../js/cardUi.js";
 import { rateAtTime, rateAtElapsed } from "../js/calc.js";
 
 // --- The price the card judges ------------------------------------------------
@@ -612,6 +612,25 @@ test("the Charge for readout says 0 min at 0, not a dash", () => {
   assert.equal(chargeForReadout(0, 20), "0 min (~20%)");
   assert.equal(chargeForReadout(45, 51.6), "45 min (~52%)");
   assert.equal(chargeForReadout(90, 80), "1 hr 30 min (~80%)");
+});
+
+// --- The Charger speed row ---------------------------------------------------
+
+const PRESETS = [{ name: "Level 1", kw: 1.4 }, { name: "Level 2", kw: 6.6 }];
+
+test("the Charger speed row names a preset the field matches, and presses it alone", () => {
+  assert.deepEqual(speedSummary(6.6, PRESETS), { name: "Level 2", rate: "6.6 kW", pressed: [false, true] });
+  assert.deepEqual(speedSummary(1.4, PRESETS), { name: "Level 1", rate: "1.4 kW", pressed: [true, false] });
+  // Within presetMatchesKw's reach the preset is lit, so the row says its printed rate.
+  assert.deepEqual(speedSummary(6.62, PRESETS), { name: "Level 2", rate: "6.6 kW", pressed: [false, true] });
+});
+
+test("the Charger speed row shows any other speed as itself, with no preset pressed", () => {
+  assert.deepEqual(speedSummary(7.2, PRESETS), { name: null, rate: "7.2 kW", pressed: [false, false] });
+  assert.deepEqual(speedSummary(11, PRESETS), { name: null, rate: "11 kW", pressed: [false, false] });
+  assert.deepEqual(speedSummary(3.333, PRESETS), { name: null, rate: "3.33 kW", pressed: [false, false] }, "at the field's own 2 dp");
+  assert.deepEqual(speedSummary(50, PRESETS), { name: null, rate: "50 kW", pressed: [false, false] }, "the outlet as typed, not the 22 it is priced at");
+  assert.deepEqual(speedSummary(NaN, PRESETS), { name: null, rate: "Not set", pressed: [false, false] }, "a cleared field");
 });
 
 // --- The "Charge for" slider -------------------------------------------------

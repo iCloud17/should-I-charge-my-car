@@ -446,8 +446,11 @@ body {
 }
 .tweak--muted > summary::after,
 .tweak--muted[open] > summary::after { content: none; }
+/* Seen, not read: <details> already announces it. The plain one first, for
+   engines without alt text. */
 .tweak--muted > summary::before {
   content: "\25B8";
+  content: "\25B8" / "";
   color: var(--muted);
   font-size: 12px;
   display: inline-block;
@@ -601,14 +604,6 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 /* A single field after a row (e.g. Battery size below the MPG/efficiency row)
    isn't caught by `.field + .field`, so give it the same rhythm. */
 .field-row + .field { margin-top: 14px; }
-/* The charge-power row sits right below the preset buttons. The generic
-   `.field + .field` rhythm doesn't match `.field + .field-row`, leaving zero
-   gap, which lets the info button's tap target overlap the presets above. */
-.field:has(.presets) + .field-row { margin-top: 14px; }
-/* A hint paragraph followed straight by a field (e.g. the AC-charging note
-   above "Battery now") otherwise butts right up against the slider label;
-   restore the normal field rhythm. Lead hints already carry their own gap. */
-#advanced .hint:not(.hint--lead) + .field { margin-top: 14px; }
 
 .hint {
   margin: 12px 0 0;
@@ -712,32 +707,28 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 
 /* Each disclosure in the Charger tile starts under a card-wide rule, wider
    than the hairlines between fees, and an open one is a tinted band down to
-   the next rule, so where one ends and the next begins is never a guess.
-   Charge for, shown with a time fee or By duration, gets the same rule. */
-#chargerTile > .tweak,
-#chargeForField {
+   the next rule, so where one ends and the next begins is never a guess. */
+#chargerTile > .tweak {
   margin: 12px -18px 0;
   padding: 0 18px;
   border-top: 1px solid var(--line);
 }
-#chargerTile > .tweak + #chargeForField { margin-top: 0; }
 #chargerTile > .tweak[open] { padding-bottom: 16px; background: var(--card-2); }
-#chargeForField { padding-top: 14px; }
-/* 14px above and below the title (the tile's rule-to-content gap, as on
-   Charge for, and its field rhythm), so a collapsed row is 49px and the whole
-   row width is the tap target. Open, the body's 8px goes, so the title still
-   sits 14px over the first hint. */
+/* 14px above and below the title (the tile's rule-to-content gap, and its
+   field rhythm), so a collapsed row is 49px and the whole row width is the
+   tap target. Open, the body's 8px goes, so the title still sits 14px over
+   the first hint. */
 #chargerTile > .tweak > summary { display: flex; padding: 14px 0; }
 #chargerTile > .tweak > .tweak__body { padding-top: 0; }
 /* The last band runs on to the card's rounded foot rather than stopping short. */
-#chargerTile:has(> #chargeForField[hidden]) > #chargerFees[open] {
+#chargerTile > #chargerFees[open] {
   margin-bottom: -18px;
   padding-bottom: 18px;
   border-radius: 0 0 var(--radius) var(--radius);
 }
 /* Closed, it runs on to the foot too, so the card's 18px sits under its title
    once, not 18px plus the row's own 14px. */
-#chargerTile:has(> #chargeForField[hidden]) > #chargerFees:not([open]) {
+#chargerTile > #chargerFees:not([open]) {
   margin-bottom: -18px;
   padding-bottom: 4px;
 }
@@ -801,7 +792,45 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 /* Less the rows' own 4px top margin: the same 14px as Energy rate. */
 #ratePanel > #touEditor,
 #ratePanel > #durEditor { margin-top: -4px; }
-#ratePanel + #chargerFees { margin-top: 0; }
+#ratePanel + #speedSection,
+#speedSection + #chargerFees { margin-top: 0; }
+
+/* Charger speed: a row like Fees whose summary keeps the current speed on
+   screen, at the right in the label color, like a settings row. */
+.speed__value {
+  margin-left: auto;
+  padding-left: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+/* Read, not seen: the commas that make the name "Charger speed, Level 1, 1.4 kW". */
+.speed__sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+#speedSection .field-label-row { margin-bottom: 0; }
+/* Open: the presets and the kW field on one row, two choices and the value they write. */
+.speed__row { display: flex; gap: 8px; align-items: stretch; }
+.speed__row > .presets { flex: 1 1 auto; min-width: 0; }
+.speed__row .preset {
+  flex: 1 1 0;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+  padding: 5px 4px;
+  line-height: 1.2;
+}
+.preset__name { font-size: 13px; font-weight: 700; white-space: nowrap; }
+.preset__kw { font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.preset.is-active .preset__kw { color: inherit; }
+.speed__kw { flex: 0 0 84px; }
+.speed__kw.input-money.has-suffix input { height: 100%; padding-left: 12px; padding-right: 32px; }
+.speed__kw .input-money__suffix { right: 11px; }
+/* Selected by more than color: a check before the name, seen, not read, since
+   aria-pressed says it. The plain one first, for engines without alt text. */
+.preset.is-active .preset__name::before { content: "\2713\00a0"; content: "\2713\00a0" / ""; }
+/* Focus is an outline 2px outside the border, never the selected border itself. */
+.preset:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* Duration-tier rows */
 .dur-after {
@@ -876,7 +905,6 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 .compare[data-verdict="gas"] .compare__dot { background: var(--gas); }
 
 /* --- Charger-speed presets --- */
-.sublabel { margin: 0 0 6px; font-size: 14px; font-weight: 600; color: var(--muted); }
 .presets { display: flex; gap: 8px; }
 .preset {
   flex: 1;
@@ -898,11 +926,12 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 /* The saved-car chips share this selector rather than copying the three
    declarations, so the "selected" look has one definition. They drive it off
    aria-checked instead of a class: the attribute a screen reader reads and the
-   styling everyone else sees are then the same fact, and cannot drift. */
+   styling everyone else sees are then the same fact, and cannot drift. The
+   text is --accent-ink, since --accent on this tint is under 4.5:1. */
 .preset.is-active,
 .my-cars__chip[aria-checked="true"] {
   border-color: var(--accent);
-  color: var(--accent);
+  color: var(--accent-ink);
   background: color-mix(in srgb, var(--accent) 12%, var(--field));
 }
 

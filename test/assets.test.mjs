@@ -8,7 +8,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { CHARGER_KEYS, defaultPrefs, hasChargerInput } from "../js/storage.js";
-import { effectivePerKwh } from "../js/cardUi.js";
+import { effectivePerKwh, speedSummary } from "../js/cardUi.js";
 import { rateAtTime, rateAtElapsed } from "../js/calc.js";
 import { parseNum } from "../js/ui.js";
 
@@ -1270,16 +1270,21 @@ test("source guard: keyboard focus shows on the pricing switch, clear of the cap
 // The pill sits on the tile's heading, so the tile is the promise. An input in
 // it that the clear keeps survives a tap that claims to clear it; an input the
 // clear resets elsewhere on the page is wiped by a button that never named it.
+// Charge for is the one exception, named here: it stops this charger's
+// session, so the clear takes it, but it sits under Charge to, once.
 
 // The page's inputs by the name the clear knows them by: the id, a radio
-// group's name, and each editor's row container, whose rows come and go.
-function controlsIn(html) {
+// group's name, and each editor's row container, whose rows come and go. Every
+// one as often as it appears, so a second copy can be counted.
+function controlList(html) {
   const attr = (tag, name) => tag.match(new RegExp(`\\s${name}="([^"]*)"`))?.[1] ?? "(unnamed)";
   const inputs = [...html.matchAll(/<(?:input|select|textarea)\b[^>]*>/g)]
     .map(([tag]) => (/\stype="radio"/.test(tag) ? attr(tag, "name") : attr(tag, "id")));
   const rows = [...html.matchAll(/\sid="(\w+Rows)"/g)].map((m) => m[1]);
-  return [...new Set([...inputs, ...rows])].sort();
+  return [...inputs, ...rows];
 }
+
+const controlsIn = (html) => [...new Set(controlList(html))].sort();
 
 // The tile and the rest of the page, comments out. Null when there is no tile.
 function splitAtChargerTile(html) {
@@ -1301,33 +1306,53 @@ function splitAtChargerTile(html) {
 // clear pins (rateMode is the radio group, chargeCapMin the Charge for slider).
 const clearedControls = (keys, rowIds) => [...keys, ...rowIds, "rateMode", "chargeForMin"].sort();
 
+// Cleared, and under Charge to rather than in the tile: each key is the first
+// control after its value, outside the tile.
+const CLEARED_BESIDE_TILE = { chargeForMin: "targetPct" };
+
 function chargerTileMismatch(html, cleared) {
   const parts = splitAtChargerTile(html);
   if (!parts) return ["no Charger tile"];
   const inTile = controlsIn(parts.tile);
-  const outside = controlsIn(parts.rest);
+  const outside = controlList(parts.rest);
+  const beside = Object.keys(CLEARED_BESIDE_TILE);
+  const tileSide = cleared.filter((c) => !beside.includes(c));
+  const follows = (c, above) => outside.includes(above) && outside[outside.indexOf(above) + 1] === c;
   return [
-    ...inTile.filter((c) => !cleared.includes(c)).map((c) => `${c} is in the tile and kept`),
-    ...cleared.filter((c) => !inTile.includes(c)).map((c) => `${c} is cleared and not in the tile`),
-    ...cleared.filter((c) => outside.includes(c)).map((c) => `${c} is cleared and also outside the tile`),
+    ...inTile.filter((c) => !tileSide.includes(c)).map((c) => `${c} is in the tile and ${cleared.includes(c) ? "belongs under Charge to" : "kept"}`),
+    ...tileSide.filter((c) => !inTile.includes(c)).map((c) => `${c} is cleared and not in the tile`),
+    ...tileSide.filter((c) => outside.includes(c)).map((c) => `${c} is cleared and also outside the tile`),
+    ...beside.filter((c) => outside.filter((o) => o === c).length !== 1).map((c) => `${c} is not outside the tile exactly once`),
+    ...Object.entries(CLEARED_BESIDE_TILE).filter(([c, above]) => !follows(c, above)).map(([c, above]) => `${c} is not the first control after ${above}`),
   ];
 }
 
-test("source guard: the Charger tile holds exactly what New charger clears", () => {
+test("source guard: the Charger tile's inputs plus Charge for are exactly what New charger clears", () => {
   // Guard on the guard: the shipped shape passes, and so does a section nested
   // in the tile; a kept input moved in, a cleared one moved out, a second copy
-  // outside, a commented-out tile and a missing one all fail.
+  // outside, Charge for back in the tile, twice or gone, Charge for above
+  // Battery now or above the tile, a commented-out tile and a missing one all
+  // fail.
   const cleared = clearedControls(["yourRate"], ["taxRows"]);
   const head = '<input id="yourRate" />\n<label><input type="radio" name="rateMode" /></label>';
-  const foot = '<div id="taxRows"></div>\n<input id="chargeForMin" type="range" />';
-  const page = (inside, after = "") =>
-    `<section class="card"><input id="gasPrice" /></section>\n<section class="card" id="chargerTile">\n${inside}\n</section>\n<details><input id="startPct" type="range" /></details>\n${after}`;
+  const foot = '<div id="taxRows"></div>';
+  const battery = '<input id="startPct" type="range" />';
+  const chargeTo = '<input id="targetPct" type="range" />';
+  const chargeFor = '<input id="chargeForMin" type="range" />';
+  const page = (inside, section = `${battery}\n${chargeTo}\n${chargeFor}`) =>
+    `<section class="card"><input id="gasPrice" /></section>\n<section class="card" id="chargerTile">\n${inside}\n</section>\n<details id="advanced">\n${section}\n</details>`;
   assert.deepEqual(chargerTileMismatch(page(`${head}\n${foot}`), cleared), []);
   assert.deepEqual(chargerTileMismatch(page(`<section>${head}</section>\n${foot}`), cleared), []);
+  const tileOpen = '<section class="card" id="chargerTile">';
   const bad = {
-    "a kept input moved in": page(`${head}\n${foot}\n<input id="powerKw" />`),
-    "a cleared input moved out": page(`${head}\n<div id="taxRows"></div>`, '<input id="chargeForMin" type="range" />'),
-    "a second copy outside": page(`${head}\n${foot}`, '<div id="taxRows"></div>'),
+    "a kept input moved in": page(`${head}\n${foot}\n${battery}`, `${chargeTo}\n${chargeFor}`),
+    "a cleared input moved out": page(head, `${battery}\n${chargeTo}\n${chargeFor}\n${foot}`),
+    "a second copy outside": page(`${head}\n${foot}`, `${battery}\n${chargeTo}\n${chargeFor}\n${foot}`),
+    "Charge for back in the tile": page(`${head}\n${foot}\n${chargeFor}`, `${battery}\n${chargeTo}`),
+    "Charge for twice": page(`${head}\n${foot}`, `${battery}\n${chargeTo}\n${chargeFor}\n${chargeFor}`),
+    "Charge for gone": page(`${head}\n${foot}`, `${battery}\n${chargeTo}`),
+    "Charge for above Battery now": page(`${head}\n${foot}`, `${chargeFor}\n${battery}\n${chargeTo}`),
+    "Charge for above the tile": page(`${head}\n${foot}`, `${battery}\n${chargeTo}`).replace(tileOpen, `${chargeFor}\n${tileOpen}`),
     "a commented-out tile": `<!-- ${page(`${head}\n${foot}`)} -->`,
     "no tile at all": page(`${head}\n${foot}`).replace(' id="chargerTile"', ""),
   };
@@ -1340,7 +1365,146 @@ test("source guard: the Charger tile holds exactly what New charger clears", () 
   assert.deepEqual(
     chargerTileMismatch(html, clearedControls(CHARGER_KEYS, chargerRowIdsIn(read("../js/main.js")))),
     [],
-    "the Charger tile in index.html no longer holds exactly what New charger clears, so the pill under its heading keeps something it seems to clear, or clears something it never showed",
+    "the Charger tile in index.html plus Charge for, once, under Charge to, no longer hold exactly what New charger clears, so the pill under its heading keeps something it seems to clear, or clears something it never showed",
+  );
+});
+
+// --- The Charger speed row ---------------------------------------------------
+//
+// Closed, the row's summary is all of the speed on screen, so it is the speed
+// in the field, and each preset's aria-pressed is its highlight. Run, not
+// scanned: updatePresetActive() is lifted out of main.js and run with
+// cardUi.js's speedSummary and ui.js's parseNum against stand-in nodes.
+function speedRowFor(src, typed) {
+  const preset = (name, kw) => {
+    const on = new Set();
+    const attrs = {};
+    return {
+      dataset: { kw }, attrs,
+      classList: { toggle: (c, v) => (v ? on.add(c) : on.delete(c)), contains: (c) => on.has(c) },
+      setAttribute: (n, v) => { attrs[n] = String(v); },
+      querySelector: (sel) => (sel === ".preset__name" ? { textContent: name } : null),
+    };
+  };
+  const btns = [preset("Level 1", "1.4"), preset("Level 2", "6.6")];
+  btns[1].classList.toggle("is-active", true);
+  btns[1].setAttribute("aria-pressed", "true");
+  const nodes = { powerKw: { value: typed }, speedPreset: { hidden: false }, speedName: { textContent: "Level 2" }, speedRate: { textContent: "6.6 kW" } };
+  const doc = { querySelectorAll: (sel) => (sel === "#powerPresets .preset" ? btns : []) };
+  const lift = new Function("$", "document", "parseNum", "speedSummary", `${bodyOf(src, "updatePresetActive")}\n}\nreturn updatePresetActive;`);
+  lift((id) => nodes[id], doc, parseNum, speedSummary)();
+  return {
+    shown: `${nodes.speedPreset.hidden ? "" : `${nodes.speedName.textContent} \u00b7 `}${nodes.speedRate.textContent}`,
+    lit: btns.map((b) => b.classList.contains("is-active")),
+    pressed: btns.map((b) => b.attrs["aria-pressed"]),
+  };
+}
+
+const SPEED_ROWS = [
+  ["6.6", "Level 2 \u00b7 6.6 kW", [false, true]],
+  ["1.4", "Level 1 \u00b7 1.4 kW", [true, false]],
+  ["7.2", "7.2 kW", [false, false]],
+  ["", "Not set", [false, false]],
+];
+
+// The typed speeds whose row, highlight or aria-pressed come out wrong.
+function wrongSpeedRows(src) {
+  return SPEED_ROWS.filter(([typed, shown, lit]) => {
+    try {
+      const got = speedRowFor(src, typed);
+      return got.shown !== shown || String(got.lit) !== String(lit) || String(got.pressed) !== String(lit);
+    } catch {
+      return true;
+    }
+  }).map(([typed]) => typed || "(blank)");
+}
+
+test("source guard: the Charger speed row shows the speed in the field, and aria-pressed is the highlight", () => {
+  // Guard on the guard: the shipped body passes, and each half read off the
+  // wrong value, or left as it was, gets some case wrong.
+  const shipped = [
+    '  const btns = [...document.querySelectorAll("#powerPresets .preset")];',
+    '  const view = speedSummary(parseNum($("powerKw").value), btns.map((btn) => ({',
+    '    name: btn.querySelector(".preset__name").textContent, kw: parseNum(btn.dataset.kw),',
+    "  })));",
+    "  btns.forEach((btn, i) => {",
+    '    btn.classList.toggle("is-active", view.pressed[i]);',
+    '    btn.setAttribute("aria-pressed", String(view.pressed[i]));',
+    "  });",
+    '  $("speedPreset").hidden = view.name === null;',
+    '  $("speedName").textContent = view.name ?? "";',
+    '  $("speedRate").textContent = view.rate;',
+  ].join("\n");
+  const fn = (body) => `function updatePresetActive() {\n${body}\n}\n`;
+  assert.deepEqual(wrongSpeedRows(fn(shipped)), []);
+  const bad = {
+    "aria-pressed read off the first preset": shipped.replace('String(view.pressed[i])', 'String(view.pressed[0])'),
+    "the preset's name shown for a typed speed": shipped.replace("view.name === null", "view.name !== null"),
+    "aria-pressed never set": shipped.replace('    btn.setAttribute("aria-pressed", String(view.pressed[i]));\n', ""),
+    "the row left as it was": shipped.replace('  $("speedRate").textContent = view.rate;', ""),
+  };
+  for (const [what, body] of Object.entries(bad)) {
+    assert.notDeepEqual(wrongSpeedRows(fn(body)), [], `${what}, and the guard passed it`);
+  }
+
+  assert.deepEqual(
+    wrongSpeedRows(read("../js/main.js")),
+    [],
+    "updatePresetActive() no longer shows the field's speed on the Charger speed row, or a preset's aria-pressed no longer says what its highlight shows",
+  );
+});
+
+// Every way the speed changes ends in a render() that repaints the row: typed
+// (a live input), tapped (the preset handler), and New charger, its Undo and
+// boot, which put the field back from prefs in paintChargerFields().
+function speedRepaintProblems(src) {
+  const problems = [];
+  if (!/^  updatePresetActive\(\);$/m.test(bodyOf(src, "render"))) problems.push("render() does not repaint the row on every pass");
+  if (!/^  paint\("powerKw", prefs\.powerKw, 2\);$/m.test(bodyOf(src, "paintChargerFields"))) problems.push("paintChargerFields() does not paint the speed");
+  for (const from of ["newCharger", "undoNewCharger", "boot"]) {
+    if (!reaches(src, from, "paintChargerFields") || !reaches(src, from, "render")) problems.push(`${from}() does not paint the charger and render`);
+  }
+  if (!listedIn(src, "liveIds").includes("powerKw")) problems.push("a typed speed does not render");
+  const s = stripComments(src);
+  const at = s.indexOf('$("powerPresets").addEventListener("click"');
+  const handler = at === -1 ? "" : s.slice(at, s.indexOf("\n  });", at));
+  if (!/^    paint\("powerKw", [^\n]*\);\n    render\(\);$/m.test(handler)) problems.push("a tapped preset does not render");
+  return problems;
+}
+
+test("source guard: the Charger speed row is repainted however the speed changes", () => {
+  // Guard on the guard: a stand-in main.js passes, and each path cut fails,
+  // the speed's paint moved back to writeDisplayValues() first, where boot
+  // still reaches it and New charger and Undo do not.
+  const parts = {
+    render: "function render() {\n  const m = readInputs();\n  updatePresetActive();\n}\n",
+    fields: 'function paintChargerFields() {\n  paint("yourRate", prefs.yourRate, 6);\n  paint("powerKw", prefs.powerKw, 2);\n}\n',
+    display: "function writeDisplayValues() {\n  paintChargerFields();\n}\n",
+    clear: "function newCharger() {\n  paintChargerFields();\n  render();\n}\n",
+    undo: "function undoNewCharger() {\n  paintChargerFields();\n  render();\n}\n",
+    boot: "function boot() {\n  writeDisplayValues();\n  render();\n}\n",
+    events: 'function attachEvents() {\n  const liveIds = ["yourRate", "powerKw"];\n  $("powerPresets").addEventListener("click", (e) => {\n    paint("powerKw", parseNum(btn.dataset.kw), 2);\n    render();\n  });\n}\n',
+  };
+  const src = (over = {}) => Object.values({ ...parts, ...over }).join("");
+  assert.deepEqual(speedRepaintProblems(src()), []);
+  const bad = {
+    "the speed painted by writeDisplayValues() alone": {
+      fields: 'function paintChargerFields() {\n  paint("yourRate", prefs.yourRate, 6);\n}\n',
+      display: 'function writeDisplayValues() {\n  paint("powerKw", prefs.powerKw, 2);\n  paintChargerFields();\n}\n',
+    },
+    "the row repainted only sometimes": { render: "function render() {\n  const m = readInputs();\n  if (m.powerKw) updatePresetActive();\n}\n" },
+    "Undo without a render": { undo: "function undoNewCharger() {\n  paintChargerFields();\n}\n" },
+    "the field not a live input": { events: parts.events.replace('"yourRate", "powerKw"', '"yourRate"') },
+    "a tapped preset left unrendered": { events: parts.events.replace("    render();\n", "") },
+  };
+  for (const [what, over] of Object.entries(bad)) {
+    assert.notDeepEqual(speedRepaintProblems(src(over)), [], `${what}, and the guard passed it`);
+  }
+
+  assert.deepEqual(
+    speedRepaintProblems(read("../js/main.js")),
+    [],
+    "a way of changing the speed (typing, a preset, New charger, Undo or a fresh load) no longer repaints the field and the Charger speed row, so the row can name a speed the estimate is not using",
   );
 });
 
@@ -1431,6 +1595,95 @@ test("source guard: the Gas title's label takes the heading's font and color, ac
     titleLabelProblems(read("../css/styles.css")),
     [],
     "the Gas title's label no longer takes its heading's font and color (it goes back to the grey 14px/600 field label) or no longer spans the title row, so a tap beside the text focuses nothing",
+  );
+});
+
+// A selector's specificity as one number: ids, then classes, attributes and
+// pseudo-classes (a :not() counts its argument), then types and pseudo-elements.
+function specificity(selector) {
+  const s = selector.replace(/:not\(([^)]*)\)/g, " $1");
+  const ids = (s.match(/#[\w-]+/g) ?? []).length;
+  const classes = (s.match(/\.[\w-]+|\[[^\]]*\]|(?<!:):(?!:)[\w-]+/g) ?? []).length;
+  const types = (s.match(/(?:^|[\s>+~])[a-z][\w-]*|::[\w-]+/gi) ?? []).length;
+  return ids * 1e4 + classes * 1e2 + types;
+}
+
+// Whether a compound selector's classes, :not() ones included, allow an
+// element with exactly these classes. Anything else in it may match.
+function compoundAllows(compound, classes) {
+  const names = (s) => (s.match(/\.[\w-]+/g) ?? []).map((c) => c.slice(1));
+  const negated = [...compound.matchAll(/:not\(([^)]*)\)/g)].flatMap((m) => names(m[1]));
+  return names(compound.replace(/:not\([^)]*\)/g, "")).every((c) => classes.includes(c)) && !negated.some((c) => classes.includes(c));
+}
+
+// The content every speed preset pseudo-element ends up with, as the cascade
+// leaves it for a selected preset and an unselected one: specificity, then
+// source order, with @media rules counted unconditionally. A selector with no
+// .preset compound applies to both.
+function presetMarks(css) {
+  const STATES = { selected: ["preset", "is-active"], unselected: ["preset"] };
+  const rules = cssRules(css);
+  const out = {};
+  for (const [state, classes] of Object.entries(STATES)) {
+    const won = {};
+    rules.forEach(({ selectors, decls }, order) => {
+      const content = decls.filter(([p]) => p === "content").at(-1)?.[1];
+      if (content === undefined) return;
+      for (const sel of selectors) {
+        const pseudo = sel.match(/::?(before|after)$/)?.[1];
+        if (!pseudo || !/\.preset(?:__|(?![\w-]))/.test(sel)) continue;
+        const parts = sel.split(" ").filter((p) => !/^[>+~]$/.test(p));
+        const host = parts.find((p) => /\.preset(?![\w-])/.test(p.replace(/:not\([^)]*\)/g, "")));
+        if (host && !compoundAllows(host, classes)) continue;
+        const target = `${parts.at(-1).match(/\.(preset__name|preset__kw|preset)(?![\w-])/)?.[1] ?? "preset child"}::${pseudo}`;
+        const rank = specificity(sel) * 1e4 + order;
+        if (!won[target] || rank >= won[target].rank) won[target] = { rank, content };
+      }
+    });
+    out[state] = Object.fromEntries(Object.entries(won).map(([t, w]) => [t, w.content]));
+  }
+  return out;
+}
+
+// Selected by more than color: the selected preset's name opens with a check,
+// and no other preset pseudo-element, on either preset, draws anything.
+function presetMarkProblems(css) {
+  const marks = presetMarks(css);
+  const name = marks.selected["preset__name::before"];
+  const problems = /^"(?:\\2713|\u2713)/.test(name ?? "") ? [] : [`the selected preset's name opens with ${name ?? "nothing"}, not the check`];
+  for (const [state, drawn] of Object.entries(marks)) {
+    for (const [target, v] of Object.entries(drawn)) {
+      if (state === "selected" && target === "preset__name::before") continue;
+      if (!/^(?:none|normal)$/.test(v)) problems.push(`the ${state} preset draws ${v} on ${target}`);
+    }
+  }
+  return problems;
+}
+
+test("source guard: only the selected speed preset draws a mark, the check before its name", () => {
+  // Guard on the guard: the shipped rule passes, and so does a later reset of
+  // lower specificity it outranks; the check moved to the unselected preset
+  // (same tokens), put on every preset, left unscoped, taken back off the
+  // selected one by a later, stronger rule, a mark after the unselected name
+  // and no check at all each fail.
+  const CHECK = '.preset.is-active .preset__name::before { content: "\\2713\\00a0"; content: "\\2713\\00a0" / ""; }';
+  assert.deepEqual(presetMarkProblems(CHECK), []);
+  assert.deepEqual(presetMarkProblems(`${CHECK}\n.preset__name::before { content: none; }`), []);
+  const bad = {
+    "the check on the unselected preset": CHECK.replace(".preset.is-active", ".preset:not(.is-active)"),
+    "the check on every preset": CHECK.replace(".preset.is-active ", ".preset "),
+    "the check unscoped": CHECK.replace(".preset.is-active ", ""),
+    "a stronger later rule taking it off": `${CHECK}\n.speed__row .preset.is-active .preset__name::before { content: none; }`,
+    "a mark after the unselected name": `${CHECK}\n.preset:not(.is-active) .preset__name::after { content: "\\00a0\\2717"; }`,
+    "no check at all": ".preset.is-active .preset__name { font-weight: 800; }",
+  };
+  for (const [what, css] of Object.entries(bad)) {
+    assert.notDeepEqual(presetMarkProblems(css), [], `${what}, and the guard passed it`);
+  }
+  assert.deepEqual(
+    presetMarkProblems(read("../css/styles.css")),
+    [],
+    "the selected speed preset no longer opens its name with a check, or another preset draws a mark, so the selection is told apart by color alone or the unselected preset looks selected",
   );
 });
 
