@@ -220,6 +220,11 @@ body {
   padding: 18px;
 }
 .card__title { margin: 0 0 4px; font-size: 15px; font-weight: 800; letter-spacing: -0.01em; }
+/* A title that labels its tile's one field (Gas) reads as the title, spans the
+   row so a tap anywhere on it focuses the field, and sits 17.5px over the field
+   with the 6px gap, as "Charger" sits over its tabs. */
+.card__title > label { display: block; font: inherit; color: inherit; }
+.field > .card__title { margin: 0 0 11.5px; }
 
 /* --- Result hero --- */
 .result {
@@ -426,23 +431,24 @@ body {
 .tweak > summary::after { content: " +"; color: var(--muted); }
 .tweak[open] > summary::after { content: " −"; }
 .tweak__body { padding-top: 8px; }
-/* Energy-mode disclosure as a lightweight accent accordion: a leading chevron
-   that rotates open. Colored so it stands out from the surrounding hints,
-   without a box, so it never reads as an input to fill. */
+/* The Charger tile's section titles: a leading chevron that rotates open, no
+   box, so it never reads as an input to fill. Text-colored and semibold, a
+   step under the tile title, so the "+ Add" buttons are the tile's only green
+   and no action shares a heading's color, size and weight. */
 .tweak--muted > summary {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: var(--accent);
-  font-weight: 700;
-  font-size: 14px;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 15px;
   padding: 6px 0;
 }
 .tweak--muted > summary::after,
 .tweak--muted[open] > summary::after { content: none; }
 .tweak--muted > summary::before {
   content: "\25B8";
-  color: var(--accent);
+  color: var(--muted);
   font-size: 12px;
   display: inline-block;
   transition: transform 0.15s;
@@ -663,19 +669,77 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   cursor: pointer;
 }
 .tou-del:active { transform: scale(0.96); }
-.tou-add { display: inline-block; margin-top: 2px; }
+/* A secondary button, not a link: outlined in the accent, the tile's only
+   green, smaller and lighter than the section titles so it never reads as one
+   more heading. 36px to look at, 44px to hit, like New charger. Block, so it
+   sits alike in an editor and in a fee field. Doubled class to outrank .link,
+   defined later. */
+.link.tou-add {
+  display: block;
+  width: fit-content;
+  position: relative;
+  align-self: flex-start;
+  min-height: 36px;
+  margin-top: 4px;
+  padding: 0 14px 0 11px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 34px;
+}
+.link.tou-add:active { transform: scale(0.98); }
+/* The inset counts from inside the 1px border, hence 5px for 4px outside it. */
+.link.tou-add::before { content: ""; position: absolute; inset: -5px -1px; }
+/* The "+" as an icon: a size up, regular weight. */
+.tou-add__plus { font-size: 17px; font-weight: 400; line-height: 1; padding-right: 2px; }
+/* The hint under an add button is about that button's rows, so it sits close. */
+.tou-add + .hint { margin-top: 6px; }
 .tf-unit { flex: 0 0 auto; margin-left: -2px; font-size: 14px; font-weight: 600; color: var(--muted); }
 .result__tou { color: var(--text); }
 
-/* Charger fees: three distinct fee types (service / time / tax). A hairline
+/* The Fees disclosure: three distinct fee types (service / time / tax). A hairline
    divider reads as separate sections without the tall whitespace that made
    them feel like one long block. The label-row margin is dropped so the field's
    own 6px gap sets the label→controls rhythm. */
 #chargerFees .field-label-row { margin-bottom: 0; }
-#chargerFees .disclosure__body .field + .field {
+#chargerFees .tweak__body .field + .field {
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--line);
+}
+
+/* Each disclosure in the Charger tile starts under a card-wide rule, wider
+   than the hairlines between fees, and an open one is a tinted band down to
+   the next rule, so where one ends and the next begins is never a guess.
+   Charge for, shown with a time fee or By duration, gets the same rule. */
+#chargerTile > .tweak,
+#chargeForField {
+  margin: 12px -18px 0;
+  padding: 0 18px;
+  border-top: 1px solid var(--line);
+}
+#chargerTile > .tweak + #chargeForField { margin-top: 0; }
+#chargerTile > .tweak[open] { padding-bottom: 16px; background: var(--card-2); }
+#chargeForField { padding-top: 14px; }
+/* 14px above and below the title (the tile's rule-to-content gap, as on
+   Charge for, and its field rhythm), so a collapsed row is 49px and the whole
+   row width is the tap target. Open, the body's 8px goes, so the title still
+   sits 14px over the first hint. */
+#chargerTile > .tweak > summary { display: flex; padding: 14px 0; }
+#chargerTile > .tweak > .tweak__body { padding-top: 0; }
+/* The last band runs on to the card's rounded foot rather than stopping short. */
+#chargerTile:has(> #chargeForField[hidden]) > #chargerFees[open] {
+  margin-bottom: -18px;
+  padding-bottom: 18px;
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+/* Closed, it runs on to the foot too, so the card's 18px sits under its title
+   once, not 18px plus the row's own 14px. */
+#chargerTile:has(> #chargeForField[hidden]) > #chargerFees:not([open]) {
+  margin-bottom: -18px;
+  padding-bottom: 4px;
 }
 
 /* Tax rows: an optional name plus a percentage, summed across rows. */
@@ -684,38 +748,60 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 .tax-pct-wrap.input-money input { padding-left: 12px; padding-right: 34px; }
 .tax-pct-wrap .input-money__suffix { font-size: 15px; }
 
-/* Exclusive pricing-mode selector */
-.segmented {
+/* Exclusive pricing-mode selector: folder tabs on the rate panel. The
+   selected tab is cut from the panel's --card-2 band and laps its top rule by
+   1px, so tab and panel read as one shape, and its 3px --accent cap marks it
+   by more than color. Unselected tabs are text on the card. Every tab is 700
+   and keeps its cap and edges, transparent, so a switch moves nothing. */
+#rateMode {
   display: flex;
-  gap: 4px;
-  background: var(--field);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  padding: 4px;
+  gap: 2px;
+  position: relative;
+  z-index: 1;
 }
-.segmented > label { flex: 1; position: relative; margin: 0; }
-.segmented input { position: absolute; opacity: 0; pointer-events: none; }
-.segmented span {
-  display: block;
-  text-align: center;
-  padding: 9px 4px;
-  border-radius: 10px;
+#rateMode > label { flex: 1 1 auto; position: relative; }
+#rateMode input { position: absolute; opacity: 0; pointer-events: none; }
+/* Content-sized and on one line, so all three labels fit at 320px. 45px tall
+   with the 1px lap: a 44px target with no hit strip. */
+#rateMode span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 45px;
+  margin-bottom: -1px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-top-width: 3px;
+  border-bottom: 0;
+  border-radius: var(--radius) var(--radius) 0 0;
   font-size: 13px;
   font-weight: 700;
+  white-space: nowrap;
   color: var(--muted);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
-.segmented input:checked + span {
-  background: var(--card);
-  color: var(--accent);
-  box-shadow: var(--shadow-sm);
+#rateMode input:checked + span {
+  background: var(--card-2);
+  border-color: var(--line);
+  border-top-color: var(--accent);
+  color: var(--accent-ink);
 }
-/* Dim only the flat-rate input when a schedule mode is active, not the mode
-   selector / editors that now live in the same field. */
-.field.is-disabled > label,
-.field.is-disabled > .input-money { opacity: 0.5; }
-.field.is-disabled > .input-money input { cursor: not-allowed; }
+/* The radios are invisible, so keyboard focus is drawn on the tab: the app's
+   2px outline, inset 7px so it sits 2px clear of the cap, never on it. */
+#rateMode input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -7px; }
+/* The panel is the tile's card-wide rule and --card-2 band, as on an open
+   Fees row, and runs down to the Fees rule. 14px from rule to content. */
+#ratePanel {
+  margin: 0 -18px;
+  padding: 14px 18px 16px;
+  border-top: 1px solid var(--line);
+  background: var(--card-2);
+}
+/* Less the rows' own 4px top margin: the same 14px as Energy rate. */
+#ratePanel > #touEditor,
+#ratePanel > #durEditor { margin-top: -4px; }
+#ratePanel + #chargerFees { margin-top: 0; }
 
 /* Duration-tier rows */
 .dur-after {
@@ -865,6 +951,62 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   margin: 0;
   padding: 0;
   overflow: hidden;
+  clip-path: inset(50%);
+}
+
+/* The Charger tile's heading row, with New charger at its right. */
+.charger-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.charger-head > .card__title { margin: 0; }
+/* The pricing switch sits under the heading, and its rate panel under it:
+   Energy rate on Flat, or in its place that mode's rows, "+ Add" and hint,
+   which main.js unhides. */
+#chargerTile > .charger-head + #rateMode { margin-top: 6px; }
+/* The pill, the undo or neither: the 44px floor is the tallest of them, so the
+   row never changes height under the user's finger. */
+.charger-head__slot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  min-height: 44px;
+}
+/* 36px to look at, 44px to hit: the strip above and below it is invisible.
+   The inset counts from inside the 1px border, hence 5px for 4px outside it. */
+.new-charger {
+  position: relative;
+  gap: 7px;
+  min-height: 36px;
+  padding: 6px 14px 6px 12px;
+}
+.new-charger::before { content: ""; position: absolute; inset: -5px -1px; }
+.new-charger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.new-charger__icon { flex: none; }
+.charger-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  column-gap: 6px;
+  margin: 0;
+}
+/* Out of layout and still in the accessibility tree while it has nothing to
+   say, for the reason .my-cars__note:empty gives. :empty cannot see past the
+   undo button inside it, so the text span decides. Also while the pill is back
+   in the slot after an undo: there is no room beside it for "Charger
+   restored." at 320px, and the values coming back are what a sighted user
+   reads as restored. */
+.charger-note:has(> .charger-note__text:empty),
+.charger-head__slot:has(> .new-charger:not([hidden])) > .charger-note {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  white-space: nowrap;
   clip-path: inset(50%);
 }
 
@@ -1163,10 +1305,10 @@ dialog:not([open]) { display: none; }
    Placed last so it wins over the base .disclosure__body padding shorthand. */
 @media (max-width: 360px) {
   .disclosure__body { padding-left: 12px; padding-right: 12px; }
-  /* The energy-mode editors live in the plain Prices card (18px padding) rather
-     than a disclosure body (12px here), so widen them 6px each side to give the
-     tier rows the same width the fees rows get, keeping controls on one line. */
-  #touEditor, #durEditor { margin-left: -6px; margin-right: -6px; }
+  /* The editors live in the plain Charger tile (18px padding) rather than a
+     disclosure body (12px here), so widen their rows 6px each side to keep
+     every control of a tier or time-fee row on one line. */
+  #touEditor, #durEditor, #timeFeeRows, #taxRows { margin-left: -6px; margin-right: -6px; }
   .tou-row { gap: 4px; }
   .dur-after { gap: 4px; }
   .dur-min { width: 48px; flex-basis: 48px; padding-left: 6px; padding-right: 6px; }

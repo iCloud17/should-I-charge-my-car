@@ -23,6 +23,16 @@ export function inclusionNote(hasTax, hasFee) {
   return "";
 }
 
+// The price per kWh the card judges. A sized charge uses its all-in average
+// (energy, fees and tax). With no battery size there is no kWh to spread the
+// session and hourly fees over, so it is the energy rate the charge starts
+// on, plus tax, which is per kWh either way. That rate comes from the active
+// mode: outside Flat, Energy rate is hidden and can hold an old price.
+export function effectivePerKwh({ hasRate, kwh, session, rateOf, startClockMin, taxRate }) {
+  if (!hasRate) return NaN;
+  return kwh > 0 ? session.effectivePerKwh : rateOf(startClockMin, 0) * (1 + taxRate);
+}
+
 export function numText(n, d) {
   if (!Number.isFinite(n)) return "";
   const f = Math.pow(10, d);

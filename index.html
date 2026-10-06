@@ -196,16 +196,47 @@
       </div>
     </details>
 
-    <!-- Prices: the two numbers that decide it -->
+    <!-- Gas: the one price New charger keeps. -->
     <section class="card">
-      <div class="field-row">
-        <div class="field">
-          <label for="gasPrice" id="gasPriceLabel">Gas price ($/gallon)</label>
-          <div class="input-money">
-            <span class="input-money__sym" id="curSym1">$</span>
-            <input id="gasPrice" type="text" min="0" step="any" inputmode="decimal" autocomplete="off" value="" placeholder="e.g. 3.89" />
-          </div>
+      <div class="field">
+        <!-- The tile's title, and the field's label too. -->
+        <h2 class="card__title"><label for="gasPrice" id="gasPriceLabel">Gas price ($/gallon)</label></h2>
+        <div class="input-money">
+          <span class="input-money__sym" id="curSym1">$</span>
+          <input id="gasPrice" type="text" min="0" step="any" inputmode="decimal" autocomplete="off" value="" placeholder="e.g. 3.89" />
         </div>
+      </div>
+    </section>
+
+    <!-- The Charger tile: everything the charger at this stop sets, and
+         exactly what New charger clears. A test holds the two together. -->
+    <section class="card" id="chargerTile">
+      <div class="charger-head">
+        <h2 class="card__title">Charger</h2>
+        <!-- One slot for New charger and its undo, on a floor as tall as
+             either, so the row keeps its height through a clear and an undo. -->
+        <div class="charger-head__slot">
+          <!-- On the heading, not a field, because it clears the tile, and it
+               stays put whatever the rate mode or row count. Offered once
+               there is something to clear. Undone rather than asked, because
+               nothing saved changes. -->
+          <button type="button" class="pill new-charger" id="newChargerBtn" hidden><svg class="new-charger__icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.07 9A8 8 0 1 0 12 5M15 2l-3 3 3 3" /></svg>New charger</button>
+          <!-- Always rendered, like #myCarsNote: a live region that appears at
+               the moment it speaks is one that often does not. Atomic, so the
+               undo is read out with the sentence it belongs to. -->
+          <p class="hint charger-note" id="chargerNote" aria-live="polite" aria-atomic="true"><span class="charger-note__text" id="chargerNoteText"></span><button type="button" class="link" id="chargerUndoBtn" hidden>Undo</button></p>
+        </div>
+      </div>
+      <!-- How the charger prices energy, first, because it decides what comes
+           next: Energy rate on Flat, or that mode's own rows in its place. -->
+      <div id="rateMode" role="radiogroup" aria-label="Energy pricing">
+        <label><input type="radio" name="rateMode" value="flat" checked aria-controls="ratePanel" /><span id="rateModeName-flat">Flat</span></label>
+        <label><input type="radio" name="rateMode" value="tod" aria-controls="ratePanel" /><span id="rateModeName-tod">Time of day</span></label>
+        <label><input type="radio" name="rateMode" value="dur" aria-controls="ratePanel" /><span id="rateModeName-dur">By duration</span></label>
+      </div>
+      <!-- What the checked mode prices with, named after that mode. A group,
+           not a tab panel: the mode is a priced setting, not a view. -->
+      <div id="ratePanel" role="group" aria-labelledby="rateModeName-flat">
         <div class="field">
           <label for="yourRate" id="yourRateLabel">Energy rate ($/kWh)</label>
           <div class="input-money">
@@ -213,62 +244,61 @@
             <input id="yourRate" type="text" min="0" step="any" inputmode="decimal" autocomplete="off" value="" placeholder="e.g. 0.30" />
           </div>
         </div>
-      </div>
-      <details class="tweak tweak--muted" id="energyModeTweak">
-        <summary>Energy price isn&rsquo;t flat?</summary>
-        <div class="tweak__body">
-          <div class="segmented" id="rateMode" role="radiogroup">
-            <label><input type="radio" name="rateMode" value="flat" checked /><span>Flat</span></label>
-            <label><input type="radio" name="rateMode" value="tod" /><span>Time of day</span></label>
-            <label><input type="radio" name="rateMode" value="dur" /><span>By duration</span></label>
-          </div>
-          <div id="touEditor" hidden>
-            <div id="touRows" class="tou-rows"></div>
-            <button type="button" id="touAdd" class="link tou-add">+ Add time period</button>
-            <p class="hint">Enter each price and the time it starts (it runs until the next one). We use your device&rsquo;s current time to pick the rate now and flag a cheaper window.</p>
-          </div>
-          <div id="durEditor" hidden>
-            <div id="durRows" class="tou-rows"></div>
-            <button type="button" id="durAdd" class="link tou-add">+ Add tier</button>
+        <div id="touEditor" hidden>
+          <div id="touRows" class="tou-rows"></div>
+          <button type="button" id="touAdd" class="link tou-add"><span class="tou-add__plus">+</span> Add time period</button>
+          <p class="hint">Enter each price and the time it starts (it runs until the next one). We use your device&rsquo;s current time to pick the rate now and flag a cheaper window.</p>
+        </div>
+        <div id="durEditor" hidden>
+          <div id="durRows" class="tou-rows"></div>
+          <button type="button" id="durAdd" class="link tou-add"><span class="tou-add__plus">+</span> Add tier</button>
           <p class="hint">Set the price from the start (0 min), then add tiers that kick in after a set amount of charging time, in minutes or hours.</p>
+        </div>
+      </div>
+
+      <!-- Optional extras, only if the charger lists them -->
+      <details class="tweak tweak--muted" id="chargerFees">
+        <summary>Fees (service, time, tax)</summary>
+        <div class="tweak__body">
+          <p class="hint hint--lead">Add these only if the charger&rsquo;s screen lists them.</p>
+          <div class="field">
+            <label for="sessionFee">Service fee</label>
+            <div class="input-money has-suffix">
+              <span class="input-money__sym" id="curSym3">$</span>
+              <input id="sessionFee" type="text" min="0" step="any" inputmode="decimal" autocomplete="off" value="0" />
+              <span class="input-money__suffix">/session</span>
+            </div>
+          </div>
+          <div class="field">
+            <div class="field-label-row">
+              <label>Station time rate while connected</label>
+              <button type="button" id="timeFeeInfoBtn" class="info-btn" aria-label="What is the station time rate?" aria-expanded="false">i</button>
+              <p class="hint info-note" id="timeFeeInfoNote" hidden>An hourly fee for staying plugged in, on top of the energy cost. Example: free for the first 4 hr, then $5/hr.</p>
+            </div>
+            <div id="timeFeeRows" class="tou-rows"></div>
+            <button type="button" id="timeFeeAdd" class="link tou-add"><span class="tou-add__plus">+</span> Add rate</button>
+          </div>
+          <div class="field">
+            <div class="field-label-row">
+              <label>Taxes</label>
+              <button type="button" id="taxInfoBtn" class="info-btn" aria-label="How are taxes applied?" aria-expanded="false">i</button>
+              <p class="hint info-note" id="taxInfoNote" hidden>A percentage added to the whole bill. Add one row per line on the charger&rsquo;s screen (e.g. state 6.25%, city 1%); we total them.</p>
+            </div>
+            <div id="taxRows" class="tou-rows"></div>
+            <button type="button" id="taxAdd" class="link tou-add"><span class="tou-add__plus">+</span> Add tax</button>
           </div>
         </div>
       </details>
-    </section>
 
-    <!-- Charger fees: optional extras, only if the charger lists them -->
-    <details class="card disclosure" id="chargerFees">
-      <summary>Charger fees (service, time, tax)</summary>
-      <div class="disclosure__body">
-        <p class="hint hint--lead">Add these only if the charger&rsquo;s screen lists them.</p>
-        <div class="field">
-          <label for="sessionFee">Service fee</label>
-          <div class="input-money has-suffix">
-            <span class="input-money__sym" id="curSym3">$</span>
-            <input id="sessionFee" type="text" min="0" step="any" inputmode="decimal" autocomplete="off" value="0" />
-            <span class="input-money__suffix">/session</span>
-          </div>
-        </div>
-        <div class="field">
-          <div class="field-label-row">
-            <label>Station time rate while connected</label>
-            <button type="button" id="timeFeeInfoBtn" class="info-btn" aria-label="What is the station time rate?" aria-expanded="false">i</button>
-            <p class="hint info-note" id="timeFeeInfoNote" hidden>An hourly fee for staying plugged in, on top of the energy cost. Example: free for the first 4 hr, then $5/hr.</p>
-          </div>
-          <div id="timeFeeRows" class="tou-rows"></div>
-          <button type="button" id="timeFeeAdd" class="link tou-add">+ Add rate</button>
-        </div>
-        <div class="field">
-          <div class="field-label-row">
-            <label>Taxes</label>
-            <button type="button" id="taxInfoBtn" class="info-btn" aria-label="How are taxes applied?" aria-expanded="false">i</button>
-            <p class="hint info-note" id="taxInfoNote" hidden>A percentage added to the whole bill. Add one row per line on the charger&rsquo;s screen (e.g. state 6.25%, city 1%); we total them.</p>
-          </div>
-          <div id="taxRows" class="tou-rows"></div>
-          <button type="button" id="taxAdd" class="link tou-add">+ Add tax</button>
-        </div>
+      <!-- The charger's, not the battery's: it shows only with a time fee or
+           By duration, and a dragged one would override the next charger's
+           own "charge briefly" pick, so New charger clears it. -->
+      <div class="field" id="chargeForField" hidden>
+        <label for="chargeForMin">Charge for: <output id="chargeForOut">-</output></label>
+        <input id="chargeForMin" type="range" min="0" max="180" step="1" value="180" />
+        <p class="hint" id="chargeForNote"></p>
       </div>
-    </details>
+    </section>
 
     <!-- How long to charge: secondary time estimate + cost breakdown -->
     <details class="card disclosure" id="advanced">
@@ -305,12 +335,6 @@
           <input id="targetPct" type="range" min="0" max="100" step="5" value="100" />
         </div>
 
-        <div class="field" id="chargeForField" hidden>
-          <label for="chargeForMin">Charge for: <output id="chargeForOut">-</output></label>
-          <input id="chargeForMin" type="range" min="0" max="180" step="1" value="180" />
-          <p class="hint" id="chargeForNote"></p>
-        </div>
-
         <div class="advanced-result" id="advancedResult">
           <p class="advanced-result__title">For this charge</p>
           <div class="advanced-result__row">
@@ -345,7 +369,7 @@
           <ol class="faq__steps">
             <li>Pick your car, or choose &ldquo;My own car&rdquo; to enter your own numbers.</li>
             <li>Enter today&rsquo;s gas price.</li>
-            <li>Enter the charger&rsquo;s price per kWh. For time-of-day or tiered pricing, use &ldquo;Energy price isn&rsquo;t flat?&rdquo;. Add session, hourly, or tax charges under &ldquo;Charger fees.&rdquo;</li>
+            <li>Enter the charger&rsquo;s price per kWh. For time-of-day or tiered pricing, pick &ldquo;Time of day&rdquo; or &ldquo;By duration&rdquo; above the rate. Add session, hourly, or tax charges under &ldquo;Fees&rdquo; in the same Charger section.</li>
             <li>Read the verdict at the top. It updates as you type and saves for next time.</li>
           </ol>
         </details>
@@ -354,7 +378,7 @@
           <summary><h2 class="faq__q">What is &ldquo;Charge time &amp; cost&rdquo; for?</h2></summary>
           <p class="faq__a">This section is optional. It estimates how long a charge takes and what the whole session costs.</p>
           <p class="faq__a">Set the charger speed (Level 1 is a wall socket, Level 2 is a 240V unit) and the two battery sliders. You get range added, time, and total.</p>
-          <p class="faq__a">Charge power sets the time estimate. On flat per-kWh pricing that is all it does. If the station adds an hourly fee or prices energy by duration, charging slower costs more for the same kWh, so it can flip the verdict, and a &ldquo;Charge for&rdquo; slider appears so you can price a partial charge.</p>
+          <p class="faq__a">Charge power sets the time estimate. On flat per-kWh pricing that is all it does. If the station adds an hourly fee or prices energy by duration, charging slower costs more for the same kWh, so it can flip the verdict, and a &ldquo;Charge for&rdquo; slider appears in the Charger section so you can price a partial charge.</p>
         </details>
 
         <details class="faq__item">

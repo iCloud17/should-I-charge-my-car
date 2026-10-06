@@ -9,8 +9,8 @@
 //
 // The pure prefs transforms the app applies in between live here too
 // (defaultPrefs, mergeCarOverride, applyCarEdit, applyCarSelection,
-// persistableFrom) rather than in main.js, so each rule is testable without a
-// DOM or a store.
+// persistableFrom, clearCharger, restoreCharger) rather than in main.js, so
+// each rule is testable without a DOM or a store.
 
 import { MAX_OUTLET_KW } from "./cars.js";
 
@@ -48,7 +48,7 @@ export const DEFAULT_PREFS = {
   units: "imperial", // "imperial" (US) | "uk" | "metric" | "kmL"
   currency: "$",
   themeMode: "auto", // "auto" (follows local time) | "light" | "dark"
-  // Advanced - charger fees & session.
+  // The Charger tile's service fee, then the battery at this stop.
   sessionFee: 0, // volatile - NOT persisted, it changes at every stop
   // Volatile for the same reason, and they sit next to sessionFee because they
   // belong to the same category: this stop, not this user. Every visit opens at
@@ -496,4 +496,54 @@ export function resetPrefs() {
   const prefs = defaultPrefs();
   savePrefs(prefs);
   return prefs;
+}
+
+// --- "New charger": the charger's prefs, and the stop's ----------------------
+//
+// A reload forgets both lists below and keeps PERSIST_KEYS. Every key in
+// DEFAULT_PREFS is on exactly one of the three, and a test pins that, so a key
+// added to the defaults has to be put on one side before the suite goes green.
+//
+// CHARGER_KEYS describe the charger the user is standing at, and "New charger"
+// clears them. The rest of the charger never reaches prefs: the pricing mode,
+// the schedule, tier, fee and tax rows, and the "Charge for" slider. main.js
+// keeps those in module variables and the DOM, and clears them beside
+// clearCharger.
+export const CHARGER_KEYS = ["yourRate", "sessionFee"];
+
+// Where the battery is and how full it should get at this stop. New charger
+// keeps them: moving to the charger next door does not change the battery.
+export const STOP_KEYS = ["startPct", "targetPct"];
+
+// The charger's prefs back at their defaults, and everything else as it was.
+// Pure: returns new prefs, never mutates what it was given.
+export function clearCharger(prefs) {
+  return restoreCharger(prefs, DEFAULT_PREFS);
+}
+
+// Undoing a "New charger": the charger's prefs as `before` held them, and
+// everything else as it is NOW. The car, the gas price, the units or the
+// battery sliders may have changed since the clear, and bringing those back
+// would undo edits the user made after it.
+// Pure: returns new prefs, never mutates what it was given.
+export function restoreCharger(prefs, before) {
+  const out = { ...prefs };
+  for (const k of CHARGER_KEYS) out[k] = before[k];
+  return out;
+}
+
+// Whether "New charger" has anything to clear: something the user entered at
+// this charger. A charger pref counts once it is off its default; a blank field
+// reads back as NaN where the default is null, and both are blank. `rows` holds
+// the number in each editor row's price, rate or percentage field, NaN where
+// blank, and counts once one holds a number, 0 included. So does a "Charge
+// for" the user has dragged. A pricing mode alone does not, nor do the blank
+// rows it starts with (Baadal, 2026-10-05: "I havent filled in anything yet").
+export function hasChargerInput(prefs, { rows, capTouched }) {
+  const blank = (v) => v == null || Number.isNaN(v);
+  const moved = CHARGER_KEYS.some((k) => {
+    const v = prefs[k], d = DEFAULT_PREFS[k];
+    return v !== d && !(blank(v) && blank(d));
+  });
+  return moved || rows.some(Number.isFinite) || capTouched === true;
 }

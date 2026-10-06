@@ -7,7 +7,40 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { inclusionNote, numText, fmtClock, cardFor, advancedFor, chargeForReadout, chargeForSlider, rememberedChargeFor } from "../js/cardUi.js";
+import { inclusionNote, numText, fmtClock, cardFor, advancedFor, chargeForReadout, chargeForSlider, rememberedChargeFor, effectivePerKwh } from "../js/cardUi.js";
+import { rateAtTime, rateAtElapsed } from "../js/calc.js";
+
+// --- The price the card judges ------------------------------------------------
+
+// A custom car with no battery size buys no kWh the card can count, so it is
+// judged on the energy rate alone. Outside Flat that is the mode's own rate:
+// Energy rate is hidden there and can still hold a price typed before the
+// switch, which is what m.yourRate carries here.
+const unsized = { m: { yourRate: 0.3 }, hasRate: true, kwh: 0, session: { effectivePerKwh: NaN }, taxRate: 0.1 };
+const flatRateOf = () => 0.3;
+
+test("with no battery size, Time of day is judged on its own rate now, not the hidden flat one", () => {
+  const schedule = [{ start: 0, rate: 0.25 }, { start: 960, rate: 0.45 }];
+  const rateOf = (clock) => rateAtTime(schedule, clock);
+  assert.equal(effectivePerKwh({ ...unsized, rateOf, startClockMin: 17 * 60 }), 0.45 * 1.1, "the evening rate was not the one judged");
+  assert.equal(effectivePerKwh({ ...unsized, rateOf, startClockMin: 9 * 60 }), 0.25 * 1.1, "the morning rate was not the one judged");
+});
+
+test("with no battery size, By duration is judged on the tier it starts on, not the hidden flat rate", () => {
+  const tiers = [{ start: 0, rate: 0.2 }, { start: 60, rate: 0.45 }];
+  const rateOf = (_clock, elapsed) => rateAtElapsed(tiers, elapsed);
+  assert.equal(effectivePerKwh({ ...unsized, rateOf, startClockMin: 0 }), 0.2 * 1.1);
+});
+
+test("with no battery size, Flat is judged on Energy rate plus tax", () => {
+  assert.equal(effectivePerKwh({ ...unsized, rateOf: flatRateOf, startClockMin: 0 }), 0.3 * 1.1);
+});
+
+test("a sized charge is judged on its all-in average, and no price on nothing", () => {
+  const session = { effectivePerKwh: 0.61 };
+  assert.equal(effectivePerKwh({ ...unsized, kwh: 12, session, rateOf: flatRateOf, startClockMin: 0 }), 0.61);
+  assert.ok(Number.isNaN(effectivePerKwh({ ...unsized, hasRate: false, rateOf: flatRateOf, startClockMin: 0 })));
+});
 
 // --- What the effective rate says it includes -------------------------------
 
@@ -824,5 +857,69 @@ test("no energy from the charger hides Total even when rate and cost are finite"
 
 test("an unknown session total hides Total even when rate and energy are present", () => {
   assert.equal(advanced({ session: { totalCost: NaN } }).total.hidden, true);
+});
+
+// --- A Flat price left behind changes nothing in the other two modes --------
+//
+// Baadal asked whether a price filled in one option can interfere once he
+// picks another. Energy rate is hidden outside Flat, never cleared, so
+// render() still hands its Flat price over in m.yourRate. Every arm Time of
+// day and By duration can reach must read the same with it empty or at 0.30.
+// The headline pins each row to the arm it is named after.
+const MODE_ARMS = {
+  "no gas price, a priced charge": ["$3.25", { be: NaN }],
+  "no gas price, nothing priced": ["\u2026", { be: NaN, hasRate: false, effective: NaN }],
+  "no gas price, nothing to charge": ["\uD83D\uDD0B Nothing to charge", { ...AT_TARGET(), be: NaN }],
+  "no gas price, Charge for at 0": ["\u2026", { ...AT_ZERO(), be: NaN }],
+  "a gas price, nothing priced": ["$0.47/kWh", { hasRate: false, effective: NaN }],
+  "a gas price, a win": ["\u26A1 Charge it", {}],
+  "a gas price, a loss": ["\u26FD Use gas", { effective: 0.9 }],
+  "a gas price, a toss-up": ["\u2248 Toss-up", { effective: 0.46 }],
+  "a gas price, a best-value tip": ["\u26A1 Charge briefly", { tip: TIP(), showBriefly: true }],
+  "a gas price, a worth limit": ["\u26A1 Charge it", { worthLimitMin: 45 }],
+  "a gas price, even a short charge loses": ["\u26FD Use gas", { effective: 0.9, fullNotWorth: true }],
+  "a gas price, no battery size": ["\u26A1 Charge it", { session: { kwhFromCharger: 0, kwhIntoBattery: 0, minutes: NaN, totalCost: 0 }, full: { fullMinutes: 0, kwhFromCharger: 0 } }],
+  "a gas price, nothing to charge": ["\uD83D\uDD0B Nothing to charge", AT_TARGET()],
+  "a gas price, a full battery": ["\uD83D\uDD0B Battery's full", { m: { startPct: 100, targetPct: 100 }, session: { kwhFromCharger: 0, minutes: 0 } }],
+  "a gas price, Charge for at 0": ["\u2026", AT_ZERO()],
+};
+
+// As render() builds it with no fees (assets.test.mjs runs its rule): the
+// effective rate shows outside Flat, and Time of day hands over its schedule.
+const inMode = (rateMode, over, yourRate) => card({
+  ...over, rateMode, showEffective: rateMode !== "flat", schedule: rateMode === "tod" ? SCHEDULE : null,
+  m: { ...over.m, yourRate },
+});
+
+test("the Flat price reaches the card on Flat, so the two below can see a leak", () => {
+  assert.notDeepEqual(inMode("flat", {}, 0.3), inMode("flat", {}, NaN), "m.yourRate never reached cardFor through inMode(), so the tests below prove nothing");
+});
+
+for (const [rateMode, name] of [["tod", "Time of day"], ["dur", "By duration"]]) {
+  test(`on ${name}, every arm reads the same whatever Flat's Energy rate holds`, () => {
+    for (const [arm, [headline, over]] of Object.entries(MODE_ARMS)) {
+      const left = inMode(rateMode, over, 0.3);
+      assert.equal(left.headline, headline, `${arm} is no longer the arm it is named after`);
+      assert.deepEqual(left, inMode(rateMode, over, NaN), `${arm}: the Flat price left in Energy rate changed the ${name} card`);
+    }
+  });
+}
+
+// Each arm with the row that pins it there, read with Energy rate empty.
+const ADVANCED_ARMS = {
+  "a priced charge": [{}, "total", "$3.25"],
+  "a time fee": [{ timeFee: 9.6 }, "timeFee", "$9.60"],
+  "nothing priced": [{ effective: NaN }, "total", null],
+  "no battery size": [{ session: { kwhIntoBattery: 0, kwhFromCharger: 0, minutes: NaN, totalCost: 0 } }, "range", "-"],
+  "power capped by the car": [{ m: { powerKw: 11 }, drawKw: 7.2 }, "timeLabel", "Time at 7.2 kW (est.)"],
+  "no mi/kWh, so Energy added": [{ m: { miPerKwh: NaN } }, "rangeLabel", "Energy added"],
+};
+
+test("the For this charge block reads the same whatever Flat's Energy rate holds", () => {
+  for (const [arm, [over, row, text]] of Object.entries(ADVANCED_ARMS)) {
+    const at = (yourRate) => advanced({ ...over, m: { ...over.m, yourRate } });
+    assert.equal(at(NaN)[row].text, text, `${arm} is no longer the arm it is named after`);
+    assert.deepEqual(at(0.3), at(NaN), `${arm}: the Flat price left in Energy rate changed For this charge`);
+  }
 });
 

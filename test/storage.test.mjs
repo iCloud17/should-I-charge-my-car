@@ -10,7 +10,7 @@ import {
   loadPrefs, savePrefs, mergeCarOverride, defaultPrefs, DEFAULT_PREFS,
   applyCarEdit, applyCarSelection, persistableFrom, resetPrefs,
   sanitizePrefs, PERSIST_KEYS, positiveNumber, MAX_STORED_NUMBER, MIN_STORED_NUMBER, MAX_CUSTOM_NAME_LEN,
-  cleanText,
+  cleanText, CHARGER_KEYS, STOP_KEYS, clearCharger, restoreCharger, hasChargerInput,
 } from "../js/storage.js";
 import { chargeDrawKw, MAX_OUTLET_KW } from "../js/cars.js";
 // Imported to prove a point rather than to test theme.js: sanitizePrefs
@@ -1047,4 +1047,146 @@ test("resetting still works when storage is unavailable", () => {
   assert.doesNotThrow(() => { out = resetPrefs(); });
   assert.equal(out.carId, null);
   assert.deepEqual(out.carOverrides, {});
+});
+
+// --- "New charger": the charger's prefs, and the stop's ---
+
+// Every pref off its default: the half the user saved, and the half they typed
+// at this stop.
+function setupAtACharger() {
+  return {
+    ...defaultPrefs(),
+    carId: "honda-clarity", customName: "Nellie",
+    carOverrides: { "honda-clarity": { mpg: 42 } },
+    mpg: 42, miPerKwh: 3.1, batteryKwh: 17, gasPrice: 3.899,
+    units: "uk", currency: "£", powerKw: 3.3, themeMode: "dark",
+    yourRate: 0.48, sessionFee: 1.5, startPct: 20, targetPct: 90,
+  };
+}
+
+// The charger state main.js keeps outside prefs, as a fresh page has it.
+const NOTHING_ELSE = { rows: [], capTouched: false };
+
+test("CHARGER_KEYS, STOP_KEYS and PERSIST_KEYS partition DEFAULT_PREFS", () => {
+  // Every pref is kept by a reload, or cleared by one and New charger, or
+  // cleared by a reload and kept by New charger. On no list, a key's fate is
+  // nobody's decision. On two, it would be kept and cleared at once.
+  const lists = { CHARGER_KEYS, STOP_KEYS, PERSIST_KEYS };
+  for (const [a, as] of Object.entries(lists)) {
+    for (const [b, bs] of Object.entries(lists)) {
+      if (a < b) assert.deepEqual(as.filter((k) => bs.includes(k)), [], `on both ${a} and ${b}`);
+    }
+  }
+  assert.deepEqual(
+    [...PERSIST_KEYS, ...CHARGER_KEYS, ...STOP_KEYS].sort(),
+    Object.keys(DEFAULT_PREFS).sort(),
+    "a pref is on no list, is listed twice, or is not a pref at all",
+  );
+});
+
+test("the charger setup these tests use moves every pref off its default", () => {
+  // Guard on the guard: a key left at its default below compares equal
+  // whether or not New charger touched it.
+  const p = setupAtACharger();
+  for (const [k, d] of Object.entries(DEFAULT_PREFS)) assert.notDeepEqual(p[k], d, k);
+});
+
+test("a new charger leaves prefs where a reload would, battery levels aside", () => {
+  const p = setupAtACharger();
+  savePrefs(p);
+  const reloaded = loadPrefs();
+  const cleared = clearCharger(p);
+  for (const k of STOP_KEYS) {
+    assert.equal(cleared[k], p[k], `New charger reset ${k}`);
+    assert.equal(reloaded[k], DEFAULT_PREFS[k], `a reload kept ${k}`);
+  }
+  for (const k of STOP_KEYS) {
+    delete cleared[k];
+    delete reloaded[k];
+  }
+  assert.deepEqual(cleared, reloaded);
+});
+
+test("a new charger writes nothing new to the store", () => {
+  // Why it is undone rather than confirmed: nothing that was saved changes.
+  const store = seed();
+  const p = setupAtACharger();
+  savePrefs(p);
+  const before = store.map.get(KEY);
+  savePrefs(clearCharger(p));
+  assert.equal(store.map.get(KEY), before);
+});
+
+test("undoing a new charger brings back the charger and keeps what changed since", () => {
+  const before = setupAtACharger();
+  const edited = { ...clearCharger(before), gasPrice: 4.25, units: "metric", carId: "volt-2018", startPct: 55 };
+  const back = restoreCharger(edited, before);
+  for (const k of CHARGER_KEYS) assert.equal(back[k], before[k], `${k} did not come back`);
+  assert.equal(back.gasPrice, 4.25, "the undo took back a gas price typed after the clear");
+  assert.equal(back.units, "metric");
+  assert.equal(back.carId, "volt-2018");
+  assert.equal(back.startPct, 55, "the undo took back a battery level moved after the clear");
+});
+
+test("clearing and restoring the charger do not mutate what they were given", () => {
+  const p = setupAtACharger();
+  const copy = JSON.parse(JSON.stringify(p));
+  const cleared = clearCharger(p);
+  const back = restoreCharger(cleared, p);
+  assert.deepEqual(p, copy, "the caller's prefs are untouched");
+  assert.equal(cleared.yourRate, null, "and the clear still happened");
+  assert.equal(back.yourRate, 0.48);
+  assert.equal(DEFAULT_PREFS.yourRate, null, "without writing into the defaults");
+});
+
+test("a fresh charger card has nothing for New charger to clear", () => {
+  assert.equal(hasChargerInput(defaultPrefs(), NOTHING_ELSE), false);
+  // A cleared field reads back as NaN, not the null default: the same blank.
+  assert.equal(hasChargerInput({ ...defaultPrefs(), yourRate: NaN }, NOTHING_ELSE), false);
+});
+
+test("any one charger input is enough to offer New charger", () => {
+  const one = [
+    ["an energy rate", { yourRate: 0.3 }, {}],
+    ["an energy rate of 0, which is still a rate", { yourRate: 0 }, {}],
+    ["a service fee", { sessionFee: 1 }, {}],
+    ["a price in one editor row", {}, { rows: [NaN, 0.25] }],
+    ["a 0 typed in an editor row, which is still a price", {}, { rows: [0, NaN] }],
+    ["a dragged Charge for", {}, { capTouched: true }],
+    ["a dragged Charge for over blank rows", {}, { rows: [NaN, NaN], capTouched: true }],
+    ["a flat rate typed before Time of day, under its blank starter rows", { yourRate: 0.3 }, { rows: [NaN, NaN] }],
+  ];
+  for (const [what, prefs, rest] of one) {
+    assert.equal(hasChargerInput({ ...defaultPrefs(), ...prefs }, { ...NOTHING_ELSE, ...rest }), true, what);
+  }
+});
+
+test("a pricing mode and its blank rows never offer New charger", () => {
+  // Baadal, 2026-10-05: "why does changing between flat, time of day, and by
+  // duration give me the option to reset charger? I havent filled in anything
+  // yet". Time of day and By duration each open on two rows with no price, and
+  // Flat keeps them. main.js hands over only each row's price, rate or
+  // percentage, so a start time or a tax name arrives here as the blank beside
+  // it; assets.test.mjs runs that read.
+  const blank = [
+    ["Time of day's or By duration's two starter rows", [NaN, NaN]],
+    ["both modes' starter rows, kept on Flat", [NaN, NaN, NaN, NaN]],
+    ["a tax row with a name and no percentage", [NaN]],
+    ["a starter row whose time moved, with no price", [NaN, NaN]],
+  ];
+  for (const [what, rows] of blank) {
+    assert.equal(hasChargerInput(defaultPrefs(), { ...NOTHING_ELSE, rows }), false, what);
+  }
+});
+
+test("the battery sliders alone never offer New charger, which keeps them", () => {
+  // Offered for them, the pill would clear nothing a user can see.
+  assert.equal(hasChargerInput({ ...defaultPrefs(), startPct: 20, targetPct: 80 }, NOTHING_ELSE), false);
+});
+
+test("after a new charger there is nothing left to clear, whatever else is set", () => {
+  // The car, gas price, outlet, battery levels, units, currency and theme are
+  // not the charger, so they never offer New charger, and it never offers
+  // itself twice.
+  assert.equal(hasChargerInput(clearCharger(setupAtACharger()), NOTHING_ELSE), false);
 });

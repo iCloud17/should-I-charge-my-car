@@ -5,6 +5,7 @@ import * as U from "./units.js";
 import {
   loadPrefs, savePrefs, resetPrefs, defaultPrefs,
   applyCarEdit, applyCarSelection, persistableFrom, CAR_EDIT_FIELDS, MAX_CUSTOM_NAME_LEN,
+  clearCharger, restoreCharger, hasChargerInput,
 } from "./storage.js";
 import {
   loadCars, getCar, getCars, carLabel, maxLabelLength,
@@ -25,7 +26,7 @@ import {
   resetConfirmQuestion, resetDoneMessage,
 } from "./myCarsUi.js";
 import { $, parseNum, money, escapeHtml, nextOptionIndex, enterAction } from "./ui.js";
-import { cardFor, advancedFor, inclusionNote, numText, chargeForReadout, chargeForSlider, rememberedChargeFor } from "./cardUi.js";
+import { cardFor, advancedFor, inclusionNote, numText, chargeForReadout, chargeForSlider, rememberedChargeFor, effectivePerKwh } from "./cardUi.js";
 import { applyTheme, nextThemeMode, themeLabel } from "./theme.js";
 import { track, trackWhenReady } from "./analytics.js";
 import {
@@ -119,7 +120,7 @@ function render() {
     // Only the flat mode uses the single charger-price field. In time-of-day or
     // by-duration mode with no schedule entered yet there's no price to judge,
     // so leave hasRate false and show the break-even prompt instead of silently
-    // reusing the (now disabled) flat field.
+    // reusing the flat field, which is hidden in those modes.
     if (rateMode === "flat") hasRate = Number.isFinite(m.yourRate) && m.yourRate >= 0;
     rateOf = () => (hasRate ? m.yourRate : 0);
   }
@@ -181,14 +182,7 @@ function render() {
   // One wording for both cards, so they cannot drift apart.
   const inclNote = inclusionNote(hasTax, m.sessionFee > 0 || hasTimeFee);
 
-  let effective = NaN;
-  if (hasRate) {
-    // With a real charge we use the all-in average (energy + fees + tax). Before
-    // a battery size is known there's no kWh to amortize per-session/per-hour
-    // fees over, so we fall back to the entered rate - but tax is a plain
-    // per-kWh multiplier that applies regardless, so keep it in the fallback.
-    effective = kwh > 0 ? session.effectivePerKwh : m.yourRate * (1 + taxRate);
-  }
+  const effective = effectivePerKwh({ hasRate, kwh, session, rateOf, startClockMin, taxRate });
   const showEffective = rateMode !== "flat" || hasFees;
 
   // --- Analytics: categorical funnel + feature usage (each once per session) ---
@@ -238,6 +232,7 @@ function render() {
   renderAdvanced(m, cur, session, effective, timeFee, drawKw);
   updatePresetActive();
   persistFrom(m);
+  offerNewCharger();
 }
 
 // The dataset entry for the selected car, or null for a custom car (or none
@@ -966,16 +961,10 @@ function resetEverything() {
   // those cars straight back.
   clearMyCars();
   myCars = emptyCarsState();
-  // Reset volatile UI too: pricing mode, schedule/tier rows, info note.
-  rateMode = "flat";
-  chargeCapMin = null;
-  capTouched = false;
-  const flatRadio = document.querySelector('input[name="rateMode"][value="flat"]');
-  if (flatRadio) flatRadio.checked = true;
-  $("touRows").innerHTML = "";
-  $("durRows").innerHTML = "";
-  $("timeFeeRows").innerHTML = "";
-  $("taxRows").innerHTML = "";
+  // New charger's own clear, so a charger input added to it is reset too.
+  clearChargerInputs();
+  // A New charger undo still on offer would bring back what this just cleared.
+  dropChargerUndo();
   $("carInfoNote").hidden = true;
   $("carInfoBtn").setAttribute("aria-expanded", "false");
   boot();
@@ -1194,12 +1183,11 @@ function writeDisplayValues() {
   // currency/units or picking a car never rounds away what the user typed
   // (e.g. 3.899, 0.257). Results are still rounded to 2 dp by money().
   paint("gasPrice", U.gasPriceForDisplay(prefs.gasPrice, s), 6, prefs.gasPrice);
-  paint("yourRate", prefs.yourRate, 6);
   paint("mpg", U.economyForDisplay(prefs.mpg, s), 2, prefs.mpg);
   paint("miPerKwh", U.efficiencyForDisplay(prefs.miPerKwh, s), 2, prefs.miPerKwh);
   paint("batteryKwh", prefs.batteryKwh, 2);
-  paint("sessionFee", prefs.sessionFee, 2);
   paint("powerKw", prefs.powerKw, 2);
+  paintChargerFields();
   $("startPct").value = prefs.startPct;
   $("targetPct").value = prefs.targetPct;
   // Keep the invariant even if a stored/edge value has start > target.
@@ -1210,12 +1198,20 @@ function writeDisplayValues() {
   $("targetPctOut").textContent = `${$("targetPct").value}%`;
   $("carNickname").value = carNameForField();
   for (const id of ["curSym1", "curSym2", "curSym3"]) $(id).textContent = prefs.currency;
+  $("currencyBtn").textContent = prefs.currency;
+  renderCurrencyMenu();
+}
+
+// The fields "New charger" clears, painted from prefs. writeDisplayValues
+// paints them along with everything else; New charger and its undo paint these
+// and nothing else.
+function paintChargerFields() {
+  paint("yourRate", prefs.yourRate, 6);
+  paint("sessionFee", prefs.sessionFee, 2);
   // Dynamic pricing rows bake the symbol in at creation; refresh them too on a currency change.
   for (const el of document.querySelectorAll("#touRows .input-money__sym, #durRows .input-money__sym, #timeFeeRows .input-money__sym")) {
     el.textContent = prefs.currency;
   }
-  $("currencyBtn").textContent = prefs.currency;
-  renderCurrencyMenu();
 }
 
 // What each field was last painted with: { text, value }, read back by
@@ -1238,21 +1234,15 @@ function nowMinutes() {
 // The fee/schedule editor rows (time-of-day, by-duration, station-time, tax)
 // are built and read in ./editorRows.js.
 
-// Reflect the selected pricing mode: show the right editor, and disable the flat
-// charger-price field when a schedule/tier mode is driving the result instead.
+// Reflect the selected pricing mode: show that mode's editor, and hide Energy
+// rate when a schedule/tier mode prices the charge instead. Hidden, never
+// cleared, so a flat rate typed first is back when the user returns to Flat.
+// The rate panel holding them is named after the mode.
 function applyRateMode() {
   $("touEditor").hidden = rateMode !== "tod";
   $("durEditor").hidden = rateMode !== "dur";
-
-  const rateInput = $("yourRate");
-  const field = rateInput.closest(".field");
-  if (rateMode === "flat") {
-    rateInput.disabled = false;
-    field.classList.remove("is-disabled");
-  } else {
-    rateInput.disabled = true;
-    field.classList.add("is-disabled");
-  }
+  $("yourRate").closest(".field").hidden = rateMode !== "flat";
+  $("ratePanel").setAttribute("aria-labelledby", `rateModeName-${rateMode}`);
 
   if (rateMode === "tod" && $("touRows").children.length === 0) {
     addTouRow(prefs.currency, "00:00", "");
@@ -1262,6 +1252,110 @@ function applyRateMode() {
     addDurRow(prefs.currency, 0, "");
     addDurRow(prefs.currency, 60, "");
   }
+}
+
+// --- New charger ------------------------------------------------------------
+//
+// Clears the charger the user was standing at, so the last stop's fees cannot
+// quietly price the next one in an installed app that is never reloaded. It
+// keeps what a reload keeps: the car, the gas price, the outlet power, the
+// units, the currency and the theme. It also keeps Battery now and Charge to,
+// which a reload resets, because the charger next door charges the same
+// battery. clearCharger in storage.js holds the rule for the prefs half; the
+// rest of the charger lives in this file and the DOM, and clearChargerInputs
+// is the one place that clears it.
+//
+// Undone rather than confirmed, because nothing saved changes. The undo stays
+// on offer until the charger next holds something, because from then on it
+// would write over a price typed for the new charger.
+
+// The four editors' rows. The undo puts back the SAME nodes the clear took: a
+// copy would lose the listeners each row's min/hr picker wired to its button.
+const CHARGER_ROW_IDS = ["touRows", "durRows", "timeFeeRows", "taxRows"];
+
+// What the last New charger took, for as long as its undo is on offer.
+let chargerUndo = null;
+
+// Each row's price, rate or percentage as typed, NaN where blank. A start time
+// or a tax name alone is not input, and a typed 0 is.
+function chargerRowValues() {
+  return CHARGER_ROW_IDS.flatMap((id) => [...$(id).children])
+    .map((row) => parseNum(row.querySelector(".tou-rate, .dur-rate, .tf-rate, .tax-pct").value));
+}
+
+function checkRateModeRadio() {
+  for (const radio of document.querySelectorAll('input[name="rateMode"]')) radio.checked = radio.value === rateMode;
+}
+
+// Clear the charger and hand back what was taken. Paints nothing, so a caller
+// that repaints the whole page anyway does not pay for a second repaint.
+function clearChargerInputs() {
+  const taken = {
+    prefs: { ...prefs }, rateMode, chargeCapMin, capTouched,
+    rows: CHARGER_ROW_IDS.map((id) => [...$(id).children]),
+  };
+  for (const id of CHARGER_ROW_IDS) $(id).replaceChildren();
+  prefs = clearCharger(prefs);
+  rateMode = "flat";
+  chargeCapMin = null;
+  capTouched = false;
+  checkRateModeRadio();
+  return taken;
+}
+
+function newCharger() {
+  chargerUndo = clearChargerInputs();
+  applyRateMode();
+  paintChargerFields();
+  render();
+  sayChargerNote("Charger cleared.", true);
+  $("yourRate").focus();
+  trackWhenReady("charger-cleared");
+}
+
+// Repaints the charger and never calls boot(), which would rebuild the car
+// tile and every field when the user only asked for their charger back.
+function undoNewCharger() {
+  const taken = chargerUndo;
+  if (!taken) return;
+  chargerUndo = null;
+  prefs = restoreCharger(prefs, taken.prefs);
+  rateMode = taken.rateMode;
+  chargeCapMin = taken.chargeCapMin;
+  capTouched = taken.capTouched;
+  checkRateModeRadio();
+  // Before the rows go back: on an empty editor this seeds two blank rows, and
+  // replaceChildren throws those away.
+  applyRateMode();
+  CHARGER_ROW_IDS.forEach((id, i) => $(id).replaceChildren(...taken.rows[i]));
+  paintChargerFields();
+  render();
+  // After render(), which empties the note now that the charger holds something.
+  sayChargerNote("Charger restored.", false);
+  // Where the undo button was, in the same slot. The pill is back, because the
+  // charger it restored had something to clear.
+  $("newChargerBtn").focus();
+  trackWhenReady("charger-clear-undone");
+}
+
+// The note in the Charger heading's slot, and its one writer.
+function sayChargerNote(text, withUndo) {
+  $("chargerNoteText").textContent = text;
+  $("chargerUndoBtn").hidden = !withUndo;
+}
+
+function dropChargerUndo() {
+  chargerUndo = null;
+  sayChargerNote("", false);
+}
+
+// From render(), once persistFrom has brought prefs up to date. The pill shows
+// while the charger holds something to clear, and that same something ends an
+// undo still on offer.
+function offerNewCharger() {
+  const hasInput = hasChargerInput(prefs, { rows: chargerRowValues(), capTouched });
+  $("newChargerBtn").hidden = !hasInput;
+  if (hasInput) dropChargerUndo();
 }
 
 // --- Theme toggle (auto -> light -> dark) ---
@@ -1704,6 +1798,8 @@ function attachEvents() {
       render();
     });
   }
+  $("newChargerBtn").addEventListener("click", newCharger);
+  $("chargerUndoBtn").addEventListener("click", undoNewCharger);
   $("touAdd").addEventListener("click", () => {
     addTouRow(prefs.currency);
     render();
