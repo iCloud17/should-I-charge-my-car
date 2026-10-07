@@ -268,7 +268,7 @@
             <div class="field-label-row">
               <label for="powerKw">Charge power</label>
               <button type="button" id="powerInfoBtn" class="info-btn" aria-label="What charge power should I enter?" aria-expanded="false">i</button>
-              <p class="hint info-note" id="powerInfoNote" hidden>The charger you&rsquo;re plugged into, not your car. Your car&rsquo;s onboard charger caps how fast it takes power, and the estimate already uses whichever is lower, so you don&rsquo;t need to account for it here. The speed sets how long the charge takes, which also changes the total if the station bills by the hour or by duration. Edit this when the charger&rsquo;s rate differs from the Level 1 or Level 2 presets. We treat anything above 22 kW as 22, the top of the common AC range. New charger puts it back at 6.6, and so does your next visit.</p>
+              <p class="hint info-note" id="powerInfoNote" hidden>The charger you&rsquo;re plugged into, not your car. Your car&rsquo;s onboard charger caps how fast it takes power. For a car from the list, the estimate already uses whichever is lower. With &ldquo;My own car&rdquo;, enter the lower one yourself. The speed sets how long the charge takes, which also changes the total if the station bills by the hour or by duration. Edit this when the charger&rsquo;s rate differs from the Level 1 or Level 2 presets. We treat anything above 22 kW as 22, the top of the common AC range. New charger puts it back at 6.6, and so does your next visit.</p>
             </div>
             <div class="speed__row">
               <div class="presets" id="powerPresets" role="group" aria-labelledby="speedTitle">
@@ -377,16 +377,17 @@
           <ol class="faq__steps">
             <li>Pick your car, or choose &ldquo;My own car&rdquo; to enter your own numbers.</li>
             <li>Enter today&rsquo;s gas price.</li>
-            <li>Enter the charger&rsquo;s price per kWh. For time-of-day or tiered pricing, pick &ldquo;Time of day&rdquo; or &ldquo;By duration&rdquo; above the rate. Add session, hourly, or tax charges under &ldquo;Fees&rdquo; in the same Charger section.</li>
-            <li>Read the verdict at the top. It updates as you type and saves for next time.</li>
+            <li>Enter the charger&rsquo;s price per kWh. For time-of-day or tiered pricing, pick &ldquo;Time of day&rdquo; or &ldquo;By duration&rdquo; above the rate. &ldquo;Charger speed&rdquo; starts at Level 2 (6.6 kW), so change it if you plug into a wall socket (Level 1) or the station lists its own kW. Add session, hourly, or tax charges under &ldquo;Fees&rdquo; in the same Charger section.</li>
+            <li>Read the verdict at the top. It updates as you type. Your car, gas price, and settings are saved for next time. The battery sliders and the charger&rsquo;s price, fees, and speed start fresh each visit.</li>
+            <li>At the next charger, tap &ldquo;New charger&rdquo; to clear the last one&rsquo;s price, fees, and speed. &ldquo;Undo&rdquo; puts them back.</li>
           </ol>
         </details>
 
         <details class="faq__item">
           <summary><h2 class="faq__q">What is &ldquo;Charge time &amp; cost&rdquo; for?</h2></summary>
           <p class="faq__a">This section is optional. It estimates how long a charge takes and what the whole session costs.</p>
-          <p class="faq__a">Set the two battery sliders and you get range added, time, and total. The charger speed (Level 1 is a wall socket, Level 2 is a 240V unit) is in the Charger section, under the price.</p>
-          <p class="faq__a">Charge power sets the time estimate. On flat per-kWh pricing that is all it does. If the station adds an hourly fee or prices energy by duration, charging slower costs more for the same kWh, so it can flip the verdict, and a &ldquo;Charge for&rdquo; slider appears here, under Charge to, so you can price a partial charge.</p>
+          <p class="faq__a">Set the two battery sliders and you get range added, time, and total.</p>
+          <p class="faq__a">The time comes from &ldquo;Charger speed&rdquo; in the Charger section, capped at what your car can take unless you chose &ldquo;My own car&rdquo;. On flat per-kWh pricing that is all the speed changes. If the station adds an hourly fee or prices energy by duration, charging slower costs more for the same kWh, so it can flip the verdict, and a &ldquo;Charge for&rdquo; slider appears here, under Charge to, so you can price a partial charge.</p>
         </details>
 
         <details class="faq__item">
@@ -401,7 +402,7 @@
 
         <details class="faq__item">
           <summary><h2 class="faq__q">Why can public charging cost more than gas?</h2></summary>
-          <p class="faq__a">The per-kWh price is often only part of the bill. Stations add session fees, hourly fees while you are plugged in, and tax. Plug-in hybrids charge slowly, 3.6 to 6.6 kW, so hourly fees hit hard. A $2/hour fee on a 3.6 kW car adds about 55 cents per kWh by itself.</p>
+          <p class="faq__a">The per-kWh price is often only part of the bill. Stations add session fees, hourly fees while you are plugged in, and tax. Plug-in hybrids charge slowly (over half the cars listed here take 3.6 kW at most), so hourly fees hit hard. A $2/hour fee on a 3.6 kW car adds about 56 cents per kWh by itself.</p>
         </details>
 
         <details class="faq__item">

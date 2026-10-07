@@ -23,7 +23,7 @@ A PHEV runs on either electricity or gasoline, so every charge is a real choice,
 3. **Enter what the charger costs.** The $/kWh shown on the charger. Not a flat rate? Switch to time-of-day or by-duration pricing, and add any session, per-hour, or tax fees the screen lists.
 4. **Read the verdict.** Charge it, Toss-up, Use gas, or Charge briefly, with the break-even price and how much you save or overpay per mile.
 
-That&rsquo;s it. Your cars, the gas price and your settings save on your device, so next time it&rsquo;s glance-and-go, even offline. The charger&rsquo;s rate and the battery sliders start fresh each visit, since those are facts about the stop you&rsquo;re at rather than about you.
+That&rsquo;s it. Your cars, the gas price and your settings save on your device, so next time it&rsquo;s glance-and-go, even offline. The battery sliders and the charger&rsquo;s rate, fees and speed start fresh each visit, since those are facts about the stop you&rsquo;re at.
 
 ## What it does
 
