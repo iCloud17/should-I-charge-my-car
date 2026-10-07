@@ -20,7 +20,7 @@ import {
   showsNameField, buildChips, chipBaseLabel, chipLabelFor, checkedChipId,
   copyBaseName, takenCarNames, nextCopyName, pickerOpenQuery,
   nextChipIndex, addRefusalMessage, addWriteFailedMessage, addedMessage, carSummaryLabel, carTileSource,
-  newCarName, defaultCarName, withDefaultNames,
+  carTileStartsOpen, newCarName, defaultCarName, withDefaultNames,
   legacyNameSlot, nameFieldValue, removedMessage, removeWriteFailedMessage, removeConfirmQuestion,
   removeGoneMessage, nameWriteFailedMessage, numbersWriteFailedMessage, selectionWriteFailedMessage,
   resetConfirmQuestion, resetDoneMessage,
@@ -2214,11 +2214,16 @@ function boot() {
     // here to summarize, so this is a different sentence, not a fallback.
     $("carName").textContent = "Select your car";
     $("carSearch").value = "";
-    $("carTile").open = true;
     $("tweak").open = false;
   }
   // The record wins over prefs here: the prefs mirror holds one slot per MODEL.
   if (saved) prefs = { ...prefs, ...savedCarNumbers(saved, getCar) };
+  // Only the first boot() finds the pre-paint's stamp, so only a tap made before that boot outranks the rule.
+  const prepaintOpen = $("carTile").dataset.prepaintOpen;
+  delete $("carTile").dataset.prepaintOpen;
+  const tappedBeforeBoot = prepaintOpen !== undefined && prepaintOpen !== String($("carTile").open);
+  // After the record's numbers land, so the rule sees what the fields will show.
+  if (!tappedBeforeBoot) $("carTile").open = carTileStartsOpen(source, prefs.mpg, prefs.miPerKwh);
   writeDisplayValues();
   renderMyCars();
   applyRateMode();

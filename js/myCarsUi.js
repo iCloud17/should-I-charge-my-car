@@ -335,6 +335,12 @@ export function carTileSource(carId, car, saved) {
   return saved ? "orphan" : "none";
 }
 
+// Open with no car, or with one the card cannot price yet (MPG or mi/kWh blank, or not above 0).
+export function carTileStartsOpen(source, mpg, miPerKwh) {
+  const positive = (n) => Number.isFinite(n) && n > 0;
+  return source === "none" || !(positive(mpg) && positive(miPerKwh));
+}
+
 // The car tile's collapsed summary. The record's name wins, and after the read
 // path fills one in that is every saved car; the arms below answer for the
 // states that hold no record at all, and for the moment between clearing a name

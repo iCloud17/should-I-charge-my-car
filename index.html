@@ -125,6 +125,16 @@
           <span class="car-summary__name" id="carName">Select your car</span>
         </span>
       </summary>
+      <script>
+        // Mirrors carTileStartsOpen (js/myCarsUi.js) before the body below is parsed; boot() has the final say.
+        try {
+          const p = JSON.parse(localStorage.getItem("sicc.prefs.v1") || "{}");
+          const positive = (n) => Number.isFinite(n) && n > 0;
+          if (p.carId && positive(p.mpg) && positive(p.miPerKwh)) document.getElementById("carTile").open = false;
+        } catch (e) {}
+        // What this left, so the first boot() can tell a tap made before it ran.
+        document.getElementById("carTile").dataset.prepaintOpen = document.getElementById("carTile").open;
+      </script>
       <div class="disclosure__body">
         <!-- Saved cars. Empty and hidden until a SECOND car exists: one car needs
              no switcher, and a user who owns one car must not pay for this. -->

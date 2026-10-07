@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import vm from "node:vm";
 import {
   showsCarChrome, showsNameField,
   showsAddControl, addControlLabel, showsChipRow, showsRemoveLink, showsCarListActions, pickerOpenQuery, newCarName,
@@ -8,14 +9,14 @@ import {
   chipBaseLabel, chipFullName, chipAccessibleName, buildChips,
   chipLabelFor, checkedChipId,
   copyBaseName, takenCarNames, nextCopyName,
-  carTileSource, carSummaryLabel, legacyNameSlot, nameFieldValue,
+  carTileSource, carTileStartsOpen, carSummaryLabel, legacyNameSlot, nameFieldValue,
   nextChipIndex, atCapMessage, addRefusalMessage, addWriteFailedMessage, addedMessage,
   removedMessage, removeWriteFailedMessage, removeConfirmQuestion, removeGoneMessage,
   resetConfirmQuestion, resetDoneMessage,
   nameWriteFailedMessage, numbersWriteFailedMessage, selectionWriteFailedMessage,
 } from "../js/myCarsUi.js";
 import { CUSTOM_CAR_ID, MAX_MY_CARS, addMyCar, emptyCarsState } from "../js/myCars.js";
-import { MAX_CUSTOM_NAME_LEN } from "../js/storage.js";
+import { MAX_CUSTOM_NAME_LEN, MIN_STORED_NUMBER } from "../js/storage.js";
 
 // A stand-in dataset. Keyed lookup so a carId that is not here answers
 // undefined, which is the orphaned-car case the label rules have to survive.
@@ -667,6 +668,127 @@ test("the custom car is answered before the row lookup, so it is never an orphan
   // has always had.
   assert.equal(carTileSource(CUSTOM_CAR_ID, null, { carId: CUSTOM_CAR_ID, name: "Runabout" }), "custom");
   assert.equal(carTileSource(CUSTOM_CAR_ID, null, null), "custom");
+});
+
+test("the car tile starts folded on any car that has its MPG and mi/kWh", () => {
+  // Baadal: a car picked last time should not hold the tile open on the next visit.
+  for (const source of ["dataset", "custom", "orphan"]) {
+    assert.equal(carTileStartsOpen(source, 52, 3.7), false, `a ${source} car with both numbers starts open`);
+  }
+});
+
+test("the car tile starts open with no car, whatever numbers are lying around", () => {
+  // The first-run nudge, and where Reset everything and removing the last car land.
+  assert.equal(carTileStartsOpen("none", NaN, NaN), true);
+  assert.equal(carTileStartsOpen("none", 52, 3.7), true);
+});
+
+test("a car still missing MPG or mi/kWh starts open, since the card asks for them", () => {
+  // The card waits on these ("Pick your car to start."), and their fields are inside the tile.
+  assert.equal(carTileStartsOpen("custom", NaN, NaN), true);
+  assert.equal(carTileStartsOpen("custom", 40, NaN), true, "a blank mi/kWh is hidden behind a folded tile");
+  assert.equal(carTileStartsOpen("custom", NaN, 3.1), true, "a blank MPG is hidden behind a folded tile");
+  assert.equal(carTileStartsOpen("dataset", null, 3.7), true, "a list car with its MPG cleared folds over the gap");
+  assert.equal(carTileStartsOpen("orphan", 40, undefined), true);
+});
+
+// The Car tile's start tag, the inline script straight after its summary (or null), and the inline scripts above the tile.
+function carTilePrepaint(html) {
+  const tag = /<details\b[^>]*\bid="carTile"[^>]*>/.exec(html);
+  assert.ok(tag, 'the Car tile is no longer a <details id="carTile"> in index.html');
+  const close = html.indexOf("</summary>", tag.index);
+  assert.notEqual(close, -1, "the Car tile lost its summary");
+  const next = /^\s*<script>([\s\S]*?)<\/script>/.exec(html.slice(close + "</summary>".length));
+  const earlier = [...html.slice(0, tag.index).matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+  return { startTag: tag[0], script: next ? next[1] : null, earlier };
+}
+
+const shipsOpen = (startTag) => /\sopen(?=[\s>=/])/.test(startTag);
+
+// Runs the scripts above the tile, then the tile's, in one global as a browser does (an Error stands for storage that throws).
+function runPrepaint({ earlier, script }, stored) {
+  // A dataset stores strings, as a DOMStringMap does.
+  const tile = { open: true, dataset: new Proxy({}, { set: (t, k, v) => Reflect.set(t, k, String(v)) }) };
+  const context = vm.createContext({
+    document: { getElementById: (id) => (id === "carTile" ? tile : null), documentElement: { dataset: {} } },
+    localStorage: {
+      getItem(key) {
+        if (stored instanceof Error) throw stored;
+        return key === "sicc.prefs.v1" ? stored : null;
+      },
+    },
+  });
+  for (const code of [...earlier, script]) vm.runInContext(code, context);
+  return tile;
+}
+
+const storedPrefs = (p) => JSON.stringify(p);
+const PREPAINT = [
+  ["a first visit", null, true],
+  ["prefs with no car", storedPrefs({ units: "us", gasPrice: 4.5 }), true],
+  ["a list car with its numbers", storedPrefs({ carId: "prius23", mpg: 52, miPerKwh: 3.7 }), false],
+  ["My own car with its numbers", storedPrefs({ carId: CUSTOM_CAR_ID, mpg: 40, miPerKwh: 3.1 }), false],
+  ["My own car with nothing typed", storedPrefs({ carId: CUSTOM_CAR_ID, mpg: null, miPerKwh: null }), true],
+  ["My own car with only an MPG", storedPrefs({ carId: CUSTOM_CAR_ID, mpg: 40, miPerKwh: null }), true],
+  ["My own car with only a mi/kWh", storedPrefs({ carId: CUSTOM_CAR_ID, mpg: null, miPerKwh: 3.1 }), true],
+  ["a list car with its MPG cleared", storedPrefs({ carId: "prius23", mpg: null, miPerKwh: 3.7 }), true],
+  // breakevenKwhPrice prices nothing at or below 0, and the loader drops what is not a finite number.
+  ["a list car with an MPG of 0", storedPrefs({ carId: "prius23", mpg: 0, miPerKwh: 3.7 }), true],
+  ["a list car with a mi/kWh of 0", storedPrefs({ carId: "prius23", mpg: 52, miPerKwh: 0 }), true],
+  ["My own car with a negative MPG", storedPrefs({ carId: CUSTOM_CAR_ID, mpg: -40, miPerKwh: 3.1 }), true],
+  ["My own car with a negative mi/kWh", storedPrefs({ carId: CUSTOM_CAR_ID, mpg: 40, miPerKwh: -3.1 }), true],
+  ["an MPG stored as text", storedPrefs({ carId: "prius23", mpg: "52", miPerKwh: 3.7 }), true],
+  ["a mi/kWh too big for a number", '{"carId":"prius23","mpg":52,"miPerKwh":1e999}', true],
+  ["the smallest numbers the store keeps", storedPrefs({ carId: "prius23", mpg: MIN_STORED_NUMBER, miPerKwh: MIN_STORED_NUMBER }), false],
+  ["numbers with no car", storedPrefs({ mpg: 52, miPerKwh: 3.7 }), true],
+  ["a corrupt store", "{", true],
+  ["a store holding null", "null", true],
+  ["storage that throws", new Error("SecurityError"), true],
+];
+
+test("the Car tile ships open, and its pre-paint script sits straight after its summary", () => {
+  // Guard on the guard: the reader tells the placement and the attribute apart.
+  const tile = (attrs, between, after = "") =>
+    `<details class="card" id="carTile"${attrs}>\n<summary>Car</summary>\n${between}<div class="disclosure__body"></div>\n</details>\n${after}`;
+  const code = "<script>tile.open = false;</script>\n";
+  assert.equal(carTilePrepaint(tile(" open", code)).script, "tile.open = false;");
+  assert.equal(carTilePrepaint(tile(" open", "", code)).script, null, "a script after the tile's body passed");
+  assert.equal(carTilePrepaint(tile(" open", `<p>hi</p>\n${code}`)).script, null, "a script behind other content passed");
+  assert.equal(shipsOpen(carTilePrepaint(tile(" open", code)).startTag), true);
+  assert.equal(shipsOpen(carTilePrepaint(tile(' open=""', code)).startTag), true);
+  assert.equal(shipsOpen(carTilePrepaint(tile(" data-open", code)).startTag), false, "a data-open attribute passed for open");
+  assert.equal(shipsOpen(carTilePrepaint(tile("", code)).startTag), false);
+
+  // Open in the markup for a first visit and with JavaScript off; the script folds before the body is parsed.
+  const { startTag, script } = carTilePrepaint(readFileSync(new URL("../index.html", import.meta.url), "utf8"));
+  assert.equal(shipsOpen(startTag), true, "the Car tile no longer ships open, so a first visit starts folded until boot() opens it");
+  assert.notEqual(script, null, "the Car tile's pre-paint script is not straight after its summary, so the tile can paint open and then fold");
+});
+
+test("the pre-paint script folds exactly the tiles carTileStartsOpen folds", () => {
+  const prepaint = carTilePrepaint(readFileSync(new URL("../index.html", import.meta.url), "utf8"));
+  assert.notEqual(prepaint.script, null, "no pre-paint script to run");
+  // Guard on the guard: one global, so a top-level name an earlier script declared is a SyntaxError.
+  assert.throws(() => runPrepaint({ earlier: ["var p = {};"], script: "let p = {};" }, null), /already been declared/);
+  assert.notEqual(prepaint.earlier.length, 0, "the head's theme script was not found, so a name clash with it passes");
+  const sourceOf = (carId) => (!carId ? "none" : carId === CUSTOM_CAR_ID ? "custom" : "dataset");
+  for (const [what, stored, open] of PREPAINT) {
+    assert.equal(runPrepaint(prepaint, stored).open, open, `pre-paint, ${what}: the tile ${open ? "folds" : "stays open"}`);
+    // The table is the rule's own answer wherever boot() reads the same prefs.
+    let p = null;
+    try { p = JSON.parse(stored); } catch { /* corrupt: boot() starts from defaults, no car */ }
+    if (p && typeof p === "object") {
+      assert.equal(carTileStartsOpen(sourceOf(p.carId), p.mpg, p.miPerKwh), open, `the rule disagrees with the pre-paint on ${what}`);
+    }
+  }
+});
+
+test("the pre-paint stamps the state it left, so the first boot() can tell a tap made before it", () => {
+  const prepaint = carTilePrepaint(readFileSync(new URL("../index.html", import.meta.url), "utf8"));
+  for (const [what, stored] of PREPAINT) {
+    const tile = runPrepaint(prepaint, stored);
+    assert.equal(tile.dataset.prepaintOpen, String(tile.open), `pre-paint, ${what}: the stamp is not the state the script left`);
+  }
 });
 
 test("a name the user typed beats the make and model, which is the reload bug", () => {

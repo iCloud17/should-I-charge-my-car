@@ -1687,3 +1687,96 @@ test("source guard: only the selected speed preset draws a mark, the check befor
   );
 });
 
+// boot() decides the Car tile's open state once, from the rule, on the numbers the fields will show.
+function carTileBootProblems(src) {
+  const body = bodyOf(src, "boot");
+  const problems = [];
+  const writes = body.match(/carTile"\)\.(?:open\s*=(?!=)|(?:set|remove|toggle)Attribute\("open")/g) ?? [];
+  if (writes.length !== 1) problems.push(`boot() sets the Car tile's open state ${writes.length} times`);
+  const merged = body.search(/^  if \(saved\) prefs = \{ \.\.\.prefs, \.\.\.savedCarNumbers\(saved, getCar\) \};$/m);
+  if (merged === -1) problems.push("boot() no longer lets the saved record's numbers win over prefs");
+  const asked = body.search(/^  if \(!tappedBeforeBoot\) \$\("carTile"\)\.open = carTileStartsOpen\(source, prefs\.mpg, prefs\.miPerKwh\);$/m);
+  if (asked === -1) problems.push("boot() does not set the Car tile from carTileStartsOpen on the MPG and mi/kWh, on every path but a tap before the first boot()");
+  else if (asked < merged) problems.push("boot() asks carTileStartsOpen before the saved record's numbers land");
+  else if (merged !== -1) problems.push(...firstBootProblems(body.slice(body.indexOf("\n", merged) + 1, body.indexOf("\n", asked))));
+  if (asked !== -1 && !/[;}]\s*$/.test(body.slice(0, asked))) problems.push("the rule line is not a statement of its own in boot(), so the line above it can skip it");
+  return problems;
+}
+
+// Runs boot()'s lines after the record merge, through the rule, on a stand-in tile: app open, a tap before it, then Reset.
+function firstBootProblems(lines) {
+  const problems = [];
+  try {
+    const run = new Function("$", "source", "prefs", "carTileStartsOpen", lines);
+    const boot = (tile, ruleOpen) => run((id) => (id === "carTile" ? tile : null), "dataset", {}, () => ruleOpen);
+    const untouched = { open: false, dataset: { prepaintOpen: "false" } };
+    boot(untouched, true);
+    if (!untouched.open) problems.push("the first boot() skips the rule on a tile nobody tapped");
+    const firstVisit = { open: true, dataset: { prepaintOpen: "true" } };
+    boot(firstVisit, true);
+    if ("prepaintOpen" in untouched.dataset || "prepaintOpen" in firstVisit.dataset) problems.push("the first boot() leaves the pre-paint's stamp on a tile nobody tapped, for a later boot() to read");
+    const tappedOpen = { open: true, dataset: { prepaintOpen: "false" } };
+    boot(tappedOpen, false);
+    if (!tappedOpen.open) problems.push("the first boot() folds a tile the user tapped open before it ran");
+    const tappedShut = { open: false, dataset: { prepaintOpen: "true" } };
+    boot(tappedShut, true);
+    if (tappedShut.open) problems.push("the first boot() opens a tile the user folded before it ran");
+    if ("prepaintOpen" in tappedShut.dataset) problems.push("the first boot() leaves the pre-paint's stamp for a later boot() to read");
+    boot(tappedShut, true);
+    if (!tappedShut.open) problems.push("a later boot() (Reset, removing the last car) keeps an earlier tap instead of asking the rule");
+  } catch (e) {
+    problems.push(`boot()'s lines between the record merge and the rule do not run on their own: ${e.message}`);
+  }
+  return problems;
+}
+
+test("source guard: boot() opens or folds the Car tile by carTileStartsOpen, after the record's numbers land", () => {
+  // Guard on the guard: the shipped shape passes and every bad shape below fails.
+  const MERGE = "  if (saved) prefs = { ...prefs, ...savedCarNumbers(saved, getCar) };";
+  const READ = '  const prepaintOpen = $("carTile").dataset.prepaintOpen;';
+  const DROP = '  delete $("carTile").dataset.prepaintOpen;';
+  const RULE = '  if (!tappedBeforeBoot) $("carTile").open = carTileStartsOpen(source, prefs.mpg, prefs.miPerKwh);';
+  const shipped = [
+    "  const source = carTileSource(prefs.carId, car, saved);",
+    '  if (source === "custom") {',
+    '    $("tweak").open = true;',
+    "  } else {",
+    '    $("carName").textContent = "Select your car";',
+    '    $("tweak").open = false;',
+    "  }",
+    MERGE,
+    READ,
+    DROP,
+    '  const tappedBeforeBoot = prepaintOpen !== undefined && prepaintOpen !== String($("carTile").open);',
+    RULE,
+    "  writeDisplayValues();",
+  ].join("\n");
+  const fn = (body) => `function boot() {\n${body}\n}\n`;
+  assert.deepEqual(carTileBootProblems(fn(shipped)), []);
+  const bad = {
+    "the rule asked before the record's numbers land": shipped.replace(`${MERGE}\n`, "").replace(RULE, `${RULE}\n${MERGE}`),
+    "the rule handed the battery for the mi/kWh": shipped.replace("prefs.miPerKwh)", "prefs.batteryKwh)"),
+    "the empty state opening the tile itself": shipped.replace('"Select your car";', '"Select your car";\n    $("carTile").open = true;'),
+    "the rule's answer flipped": shipped.replace("= carTileStartsOpen(", "= !carTileStartsOpen("),
+    "the rule on one path only": shipped.replace(RULE, `  if (saved) ${RULE.trim()}`),
+    "the rule under a braceless if on the line above": shipped.replace(RULE, `  if (source !== "none")\n${RULE}`),
+    "no rule at all": shipped.replace(`${RULE}\n`, ""),
+    "the stamp dropped before it is read": shipped.replace(`${READ}\n${DROP}`, `${DROP}\n${READ}`),
+    "the stamp kept for a later boot()": shipped.replace(`${DROP}\n`, ""),
+    "the stamp kept on a tile nobody tapped": shipped.replace(`${DROP}\n`, "").replace(RULE, `  if (tappedBeforeBoot) ${DROP.trim()}\n${RULE}`),
+    "the stamp kept on a tile found open": shipped.replace(DROP, `  if (!$("carTile").open) ${DROP.trim()}`),
+    "the stamp kept when it says folded": shipped.replace(DROP, `  if (prepaintOpen === "true") ${DROP.trim()}`),
+    "an untouched tile read as tapped": shipped.replace("prepaintOpen !== String(", "prepaintOpen === String("),
+    "a later boot() reading a tap": shipped.replace("undefined &&", "undefined ||"),
+  };
+  for (const [what, body] of Object.entries(bad)) {
+    assert.notDeepEqual(carTileBootProblems(fn(body)), [], `${what}, and the guard passed it`);
+  }
+
+  assert.deepEqual(
+    carTileBootProblems(read("../js/main.js")),
+    [],
+    "boot() no longer sets the Car tile from carTileStartsOpen on the numbers the fields will show, or it undoes a tap made before the first boot(), or a later boot() keeps one",
+  );
+});
+
