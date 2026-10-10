@@ -84,6 +84,21 @@ function missingGasOrChargerPrompt(rateMode) {
   return "Start with your gas price or the energy rate. Add both to see which is cheaper.";
 }
 
+function chargerPricePrompt(rateMode) {
+  if (rateMode === "tod") return "Add time-of-day rates to see what this charge costs.";
+  if (rateMode === "dur") return "Add duration tiers to see what this charge costs.";
+  return "Enter the energy rate to see what this charge costs.";
+}
+
+// The car figures a break-even still needs, named as their fields are labelled.
+function missingFigures(m, units) {
+  const L = labels(units);
+  const names = [];
+  if (!Number.isFinite(m.mpg)) names.push(`\u201cGas ${L.fuelEconomy}\u201d`);
+  if (!Number.isFinite(m.miPerKwh)) names.push(`\u201cElectric ${L.evEfficiency}\u201d`);
+  return names.join(" and ");
+}
+
 // Whether the "For this charge" row can turn the energy added into a distance.
 const hasDistance = (miPerKwh) => Number.isFinite(miPerKwh) && miPerKwh > 0;
 
@@ -111,7 +126,7 @@ const canSizeCharge = (m, drawKw) => m.batteryKwh > 0 && drawKw > 0;
 // promise a comparison there. And when that charge cannot be sized it shows no
 // cost either, so the sub asks for the gas price as well, which together with
 // a higher target gets a verdict on the rate alone.
-function nothingToChargeCard(m, hasGas, showBriefly, canSize) {
+function nothingToChargeCard(m, hasGas, showBriefly, canSize, ask = "add your gas price") {
   const atFull = batteryFull(m);
   return {
     verdict: "none",
@@ -119,7 +134,7 @@ function nothingToChargeCard(m, hasGas, showBriefly, canSize) {
     sub: atFull
       ? "Already full, so there's nothing to charge."
       : !hasGas && !canSize
-        ? `At your ${Math.round(m.targetPct)}% target. Raise \u201cCharge to\u201d and add your gas price to compare.`
+        ? `At your ${Math.round(m.targetPct)}% target. Raise \u201cCharge to\u201d and ${ask} to compare.`
         : `Already at your ${Math.round(m.targetPct)}% target. Raise \u201cCharge to\u201d ${hasGas ? "to compare" : "to see what it costs"}.`,
     detailLine: hiddenLine(),
     timeline: hiddenLine(),
@@ -181,14 +196,20 @@ export function cardFor(model) {
   const {
     m, be, cur, units, hasRate, session, full, drawKw,
     effective, showEffective, inclNote, rateMode, schedule, hasTimeTiers,
-    worthLimitMin, fullNotWorth, tip, showBriefly, now,
+    worthLimitMin, fullNotWorth, tip, showBriefly, now, carChosen,
   } = model;
 
   if (!Number.isFinite(be)) {
     const haveCar = Number.isFinite(m.mpg) && Number.isFinite(m.miPerKwh);
+    // A chosen car missing a figure is costed like a car with no gas price,
+    // and asked for the figure rather than for a car.
+    const missing = !haveCar && carChosen ? missingFigures(m, units) : "";
+    const costable = haveCar || missing !== "";
     const chargeIsSized = session.kwhFromCharger > 0;
-    if (haveCar && hasRate && nothingToCharge(m)) return nothingToChargeCard(m, false, showBriefly, canSizeCharge(m, drawKw));
-    if (haveCar && hasRate && buysNoEnergy(session, full)) return noChargeSelectedCard(showBriefly);
+    if (costable && hasRate && nothingToCharge(m)) {
+      return nothingToChargeCard(m, false, showBriefly, canSizeCharge(m, drawKw), missing ? `fill in ${missing}` : undefined);
+    }
+    if (costable && hasRate && buysNoEnergy(session, full)) return noChargeSelectedCard(showBriefly);
     if (hasRate && chargeIsSized) {
       // No gas price means no verdict, but the cost of the stop never needed one.
       return {
@@ -196,7 +217,9 @@ export function cardFor(model) {
         headline: money(session.totalCost, cur),
         sub: haveCar
           ? "Cost of this charge. Add your gas price to see if it beats filling up."
-          : "Cost of this charge. Pick your car to compare it with gas.",
+          : missing
+            ? `Cost of this charge. Fill in ${missing} under Adjust details to compare it with gas.`
+            : "Cost of this charge. Pick your car to compare it with gas.",
         detailLine: {
           hidden: false,
           text: showEffective
@@ -220,7 +243,11 @@ export function cardFor(model) {
         ? !hasRate && chargeIsSized
           ? missingGasOrChargerPrompt(rateMode)
           : "Enter your local gas price to see the break-even."
-        : "Pick your car to start.",
+        : missing
+          ? !hasRate && chargeIsSized
+            ? chargerPricePrompt(rateMode)
+            : `${Number.isFinite(m.gasPrice) ? "Fill" : "Add your gas price and fill"} in ${missing} under Adjust details to see the break-even.`
+          : "Pick your car to start.",
       detailLine: hiddenLine(),
       timeline: hiddenLine(),
       touNote: hiddenLine(),

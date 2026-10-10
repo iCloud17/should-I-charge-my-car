@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#15803d" />
-  <meta name="description" content="Is charging your plug-in hybrid cheaper than gas? Enter your car, gas price, and charger rate to get a straight answer plus your break-even price per kWh." />
-  <title>Should I Charge My Car? PHEV Charge-vs-Gas Calculator</title>
+  <meta name="description" content="See what you really pay per kWh at a charger, fees and all, and whether charging beats gas. Enter your car and the charger&rsquo;s price for a straight answer." />
+  <title>Should I Charge My Car? Charging Cost vs Gas Calculator</title>
 
   <!-- SEO + social link previews. Absolute URLs point at the custom domain;
        swapping this one base is enough if it ever changes again. Open Graph
@@ -16,29 +16,29 @@
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Should I Charge My Car?" />
   <meta property="og:locale" content="en_US" />
-  <meta property="og:title" content="Should I Charge My Car? PHEV Charge-vs-Gas Calculator" />
-  <meta property="og:description" content="A dead-simple calculator that tells plug-in hybrid owners if charging is actually cheaper than gas right now, break-even price and all." />
+  <meta property="og:title" content="Should I Charge My Car? Charging Cost vs Gas Calculator" />
+  <meta property="og:description" content="A dead-simple calculator that shows what you really pay per kWh at a charger, and whether charging beats gas right now." />
   <meta property="og:url" content="https://shouldichargemycar.com/" />
   <meta property="og:image" content="https://shouldichargemycar.com/og-image.png" />
   <meta property="og:image:width" content="1380" />
   <meta property="og:image:height" content="724" />
-  <meta property="og:image:alt" content="Should I Charge My Car? A calculator that shows if charging a plug-in hybrid is cheaper than gas right now." />
+  <meta property="og:image:alt" content="Should I Charge My Car? What are you really paying per kWh? Example verdict: Charge it, like $1.78/gal gas, 54% cheaper." />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:image" content="https://shouldichargemycar.com/og-image.png" />
-  <meta name="twitter:image:alt" content="Should I Charge My Car? A calculator that shows if charging a plug-in hybrid is cheaper than gas right now." />
+  <meta name="twitter:image:alt" content="Should I Charge My Car? What are you really paying per kWh? Example verdict: Charge it, like $1.78/gal gas, 54% cheaper." />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "WebApplication",
     "name": "Should I Charge My Car?",
     "url": "https://shouldichargemycar.com/",
-    "description": "A free calculator that tells plug-in hybrid (PHEV) owners whether charging is cheaper than gasoline right now, including the break-even price per kWh and real charger fees.",
+    "description": "A free calculator that shows what you really pay per kWh at a charger, real charger fees included, and whether charging is cheaper than gasoline right now, with the break-even price per kWh.",
     "applicationCategory": "UtilitiesApplication",
     "operatingSystem": "Any (web-based, installable PWA)",
     "browserRequirements": "Requires JavaScript",
     "inLanguage": "en",
     "isAccessibleForFree": true,
-    "dateModified": "2026-09-15",
+    "dateModified": "2026-10-09",
     "sameAs": "https://github.com/iCloud17/should-I-charge-my-car",
     "publisher": {
       "@type": "Organization",
@@ -52,7 +52,9 @@
       "Break-even price per kWh",
       "Real charger fees: time-of-day, by-duration, session and per-hour fees, taxes",
       "Charge-time and range estimate",
-      "441 plug-in hybrids from EPA data",
+      "176 plug-in hybrid models (2012 to 2026) from EPA data",
+      "Save several cars on your device",
+      "12 currencies, with US, UK and metric units",
       "Works offline, installable PWA, no login"
     ],
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
@@ -81,7 +83,7 @@
          never see it. Gives non-JS crawlers (and AI retrieval bots that don't
          render JS) a plain-text description of what the tool does. -->
     <noscript>
-      <p>Should I Charge My Car? is a free calculator for plug-in hybrid (PHEV) owners. Enter your car, the local gas price, and the charger&rsquo;s price per kWh to see whether charging is cheaper than gas right now, including the break-even price per kWh and real charger fees. Please enable JavaScript to use the calculator.</p>
+      <p>Should I Charge My Car? is a free charging cost calculator. Enter your car and the charger&rsquo;s price per kWh to see what you really pay, fees included. Add the local gas price to see whether charging is cheaper than gas right now, and your break-even price per kWh. Please enable JavaScript to use the calculator.</p>
     </noscript>
     <header class="app__head">
       <div class="app__head-actions">
@@ -95,7 +97,7 @@
       </div>
       <div class="app__head-text">
         <h1 class="app__title">Should I Charge My Car?</h1>
-        <p class="app__tagline">See if charging your plug-in hybrid is cheaper than filling up on gas.</p>
+        <p class="app__tagline">See what you really pay per kWh, and whether charging beats gas.</p>
       </div>
     </header>
 
@@ -136,14 +138,13 @@
         document.getElementById("carTile").dataset.prepaintOpen = document.getElementById("carTile").open;
       </script>
       <div class="disclosure__body">
-        <!-- Saved cars. Empty and hidden until a SECOND car exists: one car needs
-             no switcher, and a user who owns one car must not pay for this. -->
+        <!-- Saved cars: hidden until the first car is saved. -->
         <div class="my-cars" id="myCarsRow" role="radiogroup" aria-label="Your saved cars" hidden></div>
         <div class="field">
           <div class="field-label-row">
             <label for="carSearch">Your car</label>
             <button type="button" id="carInfoBtn" class="info-btn" aria-label="Why isn't my exact year listed?" aria-expanded="false">i</button>
-            <p class="hint info-note" id="carInfoNote" hidden>Don&rsquo;t see your exact year? Pick the closest one. A PHEV&rsquo;s MPG and efficiency barely change within a generation, so the answer comes out about the same. Not listed, or want exact numbers? Pick &ldquo;My own car&rdquo; to enter your own.<br /><br />Car data: US EPA &amp; DOE (<a href="https://www.fueleconomy.gov" target="_blank" rel="noopener">fueleconomy.gov</a>).</p>
+            <p class="hint info-note" id="carInfoNote" hidden>Don&rsquo;t see your exact year? Pick the closest one. A car&rsquo;s MPG and efficiency barely change within a generation, so the answer comes out about the same. The list only has plug-in hybrids. Not listed, or want exact numbers? Pick &ldquo;My own car&rdquo; to enter your own.<br /><br />Car data: US EPA &amp; DOE (<a href="https://www.fueleconomy.gov" target="_blank" rel="noopener">fueleconomy.gov</a>).</p>
           </div>
           <div class="combo">
             <!-- enterkeyhint=done: Enter finishes with the picker and stays put. It never runs a search (filtering is live on input) and never advances a field. -->
@@ -196,11 +197,11 @@
               <div class="field-label-row">
                 <label for="batteryKwh">Battery size (kWh)</label>
                 <button type="button" id="batteryInfoBtn" class="info-btn" aria-label="What battery size should I use?" aria-expanded="false">i</button>
-                <p class="hint info-note" id="batteryInfoNote" hidden>Your car&rsquo;s <em>usable</em> capacity, the part you actually charge, not the full pack size a maker advertises. It&rsquo;s an EPA estimate, so it&rsquo;s approximate and can vary by year. It affects the charge time and total cost.</p>
+                <p class="hint info-note" id="batteryInfoNote" hidden>Your car&rsquo;s <em>usable</em> capacity, the part you actually charge, not the full pack size a maker advertises. For a car from the list, it&rsquo;s estimated from the EPA&rsquo;s electric range, so it&rsquo;s approximate and can vary by year.</p>
               </div>
               <input id="batteryKwh" type="text" min="0" step="any" inputmode="decimal" autocomplete="off" value="" />
             </div>
-            <p class="hint">Auto-filled from your car. Only change these if you track your own real-world numbers. MPG and mi/kWh drive the break-even. Battery size drives the charge time and total.</p>
+            <p class="hint">Filled in for cars from the list. Only change these if you track your own real-world numbers. The gas and electric figures set the break-even, and battery size sets the charge time and total.</p>
           </div>
         </details>
       </div>
@@ -278,7 +279,7 @@
             <div class="field-label-row">
               <label for="powerKw">Charge power</label>
               <button type="button" id="powerInfoBtn" class="info-btn" aria-label="What charge power should I enter?" aria-expanded="false">i</button>
-              <p class="hint info-note" id="powerInfoNote" hidden>The charger you&rsquo;re plugged into, not your car. Your car&rsquo;s onboard charger caps how fast it takes power. For a car from the list, the estimate already uses whichever is lower. With &ldquo;My own car&rdquo;, enter the lower one yourself. The speed sets how long the charge takes, which also changes the total if the station bills by the hour or by duration. Edit this when the charger&rsquo;s rate differs from the Level 1 or Level 2 presets. We treat anything above 22 kW as 22, the top of the common AC range. New charger puts it back at 6.6, and so does your next visit.</p>
+              <p class="hint info-note" id="powerInfoNote" hidden>The charger you&rsquo;re plugged into, not your car. For a car from the list, the estimate already caps it at what your car can take; with &ldquo;My own car&rdquo;, enter whichever is lower. It sets the charge time, and the total too if the station bills by the hour or by duration. Level 1 is a North American 120 V socket; a 230 V socket gives about 2.3 kW. Anything above 22 kW counts as 22, the top of the common AC range. New charger and your next visit put it back at 6.6.</p>
             </div>
             <div class="speed__row">
               <div class="presets" id="powerPresets" role="group" aria-labelledby="speedTitle">
@@ -311,7 +312,7 @@
             <div class="field-label-row">
               <label>Station time rate while connected</label>
               <button type="button" id="timeFeeInfoBtn" class="info-btn" aria-label="What is the station time rate?" aria-expanded="false">i</button>
-              <p class="hint info-note" id="timeFeeInfoNote" hidden>An hourly fee for staying plugged in, on top of the energy cost. Example: free for the first 4 hr, then $5/hr.</p>
+              <p class="hint info-note" id="timeFeeInfoNote" hidden>An hourly fee for staying plugged in, on top of the energy cost. Example: free for the first 4 hr, then 5 per hour. If the charger bills by the minute, enter the per-minute price times 60. If that&rsquo;s all it charges, set the energy rate to 0.</p>
             </div>
             <div id="timeFeeRows" class="tou-rows"></div>
             <button type="button" id="timeFeeAdd" class="link tou-add"><span class="tou-add__plus">+</span> Add rate</button>
@@ -320,7 +321,7 @@
             <div class="field-label-row">
               <label>Taxes</label>
               <button type="button" id="taxInfoBtn" class="info-btn" aria-label="How are taxes applied?" aria-expanded="false">i</button>
-              <p class="hint info-note" id="taxInfoNote" hidden>A percentage added to the whole bill. Add one row per line on the charger&rsquo;s screen (e.g. state 6.25%, city 1%); we total them.</p>
+              <p class="hint info-note" id="taxInfoNote" hidden>A percentage added to the whole bill. Add one row per line on the charger&rsquo;s screen (e.g. state 6.25%, city 1%); we total them. Skip this if the price already includes tax, as it usually does where there&rsquo;s VAT.</p>
             </div>
             <div id="taxRows" class="tou-rows"></div>
             <button type="button" id="taxAdd" class="link tou-add"><span class="tou-add__plus">+</span> Add tax</button>
@@ -333,7 +334,7 @@
     <details class="card disclosure" id="advanced">
       <summary>Charge time &amp; cost</summary>
       <div class="disclosure__body">
-        <p class="hint hint--lead">Set how full the battery is now and how full you want it, and when to stop if the charger bills by time. Then see how long it takes, the range you add, and the all-in price per kWh.</p>
+        <p class="hint hint--lead">Set how full the battery is now and how full you want it, and when to stop if the charger bills by time. Then see how long it takes, the range you add, and the total cost.</p>
 
         <div class="field">
           <label for="startPct">Battery now: <output id="startPctOut">0%</output></label>
@@ -345,8 +346,8 @@
         </div>
         <!-- The charger's, not the battery's, though it sits by the battery
              sliders it stops: it shows only with a time fee or By duration,
-             and a dragged one would override the next charger's own "charge
-             briefly" pick, so New charger clears it. -->
+             and a dragged one would carry over to the next charger, so New
+             charger clears it. -->
         <div class="field" id="chargeForField" hidden>
           <label for="chargeForMin">Charge for: <output id="chargeForOut">-</output></label>
           <input id="chargeForMin" type="range" min="0" max="180" step="1" value="180" />
@@ -385,8 +386,8 @@
         <details class="faq__item">
           <summary><h2 class="faq__q">How do I calculate charging cost vs gas?</h2></summary>
           <ol class="faq__steps">
-            <li>Pick your car, or choose &ldquo;My own car&rdquo; to enter your own numbers.</li>
-            <li>Enter today&rsquo;s gas price.</li>
+            <li>Pick your car, or choose &ldquo;My own car&rdquo; to enter your own numbers. To keep several cars, tap &ldquo;Add this car&rdquo; for each one, then switch between them at the top of the car section.</li>
+            <li>Enter today&rsquo;s gas price. The buttons at the top right set your currency and units.</li>
             <li>Enter the charger&rsquo;s price per kWh. For time-of-day or tiered pricing, pick &ldquo;Time of day&rdquo; or &ldquo;By duration&rdquo; above the rate. &ldquo;Charger speed&rdquo; starts at Level 2 (6.6 kW), so change it if you plug into a wall socket (Level 1) or the station lists its own kW. Add session, hourly, or tax charges under &ldquo;Fees&rdquo; in the same Charger section.</li>
             <li>Read the verdict at the top. It updates as you type. Your car, gas price, and settings are saved for next time. The battery sliders and the charger&rsquo;s price, fees, and speed start fresh each visit.</li>
             <li>At the next charger, tap &ldquo;New charger&rdquo; to clear the last one&rsquo;s price, fees, and speed. &ldquo;Undo&rdquo; puts them back.</li>
@@ -417,7 +418,7 @@
 
         <details class="faq__item">
           <summary><h2 class="faq__q">My car isn&rsquo;t listed.</h2></summary>
-          <p class="faq__a">Choose &ldquo;My own car&rdquo; and enter your MPG, miles per kWh, and battery size. The list covers 441 US models from 2012 to 2026, so cars sold only in the UK or Europe are missing.</p>
+          <p class="faq__a">Choose &ldquo;My own car&rdquo; and enter your MPG, miles per kWh, and battery size. The list only covers 176 US plug-in hybrid models from 2012 to 2026, so any other car is missing, including ones sold only in the UK or Europe. Leave MPG empty and you still get the cost of each charge and what you really pay per kWh.</p>
         </details>
       </div>
     </details>

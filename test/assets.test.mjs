@@ -11,6 +11,7 @@ import { CHARGER_KEYS, defaultPrefs, hasChargerInput } from "../js/storage.js";
 import { effectivePerKwh, speedSummary } from "../js/cardUi.js";
 import { rateAtTime, rateAtElapsed } from "../js/calc.js";
 import { parseNum } from "../js/ui.js";
+import { CUSTOM_CAR_ID } from "../js/myCars.js";
 
 const REPO = new URL("../", import.meta.url);
 const read = (rel) => readFileSync(new URL(rel, import.meta.url), "utf8");
@@ -988,6 +989,63 @@ test("source guard: with no battery size, render() judges the mode's own rate, n
     0.45 * 1.1,
     "render() no longer judges a charge with no battery size by effectivePerKwh() with its own rateOf, so Time of day and By duration can be judged on the Flat price hidden in Energy rate (0.30 instead of the 0.45 evening rate)",
   );
+});
+
+// cardFor asks a chosen car missing a figure for that figure, and only a car
+// that was never chosen to "Pick your car" (cardUi.test.mjs). This holds
+// render() to telling it which. Run, not scanned: the flag's expression is
+// lifted out of render() and evaluated for no car, My own car and a listed car.
+function carChosenFor(src, carId) {
+  const expr = bodyOf(src, "render").match(/^ +carChosen: ([^\n]+),$/m)?.[1];
+  return expr ? new Function("prefs", `return (${expr});`)({ carId }) : null;
+}
+const CHOSEN = [[null, false], [CUSTOM_CAR_ID, true], ["toyota-rav4-prime-4wd-2024", true]];
+const chosenFlags = (src) => CHOSEN.map(([carId]) => carChosenFor(src, carId));
+
+test("source guard: render() tells cardFor whether a car is chosen", () => {
+  const want = CHOSEN.map(([, chosen]) => chosen);
+  const fresh = (line) => `function render() {\n  const view = cardFor({\n    m, be,${line}\n  });\n}\n`;
+  assert.deepEqual(chosenFlags(fresh("\n    carChosen: Boolean(prefs.carId),")), want);
+  // Guard on the guard: no flag, one that never says yes, and a misspelt key.
+  for (const [what, line] of Object.entries({
+    "no flag": "",
+    "a flag that is always false": "\n    carChosen: false,",
+    "a misspelt key": "\n    carChosen: Boolean(prefs.carID),",
+  })) {
+    assert.notDeepEqual(chosenFlags(fresh(line)), want, `${what}, and the guard passed it`);
+  }
+
+  assert.deepEqual(
+    chosenFlags(read("../js/main.js")),
+    want,
+    "render() no longer tells cardFor whether a car is chosen, so My own car with an empty MPG is told to pick a car",
+  );
+});
+
+// A Charge briefly card prices the full charge, so its sub shows what topping
+// off really costs, and the best-value tip prices the short stop. So render()
+// sizes the session from the slider once it is dragged, and from the full
+// charge until then. Run, not scanned: the cap lines are lifted out of render().
+const CAP_INPUTS = ["canStopEarly", "capTouched", "chargeCapMin", "fullChargeMin", "showBriefly", "tip"];
+function sessionCapIn(src, state) {
+  const block = bodyOf(src, "render").match(/^ {2}let cap = Infinity;\n[\s\S]*?(?=^ {2}const session = )/m)?.[0];
+  return block ? new Function(...CAP_INPUTS, `${block}\nreturn cap;`)(...CAP_INPUTS.map((n) => state[n])) : null;
+}
+
+test("source guard: a Charge briefly card prices the full charge until the slider is dragged", () => {
+  const briefly = { canStopEarly: true, capTouched: false, chargeCapMin: null, fullChargeMin: 300, showBriefly: true, tip: { min: 60 } };
+  const dragged = { ...briefly, capTouched: true, chargeCapMin: 45 };
+  const fresh = (lines) => `function render() {\n  let cap = Infinity;\n${lines}\n  const session = cap;\n}\n`;
+  const shipped = "  if (canStopEarly && capTouched && Number.isFinite(chargeCapMin) && chargeCapMin < fullChargeMin - 0.5) cap = chargeCapMin;";
+  assert.equal(sessionCapIn(fresh(shipped), briefly), Infinity);
+  assert.equal(sessionCapIn(fresh(shipped), dragged), 45);
+  // Guard on the guard: the July pre-position, which made the card repeat the tip.
+  assert.equal(sessionCapIn(fresh(`${shipped}\n  else if (showBriefly && !capTouched) cap = tip.min;`), briefly), 60);
+
+  const src = read("../js/main.js");
+  assert.equal(sessionCapIn(src, briefly), Infinity,
+    "render() sizes a Charge briefly card to the best-value stop again, so the card repeats the tip instead of showing what the full charge costs");
+  assert.equal(sessionCapIn(src, dragged), 45, "render() no longer follows a dragged Charge for slider");
 });
 
 // Baadal asked whether a price filled in one option can interfere once he

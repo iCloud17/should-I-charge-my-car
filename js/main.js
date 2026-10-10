@@ -164,11 +164,10 @@ function render() {
   // the target isn't itself a confident win but the best-value stop is.
   const showBriefly = !!(tip && vFull !== "worth");
 
-  // Display selection: the slider if the user set it, else the recommended
-  // partial charge when we're steering them to stop early, else the full charge.
+  // Display selection: the slider if the user set it, else the full charge. A
+  // Charge briefly card shows what the full charge costs; its tip prices the stop.
   let cap = Infinity;
   if (canStopEarly && capTouched && Number.isFinite(chargeCapMin) && chargeCapMin < fullChargeMin - 0.5) cap = chargeCapMin;
-  else if (showBriefly && !capTouched) cap = tip.min;
   const session = cap === Infinity ? full : chargeCurve({ ...curveArgs, capMinutes: cap });
 
   const showChargeFor = canStopEarly && fullChargeMin > 0;
@@ -202,6 +201,7 @@ function render() {
     m, be, cur, units: prefs.units, hasRate, session, full,
     drawKw, effective, showEffective, inclNote, rateMode, schedule, hasTimeTiers,
     worthLimitMin, fullNotWorth, tip, showBriefly,
+    carChosen: Boolean(prefs.carId),
     now: nowMin,
   });
 

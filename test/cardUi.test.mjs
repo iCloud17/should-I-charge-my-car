@@ -576,6 +576,51 @@ test("with no rate or no car, Charge for at 0 keeps its prompt", () => {
   assert.equal(card({ ...AT_ZERO(), be: NaN, m: { mpg: NaN, miPerKwh: NaN } }).sub, "Pick your car to start.");
 });
 
+// A chosen car missing a gas or electric figure, like My own car with MPG left
+// empty, has no break-even but is not "no car". It is costed like a car with no
+// gas price, and asked for the figure by its field's name in the current units.
+const NO_MPG = () => ({ be: NaN, carChosen: true, m: { mpg: NaN } });
+
+test("a chosen car missing a figure still costs the charge and names the figure", () => {
+  const c = card(NO_MPG());
+  assert.equal(c.verdict, "none");
+  assert.equal(c.headline, "$3.25");
+  assert.equal(c.sub, "Cost of this charge. Fill in \u201cGas MPG\u201d under Adjust details to compare it with gas.");
+  assert.equal(card({ ...NO_MPG(), units: "metric" }).sub,
+    "Cost of this charge. Fill in \u201cGas L/100km\u201d under Adjust details to compare it with gas.");
+  assert.equal(card({ be: NaN, carChosen: true, m: { miPerKwh: NaN } }).sub,
+    "Cost of this charge. Fill in \u201cElectric mi/kWh\u201d under Adjust details to compare it with gas.");
+  assert.equal(card({ be: NaN, carChosen: true, m: { mpg: NaN, miPerKwh: NaN } }).sub,
+    "Cost of this charge. Fill in \u201cGas MPG\u201d and \u201cElectric mi/kWh\u201d under Adjust details to compare it with gas.");
+  assert.equal(card({ ...NO_MPG(), carChosen: false }).sub, "Cost of this charge. Pick your car to compare it with gas.",
+    "with no car chosen, the car is still what is missing");
+});
+
+test("a chosen car missing a figure, with no charger price, asks for the price or the figure", () => {
+  const noRate = { ...NO_MPG(), hasRate: false };
+  assert.equal(card(noRate).headline, "\u2026");
+  assert.equal(card(noRate).sub, "Enter the energy rate to see what this charge costs.");
+  assert.equal(card({ ...noRate, rateMode: "tod" }).sub, "Add time-of-day rates to see what this charge costs.");
+  assert.equal(card({ ...noRate, rateMode: "dur" }).sub, "Add duration tiers to see what this charge costs.");
+  // Nothing sized, so a price alone shows nothing: ask for what the break-even
+  // needs, the way a car with no gas price is asked for that.
+  const unsized = { ...noRate, session: { kwhFromCharger: 0 } };
+  assert.equal(card(unsized).sub, "Fill in \u201cGas MPG\u201d under Adjust details to see the break-even.");
+  assert.equal(card({ ...unsized, m: { mpg: NaN, gasPrice: NaN } }).sub,
+    "Add your gas price and fill in \u201cGas MPG\u201d under Adjust details to see the break-even.");
+  assert.equal(card({ ...noRate, carChosen: false }).sub, "Pick your car to start.");
+});
+
+test("a chosen car missing a figure gets the nothing-to-charge and Charge for cards", () => {
+  const atTarget = { ...AT_TARGET(), be: NaN, carChosen: true, m: { startPct: 50, targetPct: 50, mpg: NaN } };
+  assert.equal(card({ ...atTarget, m: { ...atTarget.m, batteryKwh: 10 } }).sub,
+    "Already at your 50% target. Raise \u201cCharge to\u201d to see what it costs.");
+  assert.equal(card(atTarget).sub,
+    "At your 50% target. Raise \u201cCharge to\u201d and fill in \u201cGas MPG\u201d to compare.");
+  assert.equal(card({ ...AT_ZERO(), be: NaN, carChosen: true, m: { mpg: NaN } }).sub,
+    "Slide \u201cCharge for\u201d up to see what it costs.");
+});
+
 test("with a gas price but no rate, Charge for at 0 asks for a longer charge too", () => {
   // It asked for the rate alone "for a yes/no", and a rate alone only leads to
   // the card above. By duration, or with a time fee in the other two modes.

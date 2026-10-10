@@ -1,7 +1,7 @@
 {
   "name": "Should I Charge My Car?",
   "short_name": "Should I Charge",
-  "description": "Find the max price per kWh you can pay to charge your plug-in hybrid before gas becomes cheaper.",
+  "description": "See what you really pay per kWh, and whether charging beats gas.",
   "id": "/should-I-charge-my-car/",
   "lang": "en",
   "dir": "ltr",
